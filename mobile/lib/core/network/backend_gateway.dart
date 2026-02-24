@@ -1,26 +1,6 @@
 import 'package:dio/dio.dart';
 
-class SyncPushFailure {
-  const SyncPushFailure({
-    required this.opId,
-    required this.code,
-    required this.message,
-  });
-
-  final String? opId;
-  final String code;
-  final String message;
-}
-
-class SyncPushResult {
-  const SyncPushResult({
-    required this.ackedOpIds,
-    required this.failedEvents,
-  });
-
-  final List<String> ackedOpIds;
-  final List<SyncPushFailure> failedEvents;
-}
+import 'models/sync_models.dart';
 
 class BackendGateway {
   BackendGateway(this._dio);
@@ -59,9 +39,7 @@ class BackendGateway {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  Future<Map<String, dynamic>> refresh({
-    required String refreshToken,
-  }) async {
+  Future<Map<String, dynamic>> refresh({required String refreshToken}) async {
     final res = await _dio.post(
       '/auth/refresh',
       data: {'refresh_token': refreshToken},
@@ -97,33 +75,19 @@ class BackendGateway {
     );
   }
 
-  Future<SyncPushResult> pushSync(List<Map<String, dynamic>> events) async {
+  Future<SyncPushResponseModel> pushSync(
+    List<Map<String, dynamic>> events,
+  ) async {
     if (events.isEmpty) {
-      return SyncPushResult(ackedOpIds: const [], failedEvents: const []);
+      return const SyncPushResponseModel(ackedOpIds: [], failedEvents: []);
     }
     final res = await _dio.post('/sync/push', data: {'events': events});
-    final body = Map<String, dynamic>.from(res.data as Map? ?? const {});
-    final acked = (body['acked_op_ids'] as List? ?? const [])
-        .map((e) => e.toString())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    final failed =
-        (body['failed_events'] as List? ?? const [])
-            .whereType<Map>()
-            .map((raw) => Map<String, dynamic>.from(raw))
-            .map(
-              (raw) => SyncPushFailure(
-                opId: raw['op_id']?.toString(),
-                code: raw['code']?.toString() ?? 'SYNC_FAILED',
-                message:
-                    raw['message']?.toString() ?? 'Failed to apply sync event',
-              ),
-            )
-            .toList();
-    return SyncPushResult(ackedOpIds: acked, failedEvents: failed);
+    return SyncPushResponseModel.fromJson(
+      Map<String, dynamic>.from(res.data as Map? ?? const {}),
+    );
   }
 
-  Future<Map<String, dynamic>> pullSync({
+  Future<SyncPullResponseModel> pullSync({
     String? since,
     String? cursor,
     int? limit,
@@ -141,7 +105,9 @@ class BackendGateway {
       '/sync/pull',
       queryParameters: params.isEmpty ? null : params,
     );
-    return Map<String, dynamic>.from(res.data as Map);
+    return SyncPullResponseModel.fromJson(
+      Map<String, dynamic>.from(res.data as Map),
+    );
   }
 
   Future<Map<String, dynamic>> syncStatus() async {
@@ -160,6 +126,75 @@ class BackendGateway {
       '/reports/summary',
       queryParameters: params.isEmpty ? null : params,
     );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getLedgerReport({
+    String? fromDate,
+    String? toDate,
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final params = <String, dynamic>{'page': page, 'page_size': pageSize};
+    if (fromDate != null && fromDate.isNotEmpty) params['from'] = fromDate;
+    if (toDate != null && toDate.isNotEmpty) params['to'] = toDate;
+    final res = await _dio.get('/reports/ledger', queryParameters: params);
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getCustomerMetrics({
+    bool overdueOnly = false,
+    bool highRiskOnly = false,
+    int limit = 200,
+  }) async {
+    final res = await _dio.get(
+      '/metrics/customers',
+      queryParameters: {
+        'overdue_only': overdueOnly,
+        'high_risk_only': highRiskOnly,
+        'limit': limit,
+      },
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getAlerts({
+    String status = 'open',
+    int limit = 100,
+  }) async {
+    final res = await _dio.get(
+      '/alerts',
+      queryParameters: {'status': status, 'limit': limit},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getProductMetrics({
+    bool deadStockOnly = false,
+    int limit = 200,
+    int windowDays = 30,
+    int deadStockDays = 30,
+  }) async {
+    final res = await _dio.get(
+      '/metrics/products',
+      queryParameters: {
+        'dead_stock_only': deadStockOnly,
+        'limit': limit,
+        'window_days': windowDays,
+        'dead_stock_days': deadStockDays,
+      },
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getBusinessMetrics({
+    String? fromDate,
+    String? toDate,
+  }) async {
+    final params = <String, dynamic>{};
+    if (fromDate != null && fromDate.isNotEmpty) params['from'] = fromDate;
+    if (toDate != null && toDate.isNotEmpty) params['to'] = toDate;
+    final res = await _dio.get('/metrics/business', queryParameters: params);
     return Map<String, dynamic>.from(res.data as Map);
   }
 

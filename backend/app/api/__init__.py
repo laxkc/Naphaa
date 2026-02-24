@@ -1,4 +1,4 @@
-from app.api import auth, customers, deps, devices, expenses, exports, products, reports, sales, stores, sync
+from app.api import alerts, auth, customers, deps, devices, expenses, exports, metrics, products, reports, sales, stores, sync
 
 __all__ = [
     "auth",
@@ -11,5 +11,6 @@ __all__ = [
     "sales",
     "expenses",
     "reports",
+    "metrics",
     "sync",
 ]

@@ -86,6 +86,13 @@ class ProfileScreen extends ConsumerWidget {
                         subtitle: p.localeDefault == 'ne'
                             ? 'नेपाली'
                             : 'English',
+                        onTap: null,
+                      ),
+                      AppListTile(
+                        leading: const Icon(Icons.badge_outlined,
+                            size: 18, color: AppColors.muted),
+                        title: 'Role',
+                        subtitle: (p.role ?? 'owner').toUpperCase(),
                         showDivider: false,
                         onTap: null,
                       ),
@@ -137,8 +144,9 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class ProfileData {
-  const ProfileData({this.phone, this.storeName, this.localeDefault});
+  const ProfileData({this.phone, this.storeName, this.localeDefault, this.role});
   final String? phone;
   final String? storeName;
   final String? localeDefault;
+  final String? role;
 }

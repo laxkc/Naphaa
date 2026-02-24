@@ -11,7 +11,13 @@ class CustomersRepository {
 
   Future<List<Customer>> listCustomers() async {
     final db = await _db.database;
-    final rows = await db.query('customers', orderBy: 'updated_at DESC');
+    final rows = await db.query(
+      'customers',
+      where: '(is_deleted IS NULL OR is_deleted = 0)',
+      // Owing customers first (so "Pay" actions are easy to find), then
+      // alphabetical for predictable browsing.
+      orderBy: 'CASE WHEN COALESCE(balance, 0) > 0 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC, updated_at DESC',
+    );
     return rows.map(Customer.fromMap).toList();
   }
 

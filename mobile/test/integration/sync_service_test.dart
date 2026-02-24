@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sme_digital/core/network/backend_gateway.dart';
+import 'package:sme_digital/core/network/models/sync_models.dart';
 import 'package:sme_digital/core/network/session_service.dart';
 import 'package:sme_digital/core/network/sync_service.dart';
 import 'package:sme_digital/core/storage/preferences.dart';
@@ -51,38 +52,85 @@ class _FakeGateway extends BackendGateway {
   final List<List<Map<String, dynamic>>> pushedBatches = [];
   final List<List<String>> pushAckBatches = [];
   final List<List<SyncPushFailure>> pushFailedBatches = [];
-  final List<Map<String, dynamic>> pullResponses = [];
+  final List<SyncPullResponseModel> pullResponses = [];
   final List<Map<String, dynamic>> pullCalls = [];
+  Map<String, dynamic> customerMetricsResponse = const {'items': []};
+  Map<String, dynamic> alertsResponse = const {'items': []};
+  Map<String, dynamic> productMetricsResponse = const {'items': []};
+  Map<String, dynamic> businessMetricsResponse = const {};
 
   @override
-  Future<SyncPushResult> pushSync(List<Map<String, dynamic>> events) async {
+  Future<SyncPushResponseModel> pushSync(
+    List<Map<String, dynamic>> events,
+  ) async {
     pushedBatches.add(events);
     final acked =
         pushAckBatches.isNotEmpty
             ? pushAckBatches.removeAt(0)
             : events.map((e) => e['op_id'].toString()).toList();
     final failed =
-        pushFailedBatches.isNotEmpty ? pushFailedBatches.removeAt(0) : const <SyncPushFailure>[];
-    return SyncPushResult(ackedOpIds: acked, failedEvents: failed);
+        pushFailedBatches.isNotEmpty
+            ? pushFailedBatches.removeAt(0)
+            : const <SyncPushFailure>[];
+    return SyncPushResponseModel(ackedOpIds: acked, failedEvents: failed);
   }
 
   @override
-  Future<Map<String, dynamic>> pullSync({String? since, String? cursor, int? limit}) async {
+  Future<SyncPullResponseModel> pullSync({
+    String? since,
+    String? cursor,
+    int? limit,
+  }) async {
     pullCalls.add({'since': since, 'cursor': cursor, 'limit': limit});
     if (pullResponses.isNotEmpty) {
       return pullResponses.removeAt(0);
     }
-    return {'events': <Map<String, dynamic>>[], 'next_cursor': cursor};
+    return SyncPullResponseModel(events: const [], nextCursor: cursor);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getCustomerMetrics({
+    bool overdueOnly = false,
+    bool highRiskOnly = false,
+    int limit = 200,
+  }) async {
+    return customerMetricsResponse;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAlerts({
+    String status = 'open',
+    int limit = 100,
+  }) async {
+    return alertsResponse;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getProductMetrics({
+    bool deadStockOnly = false,
+    int limit = 200,
+    int windowDays = 30,
+    int deadStockDays = 30,
+  }) async {
+    return productMetricsResponse;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getBusinessMetrics({
+    String? fromDate,
+    String? toDate,
+  }) async {
+    return businessMetricsResponse;
   }
 }
 
 class _FakeSessionService extends SessionService {
   _FakeSessionService()
-      : super(
-          BackendGateway(Dio()),
-          SecureTokenStorage(const FlutterSecureStorage()),
-          Dio(),
-        );
+    : super(
+        BackendGateway(Dio()),
+        SecureTokenStorage(const FlutterSecureStorage()),
+        Dio(),
+      );
 
   @override
   Future<void> ensureReady({required String localeCode}) async {}
@@ -130,6 +178,7 @@ void main() {
       prefs,
       session,
       connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
     );
     final result = await service.processPendingSyncDetailed(localeCode: 'en');
     expect(result.pendingAtStart, 2);
@@ -147,52 +196,61 @@ void main() {
     await db.reset();
   });
 
-  test('backend failed_events message is stored in outbox last_error', () async {
-    final db = await createTestDb('sync_service_failed_event_reason');
-    final sql = await db.database;
-    final prefs = _FakePrefs();
-    final gateway = _FakeGateway();
-    final session = _FakeSessionService();
-    final now = DateTime.now().toIso8601String();
+  test(
+    'backend failed_events message is stored in outbox last_error',
+    () async {
+      final db = await createTestDb('sync_service_failed_event_reason');
+      final sql = await db.database;
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
+      final now = DateTime.now().toIso8601String();
 
-    await sql.insert('sync_queue', {
-      'op_id': 'op-fail-1',
-      'entity': 'unknown_entity',
-      'entity_id': 'x1',
-      'operation': 'UPSERT',
-      'payload': jsonEncode({'id': 'x1'}),
-      'created_at': now,
-      'updated_at': now,
-      'synced': 0,
-      'status': 'pending',
-      'retry_count': 0,
-    });
+      await sql.insert('sync_queue', {
+        'op_id': 'op-fail-1',
+        'entity': 'unknown_entity',
+        'entity_id': 'x1',
+        'operation': 'UPSERT',
+        'payload': jsonEncode({'id': 'x1'}),
+        'created_at': now,
+        'updated_at': now,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
 
-    gateway.pushAckBatches.add(const []);
-    gateway.pushFailedBatches.add(const [
-      SyncPushFailure(
-        opId: 'op-fail-1',
-        code: 'UNSUPPORTED_ENTITY',
-        message: 'Unsupported sync entity: unknown_entity',
-      ),
-    ]);
+      gateway.pushAckBatches.add(const []);
+      gateway.pushFailedBatches.add(const [
+        SyncPushFailure(
+          opId: 'op-fail-1',
+          entity: 'unknown_entity',
+          operation: 'UPSERT',
+          code: 'UNSUPPORTED_ENTITY',
+          message: 'Unsupported sync entity: unknown_entity',
+        ),
+      ]);
 
-    final service = SyncService(
-      db,
-      gateway,
-      prefs,
-      session,
-      connectivityCheck: () async => [ConnectivityResult.wifi],
-    );
-    await service.processPendingSync(localeCode: 'en');
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+        pushChunkSize: 100,
+      );
+      await service.processPendingSync(localeCode: 'en');
 
-    final rows = await sql.query('sync_queue');
-    expect(rows.single['status'], 'failed');
-    expect(rows.single['synced'], 0);
-    expect(rows.single['last_error'], contains('UNSUPPORTED_ENTITY'));
+      final rows = await sql.query('sync_queue');
+      expect(rows.single['status'], 'failed');
+      expect(rows.single['synced'], 0);
+      expect(
+        rows.single['last_error'],
+        'Sync failed on server. We will retry automatically.',
+      );
 
-    await db.reset();
-  });
+      await db.reset();
+    },
+  );
 
   test('pushes outbox in chunks of 100', () async {
     final db = await createTestDb('sync_service_chunk_push');
@@ -223,6 +281,7 @@ void main() {
       prefs,
       session,
       connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
     );
     await service.processPendingSync(localeCode: 'en');
 
@@ -253,18 +312,20 @@ void main() {
       'updated_at': DateTime.now().toIso8601String(),
     });
 
-    gateway.pullResponses.add({
-      'events': [
-        {
-          'id': 'evt-1',
-          'entity': 'product',
-          'operation': 'DELETE',
-          'payload': {'id': 'p-del-1', 'schema_version': 1},
-          'created_at': DateTime.now().toIso8601String(),
-        },
-      ],
-      'next_cursor': 'evt-1',
-    });
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-1',
+            entity: 'product',
+            operation: 'DELETE',
+            payload: const {'id': 'p-del-1', 'schema_version': 1},
+            createdAt: DateTime.now(),
+          ),
+        ],
+        nextCursor: 'evt-1',
+      ),
+    );
 
     final service = SyncService(
       db,
@@ -275,7 +336,11 @@ void main() {
     );
     await service.processPendingSync(localeCode: 'en');
 
-    final rows = await sql.query('products', where: 'id = ?', whereArgs: ['p-del-1']);
+    final rows = await sql.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: ['p-del-1'],
+    );
     expect(rows, isEmpty);
     expect(await prefs.getLastSyncCursor(), 'evt-1');
 
@@ -318,8 +383,18 @@ void main() {
       },
     ];
     gateway.pullResponses
-      ..add({'events': firstPageEvents, 'next_cursor': 'evt-199'})
-      ..add({'events': secondPageEvents, 'next_cursor': 'evt-200'});
+      ..add(
+        SyncPullResponseModel.fromJson({
+          'events': firstPageEvents,
+          'next_cursor': 'evt-199',
+        }),
+      )
+      ..add(
+        SyncPullResponseModel.fromJson({
+          'events': secondPageEvents,
+          'next_cursor': 'evt-200',
+        }),
+      );
 
     final service = SyncService(
       db,
@@ -327,6 +402,7 @@ void main() {
       prefs,
       session,
       connectivityCheck: () async => [ConnectivityResult.wifi],
+      pullChunkSize: 200,
     );
     await service.processPendingSync(localeCode: 'en');
 
@@ -337,7 +413,11 @@ void main() {
     expect(await prefs.getLastSyncCursor(), 'evt-200');
 
     final sql = await db.database;
-    final count = (await sql.rawQuery('SELECT COUNT(*) AS total FROM expenses')).first['total'] as num;
+    final count =
+        (await sql.rawQuery(
+              'SELECT COUNT(*) AS total FROM expenses',
+            )).first['total']
+            as num;
     expect(count.toInt(), 201);
 
     await db.reset();
@@ -359,7 +439,9 @@ void main() {
       'created_at': DateTime.now().toIso8601String(),
     });
     await prefs.setLastSyncAt('2026-02-23T00:00:00.000Z');
-    gateway.pullResponses.add({'events': <Map<String, dynamic>>[], 'next_cursor': null});
+    gateway.pullResponses.add(
+      const SyncPullResponseModel(events: [], nextCursor: null),
+    );
 
     final service = SyncService(
       db,
@@ -373,6 +455,174 @@ void main() {
     expect(gateway.pullCalls, isNotEmpty);
     expect(gateway.pullCalls.first['cursor'], isNull);
     expect(gateway.pullCalls.first['since'], '2026-02-23T00:00:00.000Z');
+
+    await db.reset();
+  });
+
+  test('successful sync overwrites local intelligence caches', () async {
+    final db = await createTestDb('sync_service_intelligence_cache');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    // Seed old cache rows to verify replace/overwrite behavior.
+    await sql.insert('customer_metrics', {
+      'customer_id': 'old-c1',
+      'outstanding_amount': 1.0,
+      'oldest_due_days': 1,
+      'avg_days_to_pay': 1.0,
+      'on_time_rate': 1.0,
+      'payment_frequency_30d': 1.0,
+      'risk_score': 1,
+      'risk_level': 'green',
+      'explanation_json': null,
+      'version': 1,
+      'computed_at': DateTime.now().toIso8601String(),
+    });
+    await sql.insert('alerts', {
+      'id': 'old-alert',
+      'type': 'credit_overdue',
+      'entity_type': 'customer',
+      'entity_id': 'old-c1',
+      'severity': 'warn',
+      'title': 'Old',
+      'body': 'Old',
+      'action_type': null,
+      'action_payload_json': null,
+      'created_at': DateTime.now().toIso8601String(),
+      'resolved_at': null,
+    });
+    await sql.insert('product_metrics', {
+      'product_id': 'old-p1',
+      'product_name': 'Old Product',
+      'stock_qty': 1.0,
+      'cost_price': 1.0,
+      'qty_sold_7d': 0.0,
+      'qty_sold_30d': 0.0,
+      'revenue_30d': 0.0,
+      'profit_30d': 0.0,
+      'last_sale_at': null,
+      'dead_stock': 1,
+      'dead_stock_value': 1.0,
+      'computed_at': DateTime.now().toIso8601String(),
+    });
+    await sql.insert('business_metrics_cache', {
+      'cache_key': 'default',
+      'from_date': null,
+      'to_date': null,
+      'payload_json': '{"sales_total":1}',
+      'computed_at': DateTime.now().toIso8601String(),
+    });
+
+    gateway.customerMetricsResponse = {
+      'items': [
+        {
+          'customer_id': 'c1',
+          'outstanding_amount': 500,
+          'oldest_due_days': 22,
+          'avg_days_to_pay': 14,
+          'on_time_rate': 0.3,
+          'payment_frequency_30d': 2,
+          'risk_score': 74,
+          'risk_level': 'red',
+          'factors': {
+            'oldest_due_factor': 0.5,
+            'avg_days_to_pay_factor': 0.3,
+            'late_behavior_factor': 0.7,
+            'outstanding_spike_factor': 0.4,
+          },
+        },
+      ],
+    };
+    gateway.alertsResponse = {
+      'items': [
+        {
+          'id': 'a1',
+          'type': 'credit_overdue',
+          'entity_type': 'customer',
+          'entity_id': 'c1',
+          'severity': 'critical',
+          'title': 'Credit overdue',
+          'body': 'Customer owes NPR 500',
+          'action_type': 'open_customer',
+          'action_payload': {'customer_id': 'c1'},
+          'created_at': '2026-02-24T12:00:00Z',
+        },
+      ],
+    };
+    gateway.productMetricsResponse = {
+      'items': [
+        {
+          'product_id': 'p1',
+          'product_name': 'WaiWai',
+          'stock_qty': 2,
+          'cost_price': 12,
+          'qty_sold_7d': 18,
+          'qty_sold_30d': 42,
+          'revenue_30d': 840,
+          'profit_30d': 210,
+          'last_sale_at': '2026-02-24T11:00:00Z',
+          'dead_stock': false,
+          'dead_stock_value': 0,
+          'computed_at': '2026-02-24T12:00:00Z',
+        },
+      ],
+    };
+    gateway.businessMetricsResponse = {
+      'sales_total': 1200,
+      'expenses_total': 450,
+      'profit_est': 750,
+      'profit_margin': 62.5,
+      'outstanding_total': 800,
+      'overdue_total': 500,
+      'cash_risk_level': 'high',
+      'low_stock_count': 1,
+      'dead_stock_count': 0,
+      'high_risk_customers': 1,
+      'open_alerts_count': 1,
+      'computed_at': '2026-02-24T12:00:00Z',
+      'reasons': ['Overdue credit NPR 500.00'],
+    };
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSync(localeCode: 'en');
+
+    final metricRows = await sql.query('customer_metrics');
+    expect(metricRows, hasLength(1));
+    expect(metricRows.single['customer_id'], 'c1');
+    expect(metricRows.single['risk_level'], 'red');
+    expect(metricRows.single['risk_score'], 74);
+
+    final alertRows = await sql.query('alerts');
+    expect(alertRows, hasLength(1));
+    expect(alertRows.single['id'], 'a1');
+    expect(alertRows.single['severity'], 'critical');
+    expect(alertRows.single['action_type'], 'open_customer');
+
+    final productRows = await sql.query('product_metrics');
+    expect(productRows, hasLength(1));
+    expect(productRows.single['product_id'], 'p1');
+    expect(productRows.single['product_name'], 'WaiWai');
+    expect((productRows.single['qty_sold_7d'] as num).toDouble(), 18);
+
+    final businessRows = await sql.query(
+      'business_metrics_cache',
+      where: 'cache_key = ?',
+      whereArgs: ['default'],
+    );
+    expect(businessRows, hasLength(1));
+    final cachedPayload = Map<String, dynamic>.from(
+      jsonDecode(businessRows.single['payload_json'] as String) as Map,
+    );
+    expect(cachedPayload['cash_risk_level'], 'high');
+    expect(cachedPayload['sales_total'], 1200);
 
     await db.reset();
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/stock_movement.dart';
@@ -16,6 +17,7 @@ class ProductDetailScreen extends ConsumerWidget {
     final productAsync = ref.watch(productDetailProvider(productId));
     final movementsAsync = ref.watch(stockMovementsProvider(productId));
     final currFmt = NumberFormat('#,##0.00');
+    final canAdjustStock = ref.watch(canAdjustStockProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -179,19 +181,21 @@ class ProductDetailScreen extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.tune_rounded),
                     label: const Text('Adjust Stock'),
-                    onPressed: () => Navigator.of(context)
-                        .push(MaterialPageRoute(
-                          builder: (_) => StockAdjustmentScreen(
-                            productId: product.id,
-                            productName: product.name,
-                            currentStock: product.stockQty,
-                          ),
-                        ))
-                        .then((_) {
-                      ref.invalidate(productDetailProvider(productId));
-                      ref.invalidate(stockMovementsProvider(productId));
-                      ref.invalidate(productsListProvider);
-                    }),
+                    onPressed: canAdjustStock
+                        ? () => Navigator.of(context)
+                            .push(MaterialPageRoute(
+                              builder: (_) => StockAdjustmentScreen(
+                                productId: product.id,
+                                productName: product.name,
+                                currentStock: product.stockQty,
+                              ),
+                            ))
+                            .then((_) {
+                          ref.invalidate(productDetailProvider(productId));
+                          ref.invalidate(stockMovementsProvider(productId));
+                          ref.invalidate(productsListProvider);
+                        })
+                        : null,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import 'product_detail_screen.dart';
@@ -15,6 +16,7 @@ class ProductsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final products = ref.watch(productsListProvider);
+    final canAdjustStock = ref.watch(canAdjustStockProvider);
 
     return Column(
       children: [
@@ -151,18 +153,19 @@ class ProductsScreen extends ConsumerWidget {
                                     const SizedBox(width: AppSpacing.xs),
                                     IconButton(
                                       tooltip: 'Adjust stock',
-                                      onPressed:
-                                          () => Navigator.of(context)
-                                            .push(MaterialPageRoute(
-                                              builder: (_) =>
-                                                  StockAdjustmentScreen(
-                                                productId: p.id,
-                                                productName: p.name,
-                                                currentStock: p.stockQty,
-                                              ),
-                                            ))
-                                            .then((_) => ref
-                                                .invalidate(productsListProvider)),
+                                      onPressed: canAdjustStock
+                                          ? () => Navigator.of(context)
+                                              .push(MaterialPageRoute(
+                                                builder: (_) =>
+                                                    StockAdjustmentScreen(
+                                                  productId: p.id,
+                                                  productName: p.name,
+                                                  currentStock: p.stockQty,
+                                                ),
+                                              ))
+                                              .then((_) => ref.invalidate(
+                                                  productsListProvider))
+                                          : null,
                                       icon: const Icon(
                                         Icons.tune_rounded,
                                         size: 18,
@@ -178,16 +181,18 @@ class ProductsScreen extends ConsumerWidget {
                                     ))
                                     .then((_) =>
                                         ref.invalidate(productsListProvider)),
-                                onLongPress: () => Navigator.of(context)
-                                    .push(MaterialPageRoute(
-                                      builder: (_) => StockAdjustmentScreen(
-                                        productId: p.id,
-                                        productName: p.name,
-                                        currentStock: p.stockQty,
-                                      ),
-                                    ))
-                                    .then((_) =>
-                                        ref.invalidate(productsListProvider)),
+                                onLongPress: canAdjustStock
+                                    ? () => Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                          builder: (_) => StockAdjustmentScreen(
+                                            productId: p.id,
+                                            productName: p.name,
+                                            currentStock: p.stockQty,
+                                          ),
+                                        ))
+                                        .then((_) => ref.invalidate(
+                                            productsListProvider))
+                                    : null,
                               ),
                             );
                           },

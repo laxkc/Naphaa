@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 import hashlib
 import json
+import logging
+from time import perf_counter
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
@@ -14,6 +16,7 @@ from app.models.sale import Sale, SaleItem
 from app.models.sale_payment import SalePayment
 from app.models.sync_event import SyncEvent
 from app.services.inventory_service import InventoryService
+from app.services.ledger_service import LedgerService
 from app.schemas.sync import (
     SyncPushFailedEvent,
     SyncPullEvent,
@@ -32,6 +35,8 @@ class SyncApplyError(Exception):
 
 
 class SyncService:
+    _log = logging.getLogger("app.sync")
+
     @staticmethod
     def _to_decimal(value: object, *, default: str = "0") -> Decimal:
         if value is None:
@@ -40,6 +45,20 @@ class SyncService:
             return Decimal(str(value))
         except (InvalidOperation, ValueError):
             return Decimal(default)
+
+    @staticmethod
+    def _to_datetime(value: object) -> datetime | None:
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            try:
+                return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        return None
 
     @staticmethod
     def _apply_product_event(db: Session, store_id: str, operation: str, payload: dict) -> None:
@@ -106,6 +125,21 @@ class SyncService:
 
         if "name" in payload and str(payload.get("name") or "").strip() != "":
             product.name = str(payload["name"]).strip()
+        payload_updated_at = SyncService._to_datetime(payload.get("updated_at"))
+        if payload_updated_at is not None and product.updated_at is not None:
+            server_updated_at = product.updated_at
+            if (
+                server_updated_at.tzinfo is not None
+                and payload_updated_at.tzinfo is None
+            ):
+                payload_updated_at = payload_updated_at.replace(tzinfo=UTC)
+            elif (
+                server_updated_at.tzinfo is None
+                and payload_updated_at.tzinfo is not None
+            ):
+                server_updated_at = server_updated_at.replace(tzinfo=UTC)
+            if payload_updated_at < server_updated_at:
+                raise SyncApplyError("CONFLICT_STALE_EVENT", "Stale product update rejected by server")
         if "sell_price" in payload:
             product.sell_price = SyncService._to_decimal(payload.get("sell_price"))
         if "cost_price" in payload:
@@ -164,6 +198,21 @@ class SyncService:
 
         if "name" in payload and str(payload.get("name") or "").strip() != "":
             customer.name = str(payload["name"]).strip()
+        payload_updated_at = SyncService._to_datetime(payload.get("updated_at"))
+        if payload_updated_at is not None and customer.updated_at is not None:
+            server_updated_at = customer.updated_at
+            if (
+                server_updated_at.tzinfo is not None
+                and payload_updated_at.tzinfo is None
+            ):
+                payload_updated_at = payload_updated_at.replace(tzinfo=UTC)
+            elif (
+                server_updated_at.tzinfo is None
+                and payload_updated_at.tzinfo is not None
+            ):
+                server_updated_at = server_updated_at.replace(tzinfo=UTC)
+            if payload_updated_at < server_updated_at:
+                raise SyncApplyError("CONFLICT_STALE_EVENT", "Stale customer update rejected by server")
         if "phone" in payload:
             customer.phone = str(payload["phone"]).strip() if payload.get("phone") else None
         if "balance" in payload:
@@ -222,6 +271,7 @@ class SyncService:
             customer.device_id = str(payload.get("device_id"))
         db.add(payment)
         db.add(customer)
+        LedgerService.record_customer_payment(db, payment)
 
     @staticmethod
     def _apply_expense_event(db: Session, store_id: str, operation: str, payload: dict) -> None:
@@ -260,6 +310,7 @@ class SyncService:
                 created_at=payload.get("created_at") if isinstance(payload.get("created_at"), datetime) else None,
             )
             db.add(expense)
+            LedgerService.record_expense(db, expense)
             return
 
         if "category" in payload and str(payload.get("category") or "").strip() != "":
@@ -446,6 +497,7 @@ class SyncService:
                 if payload.get("device_id"):
                     customer.device_id = str(payload.get("device_id"))
                 db.add(customer)
+        LedgerService.record_sale(db, sale, credit_component=credit_amount)
 
     @staticmethod
     def _apply_event(db: Session, store_id: str, entity: str, operation: str, payload: dict) -> None:
@@ -486,8 +538,11 @@ class SyncService:
 
     @staticmethod
     def push(db: Session, store_id: str, payload: SyncPushRequest) -> SyncPushResponse:
+        started = perf_counter()
         acked_op_ids: list[str] = []
         failed_events: list[SyncPushFailedEvent] = []
+        duplicate_events = 0
+        applied_events = 0
         for event in payload.events:
             event_payload = dict(event.payload)
             event_payload.setdefault("schema_version", 1)
@@ -509,6 +564,7 @@ class SyncService:
                 )
             )
             if existing is not None:
+                duplicate_events += 1
                 if event.op_id:
                     acked_op_ids.append(event.op_id)
                 continue
@@ -525,6 +581,7 @@ class SyncService:
                             created_at=datetime.now(UTC),
                         )
                     )
+                applied_events += 1
                 if event.op_id:
                     acked_op_ids.append(event.op_id)
             except SyncApplyError as exc:
@@ -548,6 +605,16 @@ class SyncService:
                     )
                 )
         db.commit()
+        SyncService._log.info(
+            "sync_push store_id=%s received=%d applied=%d duplicates=%d acked=%d failed=%d duration_ms=%d",
+            store_id,
+            len(payload.events),
+            applied_events,
+            duplicate_events,
+            len(acked_op_ids),
+            len(failed_events),
+            int((perf_counter() - started) * 1000),
+        )
         return SyncPushResponse(acked_op_ids=acked_op_ids, failed_events=failed_events)
 
     @staticmethod
@@ -559,6 +626,7 @@ class SyncService:
         *,
         limit: int = 200,
     ) -> SyncPullResponse:
+        started = perf_counter()
         query = select(SyncEvent).where(SyncEvent.store_id == store_id)
         if cursor:
             cursor_event = db.scalar(
@@ -585,7 +653,7 @@ class SyncService:
         rows = db.scalars(
             query.order_by(SyncEvent.created_at.asc(), SyncEvent.id.asc()).limit(limit)
         ).all()
-        return SyncPullResponse(
+        response = SyncPullResponse(
             events=[
                 SyncPullEvent(
                     id=row.id,
@@ -598,6 +666,17 @@ class SyncService:
             ],
             next_cursor=rows[-1].id if rows else cursor,
         )
+        SyncService._log.info(
+            "sync_pull store_id=%s limit=%d cursor=%s since=%s returned=%d next_cursor=%s duration_ms=%d",
+            store_id,
+            limit,
+            cursor or "-",
+            since.isoformat() if since else "-",
+            len(response.events),
+            response.next_cursor or "-",
+            int((perf_counter() - started) * 1000),
+        )
+        return response
 
     @staticmethod
     def status(db: Session, store_id: str) -> SyncStatusResponse:

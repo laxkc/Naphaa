@@ -1,14 +1,21 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'db_open_strategy.dart';
+
 class LocalDatabase {
-  LocalDatabase({this.dbName = 'sme_digital.db'});
+  LocalDatabase({
+    this.dbName = 'sme_digital.db',
+    DatabaseOpenStrategy? openStrategy,
+  }) : _openStrategy = openStrategy ?? const SqfliteDatabaseOpenStrategy();
 
   static final LocalDatabase instance = LocalDatabase();
 
   final String dbName;
+  final DatabaseOpenStrategy _openStrategy;
 
   Database? _database;
 
@@ -20,9 +27,9 @@ class LocalDatabase {
 
   Future<Database> _initDb() async {
     final dbPath = await getDatabasesPath();
-    return openDatabase(
-      join(dbPath, dbName),
-      version: 7,
+    return _openStrategy.open(
+      path: join(dbPath, dbName),
+      version: 9,
       onCreate: (db, version) async {
         await _createSchema(db);
       },
@@ -117,7 +124,9 @@ class LocalDatabase {
             await db.execute("ALTER TABLE customers ADD COLUMN notes TEXT");
           } catch (_) {}
           try {
-            await db.execute("ALTER TABLE customers ADD COLUMN created_at TEXT");
+            await db.execute(
+              "ALTER TABLE customers ADD COLUMN created_at TEXT",
+            );
           } catch (_) {}
           try {
             await db.execute(
@@ -130,7 +139,9 @@ class LocalDatabase {
             await db.execute("ALTER TABLE sync_queue ADD COLUMN op_id TEXT");
           } catch (_) {}
           try {
-            await db.execute("ALTER TABLE sync_queue ADD COLUMN entity_id TEXT");
+            await db.execute(
+              "ALTER TABLE sync_queue ADD COLUMN entity_id TEXT",
+            );
           } catch (_) {}
           try {
             await db.execute(
@@ -143,10 +154,14 @@ class LocalDatabase {
             );
           } catch (_) {}
           try {
-            await db.execute("ALTER TABLE sync_queue ADD COLUMN last_error TEXT");
+            await db.execute(
+              "ALTER TABLE sync_queue ADD COLUMN last_error TEXT",
+            );
           } catch (_) {}
           try {
-            await db.execute("ALTER TABLE sync_queue ADD COLUMN updated_at TEXT");
+            await db.execute(
+              "ALTER TABLE sync_queue ADD COLUMN updated_at TEXT",
+            );
           } catch (_) {}
           try {
             await db.execute(
@@ -158,6 +173,86 @@ class LocalDatabase {
               "UPDATE sync_queue SET updated_at = created_at WHERE updated_at IS NULL",
             );
           } catch (_) {}
+        }
+        if (oldVersion < 8) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS customer_metrics (
+              customer_id TEXT PRIMARY KEY,
+              outstanding_amount REAL NOT NULL DEFAULT 0,
+              oldest_due_days INTEGER NOT NULL DEFAULT 0,
+              avg_days_to_pay REAL NOT NULL DEFAULT 0,
+              on_time_rate REAL NOT NULL DEFAULT 0,
+              payment_frequency_30d REAL NOT NULL DEFAULT 0,
+              risk_score INTEGER NOT NULL DEFAULT 0,
+              risk_level TEXT NOT NULL DEFAULT 'green',
+              explanation_json TEXT,
+              version INTEGER NOT NULL DEFAULT 1,
+              computed_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_customer_metrics_risk_level ON customer_metrics(risk_level)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_customer_metrics_risk_score ON customer_metrics(risk_score)',
+          );
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS alerts (
+              id TEXT PRIMARY KEY,
+              type TEXT NOT NULL,
+              entity_type TEXT NOT NULL,
+              entity_id TEXT,
+              severity TEXT NOT NULL DEFAULT 'info',
+              title TEXT NOT NULL,
+              body TEXT NOT NULL,
+              action_type TEXT,
+              action_payload_json TEXT,
+              created_at TEXT NOT NULL,
+              resolved_at TEXT
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_alerts_type ON alerts(type)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_alerts_severity ON alerts(severity)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_alerts_resolved_at ON alerts(resolved_at)',
+          );
+        }
+        if (oldVersion < 9) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS product_metrics (
+              product_id TEXT PRIMARY KEY,
+              product_name TEXT NOT NULL,
+              stock_qty REAL NOT NULL DEFAULT 0,
+              cost_price REAL,
+              qty_sold_7d REAL NOT NULL DEFAULT 0,
+              qty_sold_30d REAL NOT NULL DEFAULT 0,
+              revenue_30d REAL NOT NULL DEFAULT 0,
+              profit_30d REAL,
+              last_sale_at TEXT,
+              dead_stock INTEGER NOT NULL DEFAULT 0,
+              dead_stock_value REAL,
+              computed_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_product_metrics_dead_stock ON product_metrics(dead_stock)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_product_metrics_qty7 ON product_metrics(qty_sold_7d)',
+          );
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS business_metrics_cache (
+              cache_key TEXT PRIMARY KEY,
+              from_date TEXT,
+              to_date TEXT,
+              payload_json TEXT NOT NULL,
+              computed_at TEXT NOT NULL
+            )
+          ''');
         }
       },
     );
@@ -294,6 +389,82 @@ class LocalDatabase {
         last_error TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE customer_metrics (
+        customer_id TEXT PRIMARY KEY,
+        outstanding_amount REAL NOT NULL DEFAULT 0,
+        oldest_due_days INTEGER NOT NULL DEFAULT 0,
+        avg_days_to_pay REAL NOT NULL DEFAULT 0,
+        on_time_rate REAL NOT NULL DEFAULT 0,
+        payment_frequency_30d REAL NOT NULL DEFAULT 0,
+        risk_score INTEGER NOT NULL DEFAULT 0,
+        risk_level TEXT NOT NULL DEFAULT 'green',
+        explanation_json TEXT,
+        version INTEGER NOT NULL DEFAULT 1,
+        computed_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_customer_metrics_risk_level ON customer_metrics(risk_level)',
+    );
+    await db.execute(
+      'CREATE INDEX ix_customer_metrics_risk_score ON customer_metrics(risk_score)',
+    );
+
+    await db.execute('''
+      CREATE TABLE alerts (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT,
+        severity TEXT NOT NULL DEFAULT 'info',
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        action_type TEXT,
+        action_payload_json TEXT,
+        created_at TEXT NOT NULL,
+        resolved_at TEXT
+      )
+    ''');
+    await db.execute('CREATE INDEX ix_alerts_type ON alerts(type)');
+    await db.execute('CREATE INDEX ix_alerts_severity ON alerts(severity)');
+    await db.execute(
+      'CREATE INDEX ix_alerts_resolved_at ON alerts(resolved_at)',
+    );
+
+    await db.execute('''
+      CREATE TABLE product_metrics (
+        product_id TEXT PRIMARY KEY,
+        product_name TEXT NOT NULL,
+        stock_qty REAL NOT NULL DEFAULT 0,
+        cost_price REAL,
+        qty_sold_7d REAL NOT NULL DEFAULT 0,
+        qty_sold_30d REAL NOT NULL DEFAULT 0,
+        revenue_30d REAL NOT NULL DEFAULT 0,
+        profit_30d REAL,
+        last_sale_at TEXT,
+        dead_stock INTEGER NOT NULL DEFAULT 0,
+        dead_stock_value REAL,
+        computed_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_product_metrics_dead_stock ON product_metrics(dead_stock)',
+    );
+    await db.execute(
+      'CREATE INDEX ix_product_metrics_qty7 ON product_metrics(qty_sold_7d)',
+    );
+
+    await db.execute('''
+      CREATE TABLE business_metrics_cache (
+        cache_key TEXT PRIMARY KEY,
+        from_date TEXT,
+        to_date TEXT,
+        payload_json TEXT NOT NULL,
+        computed_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> reset() async {
@@ -316,27 +487,52 @@ class LocalDatabase {
     if (rows > 0) return;
 
     final now = DateTime.now().toIso8601String();
-    await db.insert('products', {
-      'id': _id(),
-      'name': 'Rice',
-      'sell_price': 120.0,
-      'stock_qty': 80.0,
-      'updated_at': now,
-    });
-    await db.insert('products', {
-      'id': _id(),
-      'name': 'Oil',
-      'sell_price': 350.0,
-      'stock_qty': 30.0,
-      'updated_at': now,
-    });
-    await db.insert('products', {
-      'id': _id(),
-      'name': 'Sugar',
-      'sell_price': 90.0,
-      'stock_qty': 50.0,
-      'updated_at': now,
-    });
+    Future<void> seedProduct({
+      required String name,
+      required double sellPrice,
+      required double stockQty,
+    }) async {
+      final id = _id();
+      await db.insert('products', {
+        'id': id,
+        'name': name,
+        'sell_price': sellPrice,
+        'cost_price': 0.0,
+        'stock_qty': stockQty,
+        'low_stock_threshold': 0.0,
+        'unit': 'piece',
+        'category': null,
+        'updated_at': now,
+      });
+      // Seeded starter products must also be synced to backend; otherwise sales
+      // against them fail with PRODUCT_NOT_FOUND during /sync/push.
+      await db.insert('sync_queue', {
+        'op_id': _id(),
+        'entity': 'product',
+        'entity_id': id,
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': id,
+          'name': name,
+          'sell_price': sellPrice,
+          'cost_price': 0.0,
+          'stock_qty': stockQty,
+          'low_stock_threshold': 0.0,
+          'unit': 'piece',
+          'category': null,
+          'updated_at': now,
+        }),
+        'created_at': now,
+        'updated_at': now,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
+    }
+
+    await seedProduct(name: 'Rice', sellPrice: 120.0, stockQty: 80.0);
+    await seedProduct(name: 'Oil', sellPrice: 350.0, stockQty: 30.0);
+    await seedProduct(name: 'Sugar', sellPrice: 90.0, stockQty: 50.0);
   }
 
   Future<void> injectRealisticTestData({int salesCount = 100}) async {

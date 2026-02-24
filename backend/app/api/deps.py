@@ -54,3 +54,18 @@ def get_current_store(
             "Store not found for user",
         )
     return store
+
+
+def require_roles(*allowed_roles: str):
+    normalized = {role.strip().lower() for role in allowed_roles if role.strip()}
+
+    def _dependency(user: User = Depends(get_current_user)) -> User:
+        if normalized and str(getattr(user, "role", "owner")).lower() not in normalized:
+            raise_api_error(
+                status.HTTP_403_FORBIDDEN,
+                "FORBIDDEN",
+                "You do not have permission to access this resource",
+            )
+        return user
+
+    return _dependency

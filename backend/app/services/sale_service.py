@@ -13,6 +13,7 @@ from app.schemas.sale import SaleCreate, SaleRefundCreate, SaleType
 from app.core.errors import raise_api_error
 from app.models.stock_movement import StockMovement
 from app.services.inventory_service import InventoryService
+from app.services.ledger_service import LedgerService
 from app.services.sync_event_service import SyncEventService
 
 
@@ -190,6 +191,7 @@ class SaleService:
 
             db.add(sale)
             db.flush()
+            LedgerService.record_sale(db, sale, credit_component=credit_component)
             hydrated_for_sync = db.scalar(
                 select(Sale)
                 .where(Sale.id == sale.id)
@@ -419,6 +421,13 @@ class SaleService:
                     customer.updated_by = actor_user_id
                     customer.device_id = device_id
                     db.add(customer)
+
+            LedgerService.record_refund(
+                db,
+                refund,
+                customer_id=sale.customer_id,
+                sale_id=sale.id,
+            )
 
             db.commit()
         except HTTPException:

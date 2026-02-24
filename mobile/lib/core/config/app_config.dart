@@ -10,6 +10,14 @@ class AppConfig {
   static const String apiBaseUrl = 'http://$_apiHost:8000/api/v1';
   static const String defaultCurrency = 'NPR';
   static const String defaultLocale = 'ne';
+  static const int syncPushChunkSize = int.fromEnvironment(
+    'SYNC_PUSH_CHUNK_SIZE',
+    defaultValue: 50,
+  );
+  static const int syncPullChunkSize = int.fromEnvironment(
+    'SYNC_PULL_CHUNK_SIZE',
+    defaultValue: 100,
+  );
 
   // No login UI: app silently uses this device account for backend auth.
   static const String demoPhone = '9800000999';

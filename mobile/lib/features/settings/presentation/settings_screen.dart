@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/l10n/context_i18n.dart';
+import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -10,6 +11,7 @@ import 'business_settings_screen.dart';
 import 'tax_settings_screen.dart';
 import 'user_management_screen.dart';
 import 'subscription_screen.dart';
+import '../../sync/presentation/sync_queue_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -19,6 +21,8 @@ class SettingsScreen extends ConsumerWidget {
     final locale = ref.watch(localeControllerProvider);
     final controller = ref.read(localeControllerProvider.notifier);
     final l10n = AppLocalizations.of(context)!;
+    final isOwner = ref.watch(canManageSettingsProvider);
+    final canManageUsers = ref.watch(canManageUsersProvider);
 
     return ListView(
       children: [
@@ -31,22 +35,26 @@ class SettingsScreen extends ConsumerWidget {
                   size: 20, color: AppColors.muted),
               title: context.tr('Business Settings', 'व्यवसाय सेटिङ'),
               subtitle: context.tr('Name, address, currency', 'नाम, ठेगाना, मुद्रा'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const BusinessSettingsScreen()),
-              ),
+              onTap: isOwner
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const BusinessSettingsScreen()),
+                      )
+                  : null,
             ),
             AppListTile(
               leading: const Icon(Icons.receipt_outlined,
                   size: 20, color: AppColors.muted),
               title: context.tr('Tax Settings', 'कर सेटिङ'),
               subtitle: context.tr('VAT / PAN / tax rate', 'VAT / PAN / कर दर'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const TaxSettingsScreen()),
-              ),
+              onTap: isOwner
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const TaxSettingsScreen()),
+                      )
+                  : null,
             ),
           ],
         ),
@@ -60,22 +68,26 @@ class SettingsScreen extends ConsumerWidget {
                   size: 20, color: AppColors.muted),
               title: context.tr('User Management', 'प्रयोगकर्ता व्यवस्थापन'),
               subtitle: context.tr('Invite staff, set roles', 'कर्मचारी बोलाउनुहोस्, भूमिका सेट गर्नुहोस्'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const UserManagementScreen()),
-              ),
+              onTap: canManageUsers
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const UserManagementScreen()),
+                      )
+                  : null,
             ),
             AppListTile(
               leading: const Icon(Icons.workspace_premium_outlined,
                   size: 20, color: AppColors.muted),
               title: context.tr('Subscription', 'सदस्यता'),
               subtitle: context.tr('Plan, billing details', 'योजना, बिलिङ विवरण'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const SubscriptionScreen()),
-              ),
+              onTap: isOwner
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SubscriptionScreen()),
+                      )
+                  : null,
             ),
           ],
         ),
@@ -142,6 +154,17 @@ class SettingsScreen extends ConsumerWidget {
         SectionHeader(context.tr('ABOUT', 'बारेमा')),
         _SettingsCard(
           children: [
+            AppListTile(
+              leading: const Icon(Icons.sync_problem_outlined,
+                  size: 20, color: AppColors.muted),
+              title: context.tr('Sync Diagnostics', 'सिंक डायग्नोस्टिक्स'),
+              subtitle: context.tr('Queue, retries, sync errors', 'क्यू, पुन:प्रयास, त्रुटिहरू'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
+              ),
+            ),
+            const Divider(height: 1),
             AppListTile(
               leading: const Icon(Icons.info_outline_rounded,
                   size: 20, color: AppColors.muted),

@@ -5,7 +5,11 @@ import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../customers/presentation/customer_form_screen.dart';
+import '../../expenses/presentation/expenses_screen.dart';
 import '../../products/domain/product.dart';
+import '../../products/presentation/product_form_screen.dart';
+import '../../sales/presentation/create_sale_screen.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -64,38 +68,16 @@ class DashboardScreen extends ConsumerWidget {
                 // ── hero card ──────────────────────────────────────────────
                 _HeroCard(
                   sales: sales,
+                  expenses: expenses,
+                  profit: profit,
                   localeCode: localeCode,
                   today: today,
                   l10n: l10n,
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                // ── kpi row ────────────────────────────────────────────────
-                Row(
-                  children: [
-                    Expanded(
-                      child: _KpiCard(
-                        title: l10n.expenses,
-                        value: formatCurrency(expenses, localeCode),
-                        icon: Icons.receipt_long_outlined,
-                        color: AppColors.warning,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: _KpiCard(
-                        title: l10n.netAfterExpenses,
-                        value: formatCurrency(profit, localeCode),
-                        icon:
-                            profit >= 0
-                                ? Icons.trending_up_rounded
-                                : Icons.trending_down_rounded,
-                        color:
-                            profit >= 0 ? AppColors.success : AppColors.error,
-                      ),
-                    ),
-                  ],
-                ),
+                // ── quick actions ──────────────────────────────────────────
+                const _QuickActions(),
                 const SizedBox(height: AppSpacing.md),
 
                 // ── cashflow health card ───────────────────────────────────
@@ -136,80 +118,176 @@ class DashboardScreen extends ConsumerWidget {
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.sales,
+    required this.expenses,
+    required this.profit,
     required this.localeCode,
     required this.today,
     required this.l10n,
   });
 
   final double sales;
+  final double expenses;
+  final double profit;
   final String localeCode;
   final String today;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF004D40), Color(0xFF00897B)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final profitColor =
+        profit >= 0 ? const Color(0xFF80CBC4) : const Color(0xFFEF9A9A);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      child: Stack(
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.bar_chart_rounded,
-                size: 16,
-                color: Colors.white60,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                l10n.dashboardOverview,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white70,
-                  letterSpacing: 0.4,
+          // gradient background — Positioned.fill so it always covers full height
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF004D40), Color(0xFF00897B)],
                 ),
               ),
-              const Spacer(),
-              Text(
-                today,
-                style: const TextStyle(fontSize: 12, color: Colors.white60),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            formatCurrency(sales, localeCode),
-            style: const TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: -1,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              const Icon(
-                Icons.arrow_upward_rounded,
-                size: 13,
-                color: Colors.white60,
+          // decorative circles
+          Positioned(
+            top: -28,
+            right: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withAlpha(13),
               ),
-              const SizedBox(width: 3),
-              Text(
-                l10n.todaySales,
-                style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
+          ),
+          Positioned(
+            bottom: -40,
+            right: 60,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withAlpha(8),
               ),
-            ],
+            ),
+          ),
+          // content
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // top row: label + date chip
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.bar_chart_rounded,
+                      size: 16,
+                      color: Colors.white60,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      l10n.dashboardOverview.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white70,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(20),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        today,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                // sales amount
+                Text(
+                  formatCurrency(sales, localeCode),
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -1.5,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 13,
+                      color: Colors.white60,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      l10n.todaySales,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // thin divider
+                Container(
+                  height: 1,
+                  color: Colors.white.withAlpha(25),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // sub-stats row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HeroStat(
+                        icon: Icons.receipt_long_outlined,
+                        label: l10n.expenses,
+                        value: formatCurrency(expenses, localeCode),
+                        valueColor: Colors.white,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 32,
+                      color: Colors.white.withAlpha(25),
+                    ),
+                    Expanded(
+                      child: _HeroStat(
+                        icon: profit >= 0
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded,
+                        label: l10n.netAfterExpenses,
+                        value: formatCurrency(profit, localeCode),
+                        valueColor: profitColor,
+                        alignEnd: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -217,43 +295,54 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ─── kpi card ─────────────────────────────────────────────────────────────────
-
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.title,
-    required this.value,
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({
     required this.icon,
-    required this.color,
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    this.alignEnd = false,
   });
 
-  final String title;
-  final String value;
   final IconData icon;
-  final Color color;
+  final String label;
+  final String value;
+  final Color valueColor;
+  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    final alignment =
+        alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: alignEnd ? AppSpacing.md : 0,
+        right: alignEnd ? 0 : AppSpacing.md,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: alignment,
         children: [
-          CategoryBadge(icon: icon, color: color),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: AppColors.muted),
+          Row(
+            mainAxisAlignment:
+                alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              Icon(icon, size: 12, color: Colors.white60),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Colors.white60),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 3),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: TextStyle(
+              fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: color,
+              color: valueColor,
             ),
           ),
         ],
@@ -308,12 +397,14 @@ class _HealthCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.pill),
             child: LinearProgressIndicator(
               value: creditRatio,
-              minHeight: 8,
+              minHeight: 10,
               backgroundColor: AppColors.surfaceAlt,
               color: status.color,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
+          const Divider(),
+          const SizedBox(height: AppSpacing.sm),
 
           Row(
             children: [
@@ -380,15 +471,7 @@ class _DashboardSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
-          SkeletonBox(height: 130, radius: AppRadius.xl),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(child: SkeletonBox(height: 100, radius: AppRadius.lg)),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: SkeletonBox(height: 100, radius: AppRadius.lg)),
-            ],
-          ),
+          SkeletonBox(height: 170, radius: AppRadius.xl),
           const SizedBox(height: AppSpacing.md),
           SkeletonBox(height: 130, radius: AppRadius.lg),
         ],
@@ -449,6 +532,15 @@ class _LowStockCard extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: Row(
                         children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: AppSpacing.sm),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.warning,
+                            ),
+                          ),
                           Expanded(
                             child: Text(
                               p.name.toString(),
@@ -458,12 +550,22 @@ class _LowStockCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Text(
-                            p.stockQty.toStringAsFixed(0),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.warning,
-                              fontWeight: FontWeight.w600,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.warningBg,
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                            ),
+                            child: Text(
+                              '${p.stockQty.toStringAsFixed(0)} left',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.warning,
+                              ),
                             ),
                           ),
                         ],
@@ -483,4 +585,138 @@ class _HealthStatus {
   const _HealthStatus(this.label, this.color);
   final String label;
   final Color color;
+}
+
+// ─── quick actions ────────────────────────────────────────────────────────────
+
+class _QuickActions extends ConsumerWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'QUICK ACTIONS',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.muted,
+                letterSpacing: 1.0,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.receipt_outlined,
+                label: 'New Sale',
+                color: AppColors.primary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateSaleScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.inventory_2_outlined,
+                label: 'Product',
+                color: AppColors.success,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProductFormScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.person_add_outlined,
+                label: 'Customer',
+                color: AppColors.primaryLight,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CustomerFormScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.payments_outlined,
+                label: 'Expense',
+                color: AppColors.warning,
+                onTap: () => showAppBottomSheet(
+                  context,
+                  child: ExpenseFormSheet(ref: ref, l10n: l10n),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withAlpha(18),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        splashColor: color.withAlpha(30),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.xs,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withAlpha(45),
+                ),
+                child: Icon(icon, size: 20, color: color),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.labelSub,
+                      fontWeight: FontWeight.w600,
+                    ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -12,6 +12,7 @@ import '../../features/products/presentation/products_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/sales/presentation/sales_list_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/sync/presentation/sync_queue_screen.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -133,6 +134,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         (syncStatus.lastError?.isNotEmpty ?? false);
     if (!hasIssue) return null;
 
+    final isConflict = (syncStatus.lastError?.contains('Server has newer data') ?? false);
     final (Color bg, Color fg, IconData icon, String text) = switch (true) {
       _ when !syncStatus.online => (
           AppColors.warningBg,
@@ -152,10 +154,15 @@ class _AppShellState extends ConsumerState<AppShell> {
               : context.tr('Syncing…', 'सिंक हुँदै…'),
         ),
       _ when (syncStatus.lastError?.isNotEmpty ?? false) => (
-          AppColors.errorBg,
-          AppColors.error,
-          Icons.sync_problem_rounded,
-          context.tr('Sync failed. Will retry.', 'सिंक असफल भयो। फेरि प्रयास हुनेछ।'),
+          isConflict ? AppColors.warningBg : AppColors.errorBg,
+          isConflict ? AppColors.warning : AppColors.error,
+          isConflict ? Icons.warning_amber_rounded : Icons.sync_problem_rounded,
+          isConflict
+              ? context.tr(
+                  'Server has newer data. Pull latest and retry.',
+                  'सर्भरमा नयाँ डाटा छ। नयाँ डाटा तानेर फेरि प्रयास गर्नुहोस्।',
+                )
+              : context.tr('Sync failed. Will retry.', 'सिंक असफल भयो। फेरि प्रयास हुनेछ।'),
         ),
       _ => (
           AppColors.warningBg,
@@ -169,7 +176,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     };
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(34),
+      preferredSize: Size.fromHeight(syncStatus.lastDurationMs != null ? 48 : 34),
       child: Container(
         width: double.infinity,
         color: bg,
@@ -177,41 +184,67 @@ class _AppShellState extends ConsumerState<AppShell> {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.xs,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: fg),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: fg,
-                ),
-              ),
-            ),
-            if (syncStatus.online &&
-                !syncStatus.syncing &&
-                (syncStatus.pendingCount > 0 ||
-                    (syncStatus.lastError?.isNotEmpty ?? false)))
-              InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                onTap: () => ref.read(syncCoordinatorProvider.notifier).triggerNow(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 2,
-                  ),
+            Row(
+              children: [
+                Icon(icon, size: 15, color: fg),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
                   child: Text(
-                    context.tr('Sync now', 'अहिले सिंक'),
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: fg,
                     ),
+                  ),
+                ),
+                if (syncStatus.online &&
+                    !syncStatus.syncing &&
+                    (syncStatus.pendingCount > 0 ||
+                        (syncStatus.lastError?.isNotEmpty ?? false)))
+                  InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    onTap: () => ref.read(syncCoordinatorProvider.notifier).triggerNow(),
+                    onLongPress: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        isConflict
+                            ? context.tr('Pull+Retry', 'तान्नुहोस्+फेरि')
+                            : context.tr('Sync now', 'अहिले सिंक'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: fg,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (syncStatus.lastDurationMs != null &&
+                (syncStatus.lastPushed > 0 ||
+                    syncStatus.lastPulled > 0 ||
+                    syncStatus.lastFailed > 0))
+              Padding(
+                padding: const EdgeInsets.only(left: 20, top: 2),
+                child: Text(
+                  'ack ${syncStatus.lastAcked} • fail ${syncStatus.lastFailed} • pull ${syncStatus.lastPulled} • ${syncStatus.lastDurationMs}ms',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: fg.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),

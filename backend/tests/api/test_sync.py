@@ -1,3 +1,8 @@
+from sqlalchemy import select
+
+from app.models.ledger_entry import LedgerEntry
+
+
 def test_sync_push_pull_basic_flow(client, auth_headers, store_id):
     push = client.post(
         "/api/v1/sync/push",
@@ -15,7 +20,7 @@ def test_sync_push_pull_basic_flow(client, auth_headers, store_id):
     assert "failed_events" in body
     assert body["failed_events"] == []
 
-    pull = client.get("/api/v1/sync/pull", headers=auth_headers)
+    pull = client.get("/api/v1/sync/pull", params={"limit": 200}, headers=auth_headers)
     assert pull.status_code == 200
     assert len(pull.json()["events"]) == 2
 
@@ -36,7 +41,7 @@ def test_sync_push_duplicate_event_is_idempotent(client, auth_headers, store_id)
     assert first.status_code == 200
     assert second.status_code == 200
 
-    pull = client.get("/api/v1/sync/pull", headers=auth_headers)
+    pull = client.get("/api/v1/sync/pull", params={"limit": 200}, headers=auth_headers)
     assert pull.status_code == 200
     assert len(pull.json()["events"]) == 1
 
@@ -71,7 +76,7 @@ def test_sync_large_batch_over_100_events(client, auth_headers, store_id):
     assert push.status_code == 200
     assert "acked_op_ids" in push.json()
 
-    pull = client.get("/api/v1/sync/pull", headers=auth_headers)
+    pull = client.get("/api/v1/sync/pull", params={"limit": 200}, headers=auth_headers)
     assert pull.status_code == 200
     assert len(pull.json()["events"]) == 120
 
@@ -604,6 +609,83 @@ def test_sync_push_duplicate_sale_replay_does_not_double_apply_stock_or_credit(c
     assert float(customer_get.json()["balance"]) == 100.0
 
 
+def test_sync_push_financial_events_create_ledger_entries(client, auth_headers, store_id, db_session):
+    seed_resp = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "ledger-seed-prod",
+                    "device_id": "dev-ledger-sync",
+                    "entity": "product",
+                    "operation": "UPSERT",
+                    "payload": {"id": "ledger-sync-prod", "name": "Rice", "sell_price": 20, "stock_qty": 10},
+                },
+                {
+                    "op_id": "ledger-seed-cust",
+                    "device_id": "dev-ledger-sync",
+                    "entity": "customer",
+                    "operation": "UPSERT",
+                    "payload": {"id": "ledger-sync-cust", "name": "Hari", "balance": 0},
+                },
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert seed_resp.status_code == 200
+
+    push = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "ledger-sync-sale",
+                    "device_id": "dev-ledger-sync",
+                    "entity": "sale",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "ledger-sync-sale-1",
+                        "sale_type": "CREDIT",
+                        "payment_method": "CREDIT",
+                        "customer_id": "ledger-sync-cust",
+                        "total_amount": 40,
+                        "items": [{"product_id": "ledger-sync-prod", "qty": 2, "unit_price": 20}],
+                        "payments": [{"id": "ledger-sync-pay-1", "method": "CREDIT", "amount": 40}],
+                    },
+                },
+                {
+                    "op_id": "ledger-sync-custpay",
+                    "device_id": "dev-ledger-sync",
+                    "entity": "customer_payment",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "ledger-sync-custpay-1",
+                        "customer_id": "ledger-sync-cust",
+                        "method": "CASH",
+                        "amount": 10,
+                    },
+                },
+                {
+                    "op_id": "ledger-sync-exp",
+                    "device_id": "dev-ledger-sync",
+                    "entity": "expense",
+                    "operation": "UPSERT",
+                    "payload": {"id": "ledger-sync-exp-1", "category": "OTHER", "amount": 5},
+                },
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert push.status_code == 200
+    assert push.json()["failed_events"] == []
+
+    rows = db_session.scalars(select(LedgerEntry).where(LedgerEntry.store_id == store_id)).all()
+    by_key = {(r.entity_type, r.entity_id): r for r in rows}
+    assert ("sale", "ledger-sync-sale-1") in by_key
+    assert ("customer_payment", "ledger-sync-custpay-1") in by_key
+    assert ("expense", "ledger-sync-exp-1") in by_key
+
+
 def test_sync_push_invalid_sale_event_does_not_partially_apply(client, auth_headers, store_id):
     seed_resp = client.post(
         "/api/v1/sync/push",
@@ -676,3 +758,116 @@ def test_sync_push_invalid_sale_event_does_not_partially_apply(client, auth_head
     customer_get = client.get("/api/v1/customers/strict-cust-1", headers=auth_headers)
     assert float(product_get.json()["stock_qty"]) == 5.0
     assert float(customer_get.json()["balance"]) == 0.0
+
+
+def test_sync_push_rejects_stale_product_upsert_conflict(client, auth_headers, store_id):
+    newer = "2026-02-24T12:00:00+00:00"
+    older = "2026-02-24T11:00:00+00:00"
+    seed = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "prod-conflict-seed-1",
+                    "device_id": "dev-conflict-1",
+                    "entity": "product",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "prod-conflict-1",
+                        "name": "Current Name",
+                        "sell_price": 10,
+                        "stock_qty": 5,
+                        "updated_at": newer,
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert seed.status_code == 200
+
+    stale = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "prod-conflict-stale-1",
+                    "device_id": "dev-conflict-1",
+                    "entity": "product",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "prod-conflict-1",
+                        "name": "Stale Name",
+                        "sell_price": 999,
+                        "updated_at": older,
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert stale.status_code == 200
+    body = stale.json()
+    assert body["acked_op_ids"] == []
+    assert body["failed_events"][0]["code"] == "CONFLICT_STALE_EVENT"
+
+    product_get = client.get("/api/v1/products/prod-conflict-1", headers=auth_headers)
+    assert product_get.status_code == 200
+    assert product_get.json()["name"] == "Current Name"
+    assert float(product_get.json()["sell_price"]) == 10.0
+
+
+def test_sync_push_rejects_stale_customer_upsert_conflict(client, auth_headers, store_id):
+    newer = "2026-02-24T12:00:00+00:00"
+    older = "2026-02-24T11:00:00+00:00"
+    seed = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "cust-conflict-seed-1",
+                    "device_id": "dev-conflict-2",
+                    "entity": "customer",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "cust-conflict-1",
+                        "name": "Current Customer",
+                        "balance": 15,
+                        "updated_at": newer,
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert seed.status_code == 200
+
+    stale = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "cust-conflict-stale-1",
+                    "device_id": "dev-conflict-2",
+                    "entity": "customer",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "cust-conflict-1",
+                        "name": "Stale Customer",
+                        "balance": 999,
+                        "updated_at": older,
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert stale.status_code == 200
+    body = stale.json()
+    assert body["acked_op_ids"] == []
+    assert body["failed_events"][0]["code"] == "CONFLICT_STALE_EVENT"
+
+    customer_get = client.get("/api/v1/customers/cust-conflict-1", headers=auth_headers)
+    assert customer_get.status_code == 200
+    assert customer_get.json()["name"] == "Current Customer"
+    assert float(customer_get.json()["balance"]) == 15.0

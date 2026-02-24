@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_minutes: int = 60 * 24 * 7
     cors_allowed_origins: list[str] = ["*"]
+    sync_pull_default_limit: int = 100
+    sync_pull_max_limit: int = 500
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 

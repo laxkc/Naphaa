@@ -73,6 +73,7 @@ class CreateSaleScreen extends ConsumerWidget {
 
   Future<void> _showQuickCreditCustomerDialog(
     BuildContext context,
+    WidgetRef ref,
     SalesController controller,
   ) async {
     final nameCtrl = TextEditingController();
@@ -106,6 +107,13 @@ class CreateSaleScreen extends ConsumerWidget {
               ),
               FilledButton(
                 onPressed: () async {
+                  final confirmed = await _confirmCreditRiskIfNeeded(
+                    context,
+                    ref,
+                    customerName: nameCtrl.text,
+                    phone: phoneCtrl.text,
+                  );
+                  if (!confirmed) return;
                   await controller.saveCreditSaleWithCustomer(
                     customerName: nameCtrl.text,
                     phone: phoneCtrl.text,
@@ -117,6 +125,82 @@ class CreateSaleScreen extends ConsumerWidget {
             ],
           ),
     );
+  }
+
+  Future<bool> _confirmCreditRiskIfNeeded(
+    BuildContext context,
+    WidgetRef ref, {
+    required String customerName,
+    required String phone,
+  }) async {
+    final name = customerName.trim();
+    final phoneTrimmed = phone.trim();
+    if (name.isEmpty) return true;
+
+    try {
+      final customers = await ref.read(customersListProvider.future);
+      final riskMap = await ref.read(customerRiskMetricsProvider.future);
+
+      final existing = customers.firstWhere((c) {
+        final phoneMatch =
+            phoneTrimmed.isNotEmpty && (c.phone?.trim() ?? '') == phoneTrimmed;
+        final nameMatch = c.name.trim().toLowerCase() == name.toLowerCase();
+        return phoneMatch || nameMatch;
+      });
+      final risk = riskMap[existing.id];
+      if (risk == null) return true;
+      final level = risk.riskLevel.toLowerCase();
+      if (level != 'red' && level != 'yellow') return true;
+
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          final color = level == 'red' ? AppColors.error : AppColors.warning;
+          final label = level == 'red' ? 'High Risk' : 'Medium Risk';
+          return AlertDialog(
+            title: const Text('Credit Risk Warning'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Existing customer "${existing.name}" is marked $label.'),
+                const SizedBox(height: 10),
+                Text(
+                  'Outstanding: NPR ${risk.outstandingAmount.toStringAsFixed(2)}',
+                ),
+                Text('Oldest due: ${risk.oldestDueDays} days'),
+                Text('Risk score: ${risk.riskScore}'),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: color.withValues(alpha: 0.20)),
+                  ),
+                  child: const Text(
+                    'Continue only if you are comfortable extending more credit.',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      return shouldProceed ?? false;
+    } catch (_) {
+      return true;
+    }
   }
 
   @override
@@ -169,12 +253,11 @@ class CreateSaleScreen extends ConsumerWidget {
             SizedBox(
               height: 38,
               child: ListView.separated(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 scrollDirection: Axis.horizontal,
                 itemCount: state.recentProducts.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: AppSpacing.sm),
+                separatorBuilder:
+                    (_, __) => const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (_, i) {
                   final p = state.recentProducts[i];
                   return ActionChip(
@@ -192,8 +275,7 @@ class CreateSaleScreen extends ConsumerWidget {
                       color: AppColors.primary,
                     ),
                     backgroundColor: AppColors.surfaceAlt,
-                    side:
-                        const BorderSide(color: AppColors.border, width: 0.8),
+                    side: const BorderSide(color: AppColors.border, width: 0.8),
                     elevation: 0,
                     pressElevation: 0,
                     surfaceTintColor: Colors.transparent,
@@ -204,64 +286,67 @@ class CreateSaleScreen extends ConsumerWidget {
           ],
           const SizedBox(height: AppSpacing.sm),
           Expanded(
-            child: state.loading
-                ? ListView.builder(
-                    itemCount: 6,
-                    itemBuilder: (_, __) => const SkeletonListTile(),
-                  )
-                : state.products.isEmpty
+            child:
+                state.loading
+                    ? ListView.builder(
+                      itemCount: 6,
+                      itemBuilder: (_, __) => const SkeletonListTile(),
+                    )
+                    : state.products.isEmpty
                     ? _QuickCreateProductEmpty(
-                        query: state.search,
-                        onCreateQuick: state.search.trim().isEmpty
-                            ? null
-                            : () => _showQuickCreateProductDialog(
-                                  context,
-                                  controller,
-                                  state.search,
-                                ),
-                      )
-                    : ListView.separated(
-                        itemCount: state.products.length +
-                            (showInlineCreate ? 1 : 0),
-                        separatorBuilder: (_, __) => const Divider(
-                          indent: AppSpacing.lg,
-                          endIndent: AppSpacing.lg,
-                          height: 0,
-                        ),
-                        itemBuilder: (_, i) {
-                          if (showInlineCreate && i == 0) {
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.add_box_outlined,
-                                color: AppColors.primary,
-                              ),
-                              title: Text('Create "$query" quickly'),
-                              subtitle: const Text(
-                                'Enter only selling price and continue sale',
-                              ),
-                              trailing:
-                                  const Icon(Icons.chevron_right_rounded),
-                              onTap: () => _showQuickCreateProductDialog(
+                      query: state.search,
+                      onCreateQuick:
+                          state.search.trim().isEmpty
+                              ? null
+                              : () => _showQuickCreateProductDialog(
                                 context,
                                 controller,
-                                query,
+                                state.search,
                               ),
-                            );
-                          }
-                          final index = i - (showInlineCreate ? 1 : 0);
-                          final p = state.products[index];
-                          final qty = state.selected[p.id] ?? 0;
-                          return _ProductRow(
-                            name: p.name,
-                            price: p.sellPrice,
-                            stock: p.stockQty.toInt(),
-                            qty: qty,
-                            localeCode: localeCode,
-                            onIncrement: () => controller.increment(p.id),
-                            onDecrement: () => controller.decrement(p.id),
+                    )
+                    : ListView.separated(
+                      itemCount:
+                          state.products.length + (showInlineCreate ? 1 : 0),
+                      separatorBuilder:
+                          (_, __) => const Divider(
+                            indent: AppSpacing.lg,
+                            endIndent: AppSpacing.lg,
+                            height: 0,
+                          ),
+                      itemBuilder: (_, i) {
+                        if (showInlineCreate && i == 0) {
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.add_box_outlined,
+                              color: AppColors.primary,
+                            ),
+                            title: Text('Create "$query" quickly'),
+                            subtitle: const Text(
+                              'Enter only selling price and continue sale',
+                            ),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap:
+                                () => _showQuickCreateProductDialog(
+                                  context,
+                                  controller,
+                                  query,
+                                ),
                           );
-                        },
-                      ),
+                        }
+                        final index = i - (showInlineCreate ? 1 : 0);
+                        final p = state.products[index];
+                        final qty = state.selected[p.id] ?? 0;
+                        return _ProductRow(
+                          name: p.name,
+                          price: p.sellPrice,
+                          stock: p.stockQty.toInt(),
+                          qty: qty,
+                          localeCode: localeCode,
+                          onIncrement: () => controller.increment(p.id),
+                          onDecrement: () => controller.decrement(p.id),
+                        );
+                      },
+                    ),
           ),
           if (state.message != null)
             Padding(
@@ -273,10 +358,11 @@ class CreateSaleScreen extends ConsumerWidget {
               ),
               child: InlineBanner(
                 message: state.message!,
-                type: state.message!.toLowerCase().contains('fail') ||
-                        state.message!.toLowerCase().contains('error')
-                    ? BannerType.error
-                    : BannerType.success,
+                type:
+                    state.message!.toLowerCase().contains('fail') ||
+                            state.message!.toLowerCase().contains('error')
+                        ? BannerType.error
+                        : BannerType.success,
               ),
             ),
           _CartFooter(
@@ -286,8 +372,8 @@ class CreateSaleScreen extends ConsumerWidget {
             localeCode: localeCode,
             loading: state.loading,
             onCash: controller.saveCashSale,
-            onCredit: () =>
-                _showQuickCreditCustomerDialog(context, controller),
+            onCredit:
+                () => _showQuickCreditCustomerDialog(context, ref, controller),
           ),
         ],
       ),
@@ -318,11 +404,16 @@ class _QuickCreateProductEmpty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded,
-                size: 34, color: AppColors.muted),
+            const Icon(
+              Icons.search_off_rounded,
+              size: 34,
+              color: AppColors.muted,
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Text('No match for "$query"',
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              'No match for "$query"',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               onPressed: onCreateQuick,
@@ -366,27 +457,33 @@ class _ProductRow extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: inCart
-              ? AppColors.primary.withAlpha(20)
-              : AppColors.surfaceAlt,
+          color:
+              inCart ? AppColors.primary.withAlpha(20) : AppColors.surfaceAlt,
           shape: BoxShape.circle,
         ),
-        child: Icon(Icons.inventory_2_outlined,
-            size: 18,
-            color: inCart ? AppColors.primary : AppColors.muted),
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 18,
+          color: inCart ? AppColors.primary : AppColors.muted,
+        ),
       ),
-      title: Text(name,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: inCart ? FontWeight.w600 : FontWeight.w500,
-            color: AppColors.label,
-          )),
+      title: Text(
+        name,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: inCart ? FontWeight.w600 : FontWeight.w500,
+          color: AppColors.label,
+        ),
+      ),
       subtitle: Text(
         '${formatCurrency(price, localeCode)}  ·  Stock $stock',
         style: const TextStyle(fontSize: 12, color: AppColors.muted),
       ),
       trailing: _QuantityStepper(
-          qty: qty, onIncrement: onIncrement, onDecrement: onDecrement),
+        qty: qty,
+        onIncrement: onIncrement,
+        onDecrement: onDecrement,
+      ),
     );
   }
 }
@@ -410,9 +507,10 @@ class _QuantityStepper extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: const BoxDecoration(
-              color: AppColors.primary, shape: BoxShape.circle),
-          child:
-              const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
         ),
       );
     }
@@ -428,11 +526,14 @@ class _QuantityStepper extends StatelessWidget {
           _StepBtn(icon: Icons.remove_rounded, onTap: onDecrement),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text('$qty',
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white)),
+            child: Text(
+              '$qty',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
           _StepBtn(icon: Icons.add_rounded, onTap: onIncrement),
         ],
@@ -484,25 +585,36 @@ class _CartFooter extends StatelessWidget {
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (totalQty > 0) ...[
             Row(
               children: [
-                const Icon(Icons.shopping_cart_outlined,
-                    size: 15, color: AppColors.muted),
+                const Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 15,
+                  color: AppColors.muted,
+                ),
                 const SizedBox(width: AppSpacing.xs),
-                Text('$totalQty item${totalQty != 1 ? 's' : ''}',
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.muted)),
+                Text(
+                  '$totalQty item${totalQty != 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
                 const Spacer(),
-                Text(formatCurrency(totalAmt, localeCode),
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.label)),
+                Text(
+                  formatCurrency(totalAmt, localeCode),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.label,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -513,10 +625,11 @@ class _CartFooter extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: loading || totalQty == 0 ? null : onCash,
                   icon: const Icon(Icons.payments_outlined, size: 16),
-                  label: Text(l10n.saveCashSale,
-                      style: const TextStyle(fontSize: 13)),
-                  style:
-                      FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                  label: Text(
+                    l10n.saveCashSale,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -524,10 +637,11 @@ class _CartFooter extends StatelessWidget {
                 child: FilledButton.tonalIcon(
                   onPressed: loading || totalQty == 0 ? null : onCredit,
                   icon: const Icon(Icons.credit_card_outlined, size: 16),
-                  label: Text(l10n.saveCreditSale,
-                      style: const TextStyle(fontSize: 13)),
-                  style:
-                      FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                  label: Text(
+                    l10n.saveCreditSale,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
                 ),
               ),
             ],

@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, customers, devices, expenses, exports, products, reports, sales, stores, sync
+from app import models as _models  # noqa: F401 - ensure SQLAlchemy models are registered
+from app.api import alerts, auth, customers, devices, expenses, exports, metrics, products, reports, sales, stores, sync
 from app.core.config import settings
 from app.core.database import Base, engine, run_sqlite_compat_migrations
 from app.core.logging import configure_logging
@@ -43,4 +44,6 @@ app.include_router(sales.router, prefix=settings.api_v1_prefix)
 app.include_router(expenses.router, prefix=settings.api_v1_prefix)
 app.include_router(exports.router, prefix=settings.api_v1_prefix)
 app.include_router(reports.router, prefix=settings.api_v1_prefix)
+app.include_router(metrics.router, prefix=settings.api_v1_prefix)
+app.include_router(alerts.router, prefix=settings.api_v1_prefix)
 app.include_router(sync.router, prefix=settings.api_v1_prefix)

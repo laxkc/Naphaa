@@ -11,6 +11,7 @@ from app.models.expense import Expense
 from app.models.store import Store
 from app.models.user import User
 from app.schemas.expense import ExpenseCreate, ExpenseListResponse, ExpenseOut
+from app.services.ledger_service import LedgerService
 from app.services.sync_event_service import SyncEventService
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -33,6 +34,7 @@ def create_expense(
     )
     db.add(expense)
     db.flush()
+    LedgerService.record_expense(db, expense)
     SyncEventService.emit(
         db,
         store_id=store.id,

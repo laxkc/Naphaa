@@ -19,6 +19,21 @@ def test_auth_register_login_refresh(client):
         json={"refresh_token": login.json()["refresh_token"]},
     )
     assert refresh.status_code == 200
+    rotated = refresh.json()
+    assert rotated["refresh_token"] != login.json()["refresh_token"]
+
+    old_refresh_reuse = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": login.json()["refresh_token"]},
+    )
+    assert old_refresh_reuse.status_code == 401
+    assert old_refresh_reuse.json()["detail"]["code"] == "TOKEN_REVOKED"
+
+    new_refresh = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": rotated["refresh_token"]},
+    )
+    assert new_refresh.status_code == 200
 
 
 def test_store_create_me_update(client, auth_headers):
@@ -78,6 +93,7 @@ def test_auth_register_with_business_name_creates_store_and_me(client):
     assert me.status_code == 200
     body = me.json()
     assert body["phone"] == "9822222222"
+    assert body["role"] == "owner"
     assert body["store_name"] == "Sunrise Mart"
     assert body["locale_default"] == "en"
 

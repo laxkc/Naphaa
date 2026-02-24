@@ -2,7 +2,21 @@ import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 import '../storage/secure_storage.dart';
+import 'api_error.dart';
 import 'backend_gateway.dart';
+
+class SessionAuthException implements Exception {
+  const SessionAuthException({
+    required this.code,
+    required this.message,
+  });
+
+  final String code;
+  final String message;
+
+  @override
+  String toString() => 'SessionAuthException($code): $message';
+}
 
 class SessionService {
   SessionService(this._gateway, this._tokens, this._dio);
@@ -19,7 +33,10 @@ class SessionService {
 
     final access = await _tokens.getAccessToken();
     if (access == null || access.isEmpty) {
-      throw StateError('Unauthenticated');
+      throw const SessionAuthException(
+        code: 'UNAUTHENTICATED',
+        message: 'Please sign in again.',
+      );
     }
 
     _dio.options.headers['Authorization'] = 'Bearer $access';
@@ -35,7 +52,10 @@ class SessionService {
       if (e.response?.statusCode == 401) {
         final refreshed = await _tryRefreshTokens();
         if (!refreshed) {
-          throw StateError('Unauthenticated');
+          throw const SessionAuthException(
+            code: 'UNAUTHENTICATED',
+            message: 'Please sign in again.',
+          );
         }
         await _gateway.ensureStore(
           name: 'SME Store',
@@ -103,6 +123,22 @@ class SessionService {
     await _tokens.clear();
   }
 
+  Future<String?> fetchCurrentUserRole({required String localeCode}) async {
+    try {
+      await ensureReady(localeCode: localeCode);
+      final profile = await _gateway.getAuthMe();
+      final role = profile['role']?.toString().trim().toLowerCase();
+      if (role == null || role.isEmpty) return 'owner';
+      return role;
+    } on DioException {
+      return null;
+    } on SessionAuthException {
+      rethrow;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _applyAuth(
     Map<String, dynamic> auth, {
     required String localeCode,
@@ -128,7 +164,15 @@ class SessionService {
   Future<bool> _tryRefreshTokens() async {
     try {
       final refresh = await _tokens.getRefreshToken();
-      if (refresh == null || refresh.isEmpty) return false;
+      if (refresh == null || refresh.isEmpty) {
+        _dio.options.headers.remove('Authorization');
+        await _tokens.clear();
+        _ready = false;
+        throw const SessionAuthException(
+          code: 'UNAUTHENTICATED',
+          message: 'Please sign in again.',
+        );
+      }
       final auth = await _gateway.refresh(refreshToken: refresh);
       final access = auth['access_token'] as String?;
       final nextRefresh = auth['refresh_token'] as String?;
@@ -139,10 +183,24 @@ class SessionService {
       _dio.options.headers['Authorization'] = 'Bearer $access';
       _ready = false;
       return true;
-    } on DioException {
+    } on DioException catch (e) {
+      final apiError = ApiError.fromDio(e);
       _dio.options.headers.remove('Authorization');
       await _tokens.clear();
       _ready = false;
+      if (apiError.statusCode == 401 || apiError.statusCode == 403) {
+        final code = (apiError.code ?? 'UNAUTHENTICATED').toUpperCase();
+        if (code == 'TOKEN_REVOKED' ||
+            code == 'INVALID_TOKEN' ||
+            code == 'INVALID_TOKEN_TYPE' ||
+            code == 'USER_NOT_FOUND' ||
+            code == 'UNAUTHENTICATED') {
+          throw SessionAuthException(
+            code: code,
+            message: 'Session expired. Please sign in again.',
+          );
+        }
+      }
       return false;
     }
   }

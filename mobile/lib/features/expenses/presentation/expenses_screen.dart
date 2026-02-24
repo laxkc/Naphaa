@@ -122,22 +122,22 @@ class ExpensesScreen extends ConsumerWidget {
 
   void _showExpenseSheet(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    showAppBottomSheet(context, child: _ExpenseForm(ref: ref, l10n: l10n));
+    showAppBottomSheet(context, child: ExpenseFormSheet(ref: ref, l10n: l10n));
   }
 }
 
 // ─── add expense bottom sheet ─────────────────────────────────────────────────
 
-class _ExpenseForm extends StatefulWidget {
-  const _ExpenseForm({required this.ref, required this.l10n});
+class ExpenseFormSheet extends StatefulWidget {
+  const ExpenseFormSheet({super.key, required this.ref, required this.l10n});
   final WidgetRef ref;
   final AppLocalizations l10n;
 
   @override
-  State<_ExpenseForm> createState() => _ExpenseFormState();
+  State<ExpenseFormSheet> createState() => _ExpenseFormState();
 }
 
-class _ExpenseFormState extends State<_ExpenseForm> {
+class _ExpenseFormState extends State<ExpenseFormSheet> {
   final _formKey    = GlobalKey<FormState>();
   final _amountCtl  = TextEditingController();
   final _noteCtl    = TextEditingController();

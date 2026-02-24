@@ -73,6 +73,7 @@ class SalesScreen extends ConsumerWidget {
 
   Future<void> _showQuickCreditCustomerDialog(
     BuildContext context,
+    WidgetRef ref,
     SalesController controller,
   ) async {
     final nameCtrl = TextEditingController();
@@ -106,6 +107,13 @@ class SalesScreen extends ConsumerWidget {
               ),
               FilledButton(
                 onPressed: () async {
+                  final confirmed = await _confirmCreditRiskIfNeeded(
+                    context,
+                    ref,
+                    customerName: nameCtrl.text,
+                    phone: phoneCtrl.text,
+                  );
+                  if (!confirmed) return;
                   await controller.saveCreditSaleWithCustomer(
                     customerName: nameCtrl.text,
                     phone: phoneCtrl.text,
@@ -117,6 +125,82 @@ class SalesScreen extends ConsumerWidget {
             ],
           ),
     );
+  }
+
+  Future<bool> _confirmCreditRiskIfNeeded(
+    BuildContext context,
+    WidgetRef ref, {
+    required String customerName,
+    required String phone,
+  }) async {
+    final name = customerName.trim();
+    final phoneTrimmed = phone.trim();
+    if (name.isEmpty) return true;
+
+    try {
+      final customers = await ref.read(customersListProvider.future);
+      final riskMap = await ref.read(customerRiskMetricsProvider.future);
+
+      final existing = customers.firstWhere((c) {
+        final phoneMatch =
+            phoneTrimmed.isNotEmpty && (c.phone?.trim() ?? '') == phoneTrimmed;
+        final nameMatch = c.name.trim().toLowerCase() == name.toLowerCase();
+        return phoneMatch || nameMatch;
+      });
+      final risk = riskMap[existing.id];
+      if (risk == null) return true;
+      final level = risk.riskLevel.toLowerCase();
+      if (level != 'red' && level != 'yellow') return true;
+
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          final color = level == 'red' ? AppColors.error : AppColors.warning;
+          final label = level == 'red' ? 'High Risk' : 'Medium Risk';
+          return AlertDialog(
+            title: const Text('Credit Risk Warning'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Existing customer "${existing.name}" is marked $label.'),
+                const SizedBox(height: 10),
+                Text(
+                  'Outstanding: NPR ${risk.outstandingAmount.toStringAsFixed(2)}',
+                ),
+                Text('Oldest due: ${risk.oldestDueDays} days'),
+                Text('Risk score: ${risk.riskScore}'),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: color.withValues(alpha: 0.20)),
+                  ),
+                  child: const Text(
+                    'Continue only if you are comfortable extending more credit.',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      return shouldProceed ?? false;
+    } catch (_) {
+      return true;
+    }
   }
 
   @override
@@ -291,7 +375,8 @@ class SalesScreen extends ConsumerWidget {
           localeCode: localeCode,
           loading: state.loading,
           onCash: controller.saveCashSale,
-          onCredit: () => _showQuickCreditCustomerDialog(context, controller),
+          onCredit:
+              () => _showQuickCreditCustomerDialog(context, ref, controller),
         ),
       ],
     );

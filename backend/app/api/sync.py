@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_store
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.store import Store
 from app.schemas.sync import (
@@ -30,7 +31,7 @@ def sync_push(
 def sync_pull(
     since: datetime | None = Query(default=None),
     cursor: str | None = Query(default=None),
-    limit: int = Query(default=200, ge=1, le=1000),
+    limit: int = Query(default=settings.sync_pull_default_limit, ge=1, le=settings.sync_pull_max_limit),
     store: Store = Depends(get_current_store),
     db: Session = Depends(get_db),
 ) -> SyncPullResponse:

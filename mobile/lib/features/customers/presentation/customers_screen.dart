@@ -8,13 +8,21 @@ import '../../sales/presentation/credit_payment_screen.dart';
 import 'customer_detail_screen.dart';
 import 'customer_form_screen.dart';
 
-class CustomersScreen extends ConsumerWidget {
+class CustomersScreen extends ConsumerStatefulWidget {
   const CustomersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
+}
+
+class _CustomersScreenState extends ConsumerState<CustomersScreen> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final customers = ref.watch(customersListProvider);
+    final riskMetrics = ref.watch(customerRiskMetricsProvider);
 
     return Column(
       children: [
@@ -23,9 +31,10 @@ class CustomersScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: TextField(
-                  decoration: InputDecoration(
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: const InputDecoration(
                     prefixIcon: Icon(
                       Icons.search_rounded,
                       size: 19,
@@ -61,27 +70,43 @@ class CustomersScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(customersListProvider),
               message: 'Failed to load customers',
             ),
-            data: (items) => items.isEmpty
+            data: (items) {
+              final q = _query.trim().toLowerCase();
+              final filtered =
+                  q.isEmpty
+                      ? items
+                      : items.where((c) {
+                        final name = c.name.toLowerCase();
+                        final phone = (c.phone ?? '').toLowerCase();
+                        return name.contains(q) || phone.contains(q);
+                      }).toList();
+
+              return filtered.isEmpty
                 ? EmptyState(
                     icon: Icons.people_outline_rounded,
-                    title: l10n.manageCustomers,
-                    subtitle: 'Tap "Add Customer" to get started.',
-                    action: l10n.addCustomer,
-                    onAction: () => Navigator.of(context)
-                        .push(MaterialPageRoute(
-                          builder: (_) => const CustomerFormScreen(),
-                        ))
-                        .then((_) => ref.invalidate(customersListProvider)),
+                    title: q.isEmpty ? l10n.manageCustomers : 'No customers found',
+                    subtitle: q.isEmpty
+                        ? 'Tap "Add Customer" to get started.'
+                        : 'Try a different name or phone number.',
+                    action: q.isEmpty ? l10n.addCustomer : null,
+                    onAction: q.isEmpty
+                        ? () => Navigator.of(context)
+                            .push(MaterialPageRoute(
+                              builder: (_) => const CustomerFormScreen(),
+                            ))
+                            .then((_) => ref.invalidate(customersListProvider))
+                        : null,
                   )
                 : ListView.separated(
-                    itemCount: items.length,
+                    itemCount: filtered.length,
                     separatorBuilder: (_, __) => const Divider(
                       indent: 72,
                       endIndent: AppSpacing.lg,
                       height: 0,
                     ),
                     itemBuilder: (_, i) {
-                      final c = items[i];
+                      final c = filtered[i];
+                      final risk = riskMetrics.whenOrNull(data: (m) => m[c.id]);
                       final balance = c.balance;
                       final isDebt = balance > 0;
                       return Dismissible(
@@ -110,13 +135,28 @@ class CustomersScreen extends ConsumerWidget {
                               color: AppColors.label,
                             ),
                           ),
-                          subtitle: c.phone != null
-                              ? Text(
-                                  c.phone!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.muted,
-                                  ),
+                          subtitle: (c.phone != null || risk != null)
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (c.phone != null)
+                                      Text(
+                                        c.phone!,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.muted,
+                                        ),
+                                      ),
+                                    if (risk != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: _RiskBadge(
+                                          level: risk.riskLevel,
+                                          score: risk.riskScore,
+                                        ),
+                                      ),
+                                  ],
                                 )
                               : null,
                           trailing: balance != 0
@@ -198,10 +238,47 @@ class CustomersScreen extends ConsumerWidget {
                         ),
                       );
                     },
-                  ),
+                  );
+            },
           ),
         ),
       ],
+    );
+  }
+}
+
+class _RiskBadge extends StatelessWidget {
+  const _RiskBadge({
+    required this.level,
+    required this.score,
+  });
+
+  final String level;
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = level.toLowerCase();
+    final (label, color) = switch (normalized) {
+      'red' => ('High Risk', AppColors.error),
+      'yellow' => ('Medium Risk', AppColors.warning),
+      _ => ('Low Risk', AppColors.success),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        '$label • $score',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }

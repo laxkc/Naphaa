@@ -1,13 +1,15 @@
 from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_store
 from app.core.database import get_db
+from app.models.ledger_entry import LedgerEntry
 from app.models.product import Product
 from app.models.store import Store
+from app.schemas.ledger import LedgerListResponse
 from app.schemas.report import CashbookReport, LowStockItem, LowStockReport, SummaryReport, TopProductsReport
 from app.services.report_service import ReportService
 
@@ -67,3 +69,25 @@ def top_products_report(
     db: Session = Depends(get_db),
 ) -> TopProductsReport:
     return ReportService.top_products(db, store.id, limit=limit)
+
+
+@router.get("/ledger", response_model=LedgerListResponse)
+def ledger_report(
+    from_date: date | None = Query(default=None, alias="from"),
+    to_date: date | None = Query(default=None, alias="to"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    store: Store = Depends(get_current_store),
+    db: Session = Depends(get_db),
+) -> LedgerListResponse:
+    query = select(LedgerEntry).where(LedgerEntry.store_id == store.id)
+    if from_date is not None:
+        query = query.where(LedgerEntry.created_at >= datetime.combine(from_date, time.min))
+    if to_date is not None:
+        query = query.where(LedgerEntry.created_at <= datetime.combine(to_date, time.max))
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    offset = (page - 1) * page_size
+    items = db.scalars(
+        query.order_by(LedgerEntry.created_at.desc()).offset(offset).limit(page_size)
+    ).all()
+    return LedgerListResponse(items=items, total=total, page=page, page_size=page_size)

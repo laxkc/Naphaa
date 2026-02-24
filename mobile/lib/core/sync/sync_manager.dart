@@ -34,4 +34,13 @@ class SyncManager {
       appliedEvents: 0,
     );
   }
+
+  Future<SyncLastRunMeta> processPendingSyncWithMeta({String localeCode = 'ne'}) async {
+    final service = _service;
+    if (service != null) {
+      return service.processPendingSyncWithMeta(localeCode: localeCode);
+    }
+    final result = await processPendingSyncDetailed(localeCode: localeCode);
+    return SyncLastRunMeta(result: result, durationMs: 0);
+  }
 }

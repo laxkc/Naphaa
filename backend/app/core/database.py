@@ -51,6 +51,13 @@ def run_sqlite_compat_migrations() -> None:
             "fingerprint",
             "ALTER TABLE sync_events ADD COLUMN fingerprint VARCHAR(64) DEFAULT ''",
         )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "users",
+            "role",
+            "ALTER TABLE users ADD COLUMN role VARCHAR(16) DEFAULT 'owner'",
+        )
 
         # Audit and soft-delete compatibility columns.
         for table in ("stores", "products", "customers", "sales", "expenses"):
@@ -355,6 +362,102 @@ def run_sqlite_compat_migrations() -> None:
                     "ON revoked_tokens(token_hash)"
                 )
             )
+
+        if "ledger_entries" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE ledger_entries (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        entity_type VARCHAR(32) NOT NULL,
+                        entity_id VARCHAR(36) NOT NULL,
+                        entry_type VARCHAR(32) NOT NULL,
+                        direction VARCHAR(8) NOT NULL,
+                        amount NUMERIC(12, 2) NOT NULL,
+                        customer_id VARCHAR(36),
+                        sale_id VARCHAR(36),
+                        created_by VARCHAR(36),
+                        device_id VARCHAR(128),
+                        metadata_json JSON,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            for index_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_store_id ON ledger_entries(store_id)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_entity_type ON ledger_entries(entity_type)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_entity_id ON ledger_entries(entity_id)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_entry_type ON ledger_entries(entry_type)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_customer_id ON ledger_entries(customer_id)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_sale_id ON ledger_entries(sale_id)",
+                "CREATE INDEX IF NOT EXISTS ix_ledger_entries_created_at ON ledger_entries(created_at)",
+            ):
+                conn.execute(text(index_sql))
+
+        if "customer_metrics" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE customer_metrics (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        customer_id VARCHAR(36) NOT NULL,
+                        outstanding_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+                        oldest_due_days INTEGER NOT NULL DEFAULT 0,
+                        avg_days_to_pay NUMERIC(8, 2) NOT NULL DEFAULT 0,
+                        on_time_rate NUMERIC(5, 4) NOT NULL DEFAULT 0,
+                        payment_frequency_30d NUMERIC(8, 2) NOT NULL DEFAULT 0,
+                        risk_score INTEGER NOT NULL DEFAULT 0,
+                        risk_level VARCHAR(16) NOT NULL DEFAULT 'green',
+                        explanation_json JSON,
+                        version INTEGER NOT NULL DEFAULT 1,
+                        computed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            for index_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_customer_metrics_store_id ON customer_metrics(store_id)",
+                "CREATE INDEX IF NOT EXISTS ix_customer_metrics_customer_id ON customer_metrics(customer_id)",
+                "CREATE INDEX IF NOT EXISTS ix_customer_metrics_risk_score ON customer_metrics(risk_score)",
+                "CREATE INDEX IF NOT EXISTS ix_customer_metrics_risk_level ON customer_metrics(risk_level)",
+                "CREATE INDEX IF NOT EXISTS ix_customer_metrics_computed_at ON customer_metrics(computed_at)",
+            ):
+                conn.execute(text(index_sql))
+
+        if "alerts" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE alerts (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        type VARCHAR(32) NOT NULL,
+                        entity_type VARCHAR(32) NOT NULL,
+                        entity_id VARCHAR(36),
+                        severity VARCHAR(16) NOT NULL DEFAULT 'info',
+                        title VARCHAR(255) NOT NULL,
+                        body VARCHAR(1000) NOT NULL,
+                        action_type VARCHAR(64),
+                        action_payload_json JSON,
+                        resolved_at DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            for index_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_alerts_store_id ON alerts(store_id)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_type ON alerts(type)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_entity_type ON alerts(entity_type)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_entity_id ON alerts(entity_id)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_severity ON alerts(severity)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_resolved_at ON alerts(resolved_at)",
+                "CREATE INDEX IF NOT EXISTS ix_alerts_created_at ON alerts(created_at)",
+            ):
+                conn.execute(text(index_sql))
 
 
 def _sqlite_has_column(conn, table_name: str, column_name: str) -> bool:

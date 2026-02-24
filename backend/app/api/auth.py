@@ -34,6 +34,23 @@ from app.schemas.user import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _revoke_refresh_token_if_needed(db: Session, refresh_token: str) -> None:
+    token_hash = RevokedToken.hash_token(refresh_token)
+    existing = db.scalar(select(RevokedToken).where(RevokedToken.token_hash == token_hash))
+    if existing is not None:
+        return
+    token_data = decode_token(refresh_token)
+    exp = token_data.get("exp")
+    expires_at = datetime.fromtimestamp(exp, tz=UTC) if exp else datetime.now(UTC)
+    db.add(
+        RevokedToken(
+            token_hash=token_hash,
+            token_type="refresh",
+            expires_at=expires_at,
+        )
+    )
+
+
 @router.post("/register", response_model=TokenPair)
 def register(
     payload: UserRegister,
@@ -66,8 +83,8 @@ def register(
         db.commit()
 
     return TokenPair(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=create_access_token(user.id, extra_claims={"role": user.role}),
+        refresh_token=create_refresh_token(user.id, extra_claims={"role": user.role}),
     )
 
 
@@ -82,8 +99,8 @@ def login(
         raise_api_error(status.HTTP_401_UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid credentials")
 
     return TokenPair(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=create_access_token(user.id, extra_claims={"role": user.role}),
+        refresh_token=create_refresh_token(user.id, extra_claims={"role": user.role}),
     )
 
 
@@ -106,9 +123,13 @@ def refresh(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -> Toke
     if user is None:
         raise_api_error(status.HTTP_401_UNAUTHORIZED, "USER_NOT_FOUND", "User not found")
 
+    # Rotate refresh token: revoke the submitted token and mint a new pair.
+    _revoke_refresh_token_if_needed(db, payload.refresh_token)
+    db.commit()
+
     return TokenPair(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=create_access_token(user.id, extra_claims={"role": user.role}),
+        refresh_token=create_refresh_token(user.id, extra_claims={"role": user.role}),
     )
 
 
@@ -121,6 +142,7 @@ def auth_me(
     return AuthProfileOut(
         user_id=user.id,
         phone=user.phone,
+        role=user.role,
         store_id=store.id if store else None,
         store_name=store.name if store else None,
         locale_default=store.locale_default if store else None,
@@ -137,19 +159,8 @@ def logout(payload: LogoutRequest, db: Session = Depends(get_db)) -> MessageOut:
     if token_data.get("type") != "refresh":
         raise_api_error(status.HTTP_401_UNAUTHORIZED, "INVALID_TOKEN_TYPE", "Invalid token type")
 
-    token_hash = RevokedToken.hash_token(payload.refresh_token)
-    existing = db.scalar(select(RevokedToken).where(RevokedToken.token_hash == token_hash))
-    if existing is None:
-        exp = token_data.get("exp")
-        expires_at = datetime.fromtimestamp(exp, tz=UTC) if exp else datetime.now(UTC)
-        db.add(
-            RevokedToken(
-                token_hash=token_hash,
-                token_type="refresh",
-                expires_at=expires_at,
-            )
-        )
-        db.commit()
+    _revoke_refresh_token_if_needed(db, payload.refresh_token)
+    db.commit()
     return MessageOut(message="Logged out")
 
 

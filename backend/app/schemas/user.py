@@ -62,6 +62,7 @@ class MessageOut(BaseModel):
 class UserOut(BaseModel):
     id: str
     phone: str
+    role: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -70,6 +71,7 @@ class UserOut(BaseModel):
 class AuthProfileOut(BaseModel):
     user_id: str
     phone: str
+    role: str = "owner"
     store_id: str | None = None
     store_name: str | None = None
     locale_default: str | None = None

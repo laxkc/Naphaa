@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sme_digital/core/providers/app_providers.dart';
+import 'package:sme_digital/core/network/sync_service.dart';
 import 'package:sme_digital/core/storage/local_db.dart';
 import 'package:sme_digital/core/sync/sync_manager.dart';
 import 'package:sme_digital/core/sync/sync_queue.dart';
@@ -204,7 +205,7 @@ void main() {
       await notifier.triggerNow();
       final afterFailure = container.read(syncCoordinatorProvider);
       expect(fake.calls, 1);
-      expect(afterFailure.lastError, contains('sync failed'));
+      expect(afterFailure.lastError, contains('Sync failed'));
 
       shouldFail = false;
       await notifier.triggerNow();

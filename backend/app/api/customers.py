@@ -24,6 +24,7 @@ from app.schemas.customer import (
     CustomerPaymentOut,
     CustomerUpdate,
 )
+from app.services.ledger_service import LedgerService
 from app.services.sync_event_service import SyncEventService
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -245,6 +246,7 @@ def create_customer_payment(
     db.add(payment)
     db.add(customer)
     db.flush()
+    LedgerService.record_customer_payment(db, payment)
     SyncEventService.emit(
         db,
         store_id=store.id,

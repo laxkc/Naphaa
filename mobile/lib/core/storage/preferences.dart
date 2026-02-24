@@ -8,6 +8,7 @@ class AppPreferences {
   static const _lastSyncCursorKey = 'last_sync_cursor';
   static const _deviceIdKey = 'device_id';
   static const _phoneKey = 'user_phone';
+  static const _roleKey = 'user_role';
 
   Future<String> getLocaleCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -66,6 +67,21 @@ class AppPreferences {
   Future<void> clearUserPhone() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_phoneKey);
+  }
+
+  Future<String?> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_roleKey);
+  }
+
+  Future<void> setUserRole(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleKey, role);
+  }
+
+  Future<void> clearUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_roleKey);
   }
 
   Future<bool> getOnboardingComplete() async {
