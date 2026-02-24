@@ -1,0 +1,367 @@
+from collections.abc import Generator
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+from app.core.config import settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+engine_kwargs: dict[str, object] = {}
+if settings.database_url.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.database_url, future=True, **engine_kwargs)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db() -> Generator:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def run_sqlite_compat_migrations() -> None:
+    """Apply lightweight schema patches for local sqlite dev DBs."""
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    with engine.begin() as conn:
+        table_rows = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        ).fetchall()
+        tables = {row[0] for row in table_rows}
+
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "stores",
+            "locale_default",
+            "ALTER TABLE stores ADD COLUMN locale_default VARCHAR(16) DEFAULT 'ne'",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "sync_events",
+            "fingerprint",
+            "ALTER TABLE sync_events ADD COLUMN fingerprint VARCHAR(64) DEFAULT ''",
+        )
+
+        # Audit and soft-delete compatibility columns.
+        for table in ("stores", "products", "customers", "sales", "expenses"):
+            _sqlite_add_column_if_missing(
+                conn,
+                tables,
+                table,
+                "created_by",
+                f"ALTER TABLE {table} ADD COLUMN created_by VARCHAR(36)",
+            )
+            _sqlite_add_column_if_missing(
+                conn,
+                tables,
+                table,
+                "updated_by",
+                f"ALTER TABLE {table} ADD COLUMN updated_by VARCHAR(36)",
+            )
+            _sqlite_add_column_if_missing(
+                conn,
+                tables,
+                table,
+                "device_id",
+                f"ALTER TABLE {table} ADD COLUMN device_id VARCHAR(128)",
+            )
+            _sqlite_add_column_if_missing(
+                conn,
+                tables,
+                table,
+                "deleted_at",
+                f"ALTER TABLE {table} ADD COLUMN deleted_at DATETIME",
+            )
+
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "products",
+            "is_deleted",
+            "ALTER TABLE products ADD COLUMN is_deleted BOOLEAN DEFAULT 0",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "products",
+            "created_at",
+            "ALTER TABLE products ADD COLUMN created_at DATETIME",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "customers",
+            "created_at",
+            "ALTER TABLE customers ADD COLUMN created_at DATETIME",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "customers",
+            "is_deleted",
+            "ALTER TABLE customers ADD COLUMN is_deleted BOOLEAN DEFAULT 0",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "sales",
+            "idempotency_key",
+            "ALTER TABLE sales ADD COLUMN idempotency_key VARCHAR(72)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "sales",
+            "payment_method",
+            "ALTER TABLE sales ADD COLUMN payment_method VARCHAR(24)",
+        )
+        if "sales" in tables:
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_sale_store_idempotency "
+                    "ON sales(store_id, idempotency_key) "
+                    "WHERE idempotency_key IS NOT NULL"
+                )
+            )
+
+        if "customer_payments" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE customer_payments (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        customer_id VARCHAR(36) NOT NULL,
+                        method VARCHAR(24) DEFAULT 'CASH',
+                        amount NUMERIC(12, 2) NOT NULL,
+                        note TEXT,
+                        created_by VARCHAR(36),
+                        device_id VARCHAR(128),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_customer_payments_store_id "
+                    "ON customer_payments(store_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_customer_payments_customer_id "
+                    "ON customer_payments(customer_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_customer_payments_created_at "
+                    "ON customer_payments(created_at)"
+                )
+            )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "customer_payments",
+            "method",
+            "ALTER TABLE customer_payments ADD COLUMN method VARCHAR(24) DEFAULT 'CASH'",
+        )
+
+        if "sale_refunds" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE sale_refunds (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        sale_id VARCHAR(36) NOT NULL,
+                        amount NUMERIC(12, 2) NOT NULL,
+                        reason TEXT,
+                        created_by VARCHAR(36),
+                        device_id VARCHAR(128),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_refunds_store_id "
+                    "ON sale_refunds(store_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_refunds_sale_id "
+                    "ON sale_refunds(sale_id)"
+                )
+            )
+
+        if "sale_refund_items" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE sale_refund_items (
+                        id VARCHAR(36) PRIMARY KEY,
+                        refund_id VARCHAR(36) NOT NULL,
+                        sale_id VARCHAR(36) NOT NULL,
+                        product_id VARCHAR(36) NOT NULL,
+                        qty NUMERIC(12, 2) NOT NULL,
+                        unit_price NUMERIC(12, 2) NOT NULL,
+                        line_total NUMERIC(12, 2) NOT NULL
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_refund_items_refund_id "
+                    "ON sale_refund_items(refund_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_refund_items_sale_id "
+                    "ON sale_refund_items(sale_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_refund_items_product_id "
+                    "ON sale_refund_items(product_id)"
+                )
+            )
+
+        if "sale_payments" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE sale_payments (
+                        id VARCHAR(36) PRIMARY KEY,
+                        sale_id VARCHAR(36) NOT NULL,
+                        method VARCHAR(24) NOT NULL,
+                        amount NUMERIC(12, 2) NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_sale_payments_sale_id "
+                    "ON sale_payments(sale_id)"
+                )
+            )
+
+        if "stock_movements" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE stock_movements (
+                        id VARCHAR(36) PRIMARY KEY,
+                        store_id VARCHAR(36) NOT NULL,
+                        product_id VARCHAR(36) NOT NULL,
+                        movement_type VARCHAR(32) NOT NULL,
+                        delta_qty NUMERIC(12, 2) NOT NULL,
+                        balance_after NUMERIC(12, 2) NOT NULL,
+                        reason TEXT,
+                        reference_type VARCHAR(32),
+                        reference_id VARCHAR(36),
+                        created_by VARCHAR(36),
+                        device_id VARCHAR(128),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_stock_movements_product_id "
+                    "ON stock_movements(product_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_stock_movements_store_id "
+                    "ON stock_movements(store_id)"
+                )
+            )
+
+        if "devices" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE devices (
+                        device_id VARCHAR(128) PRIMARY KEY,
+                        owner_user_id VARCHAR(36) NOT NULL,
+                        platform VARCHAR(32) DEFAULT 'unknown',
+                        device_model VARCHAR(64),
+                        app_version VARCHAR(32),
+                        registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_devices_owner_user_id "
+                    "ON devices(owner_user_id)"
+                )
+            )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "devices",
+            "device_model",
+            "ALTER TABLE devices ADD COLUMN device_model VARCHAR(64)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "devices",
+            "registered_at",
+            "ALTER TABLE devices ADD COLUMN registered_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+        )
+
+        if "revoked_tokens" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE revoked_tokens (
+                        id VARCHAR(36) PRIMARY KEY,
+                        token_hash VARCHAR(64) NOT NULL UNIQUE,
+                        token_type VARCHAR(16) DEFAULT 'refresh',
+                        expires_at DATETIME NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_revoked_tokens_token_hash "
+                    "ON revoked_tokens(token_hash)"
+                )
+            )
+
+
+def _sqlite_has_column(conn, table_name: str, column_name: str) -> bool:
+    rows = conn.execute(text(f"PRAGMA table_info({table_name})")).mappings().all()
+    return any(row["name"] == column_name for row in rows)
+
+
+def _sqlite_add_column_if_missing(conn, tables: set[str], table: str, column: str, ddl: str) -> None:
+    if table in tables and not _sqlite_has_column(conn, table, column):
+        conn.execute(text(ddl))

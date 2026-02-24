@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.db-shm
+*.db-wal
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+*.iml
+
+# iOS
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Runner.xcworkspace/xcuserdata/
+mobile/ios/**/*.xcworkspace/xcuserdata/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+
+# Android
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/google-services.json
+
+# macOS
+mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+mobile/macos/Flutter/Flutter-Debug.xcconfig
+mobile/macos/Flutter/Flutter-Release.xcconfig
+
+# General
+.DS_Store
+*.log
