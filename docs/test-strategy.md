@@ -1,6 +1,6 @@
 # SME Digital Test Strategy
 
-Status date: February 19, 2026
+Status date: February 24, 2026
 
 ## 1. Goals
 
@@ -42,13 +42,14 @@ Mandatory API coverage:
 - Duplicate sales are prevented by idempotency key.
 - Duplicate sync events are deduped by fingerprint.
 
-### 3.3 Current automated status
+### 3.3 Current automated status (latest verified)
 
-- Backend API test suite is passing: `36 passed`.
-- Command:
+- Backend targeted intelligence+reports regression: `36 passed`
+- Backend full regression suite (offline/sync + API/unit): `56 passed` (latest full-pass result recorded in progress tracker)
+- Command examples:
 ```bash
 cd /Users/laxmankc/Startup/SME/sme-digital/backend
-.venv/bin/python -m pytest -q
+uv run pytest -q
 ```
 
 ## 4. Mobile Strategy (Flutter)
@@ -72,6 +73,16 @@ cd /Users/laxmankc/Startup/SME/sme-digital/backend
 - Credit sale -> payment -> ledger reflects running balance.
 - Refund flow updates stock and summaries.
 - Offline queue -> reconnect -> sync completion without duplicates.
+- Sync cursor pagination + ACK reconciliation + retry/failure states.
+- Intelligence/Risk UI/provider refresh and offline-cache fallback.
+
+### 4.4 Current mobile automated status (latest verified)
+
+- Intelligence/Risk UI tests: passing
+- Intelligence providers refresh/fallback tests: passing
+- SyncService integration tests (ACK/cursor/chunk/cache overwrite): passing
+- Sync coordinator integration tests (reconnect/backoff/invalidation): passing
+- `flutter analyze`: clean on touched offline/intelligence surfaces
 
 ## 5. Manual E2E Scenarios (Release Gate)
 
@@ -93,9 +104,15 @@ All 9 scenarios must pass before production promotion.
 - Reliability: no crash across repeated sync retries.
 - Security: revoked refresh token cannot be reused.
 
-## 7. Exit Criteria
+## 7. Exit Criteria (v1 Core)
 
 - Backend tests green.
 - No blocker defects in manual E2E.
 - No data-integrity bug (stock, credit, refund, ledger).
 - Mobile error states visible and actionable (loading/success/failure).
+
+## 8. Known Remaining Hardening (Post-v1)
+
+- Full end-to-end automated device/network chaos tests
+- Periodic manual rollout checklist runs for release candidates
+- Feature-flagged rollout path for intelligence/risk layer (optional operational control)

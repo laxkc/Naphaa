@@ -11,6 +11,8 @@ import 'package:sme_digital/core/storage/local_db.dart';
 import 'package:sme_digital/core/sync/sync_manager.dart';
 import 'package:sme_digital/core/sync/sync_queue.dart';
 import 'package:sme_digital/features/auth/domain/auth_state.dart';
+import 'package:sme_digital/features/reports/domain/alert_item.dart';
+import 'package:sme_digital/features/reports/domain/product_metric_item.dart';
 
 import '../helpers/test_db.dart';
 
@@ -56,7 +58,8 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      connectivityController = StreamController<List<ConnectivityResult>>.broadcast();
+      connectivityController =
+          StreamController<List<ConnectivityResult>>.broadcast();
     });
 
     tearDown(() async {
@@ -73,7 +76,11 @@ void main() {
     }) async {
       final queue = SyncQueueService(testDb);
       // Seed one pending row so pending count queries have non-zero coverage.
-      await queue.enqueue(entity: 'sale', operation: 'UPSERT', payload: {'id': 's1'});
+      await queue.enqueue(
+        entity: 'sale',
+        operation: 'UPSERT',
+        payload: {'id': 's1'},
+      );
       final container = ProviderContainer(
         overrides: [
           localDatabaseProvider.overrideWithValue(testDb),
@@ -106,7 +113,8 @@ void main() {
       final db = await createTestDb('sync_coordinator_reconnect');
       final fake = _FakeSyncManager(
         queue: SyncQueueService(db),
-        onProcessDetailed: (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
+        onProcessDetailed:
+            (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
       );
       final container = await _buildContainer(
         testDb: db,
@@ -142,7 +150,8 @@ void main() {
       final db = await createTestDb('sync_coordinator_periodic');
       final fake = _FakeSyncManager(
         queue: SyncQueueService(db),
-        onProcessDetailed: (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
+        onProcessDetailed:
+            (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
       );
       final container = await _buildContainer(
         testDb: db,
@@ -209,14 +218,25 @@ void main() {
 
       shouldFail = false;
       await notifier.triggerNow();
-      expect(fake.calls, 1, reason: 'Immediate retry should be skipped by backoff');
+      expect(
+        fake.calls,
+        1,
+        reason: 'Immediate retry should be skipped by backoff',
+      );
     });
 
     test('successful sync invalidates common UI providers', () async {
       final db = await createTestDb('sync_coordinator_invalidate');
+      const customerParams = CustomerMetricsQueryParams(limit: 500);
+      const productParams = ProductMetricsQueryParams(
+        limit: 200,
+        windowDays: 30,
+        deadStockDays: 30,
+      );
       final fake = _FakeSyncManager(
         queue: SyncQueueService(db),
-        onProcessDetailed: (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
+        onProcessDetailed:
+            (_) async => const SyncRunResult(pendingAtStart: 1, ackedEvents: 1),
       );
       final counts = <String, int>{};
       final container = await _buildContainer(
@@ -248,6 +268,30 @@ void main() {
               creditOutstanding: 0,
             );
           }),
+          alertsFeedProvider.overrideWith((ref) async {
+            counts['alerts'] = (counts['alerts'] ?? 0) + 1;
+            return const <AlertItem>[];
+          }),
+          customerMetricsReportProvider(customerParams).overrideWith((
+            ref,
+          ) async {
+            counts['customerMetrics'] = (counts['customerMetrics'] ?? 0) + 1;
+            return const {
+              'items': <Map<String, dynamic>>[],
+              'totals': {'d0_7': 0, 'd8_30': 0, 'd31_60': 0, 'd60_plus': 0},
+              'total_outstanding': 0,
+              'total_overdue': 0,
+              'high_risk_count': 0,
+            };
+          }),
+          productMetricsReportProvider(productParams).overrideWith((ref) async {
+            counts['productMetrics'] = (counts['productMetrics'] ?? 0) + 1;
+            return {
+              'items': const <ProductMetricItem>[],
+              'dead_stock_count': 0,
+              'dead_stock_value_total': 0,
+            };
+          }),
         ],
       );
       await container.read(productsListProvider.future);
@@ -255,6 +299,11 @@ void main() {
       await container.read(expensesListProvider.future);
       await container.read(lowStockProductsProvider.future);
       await container.read(dashboardSummaryProvider.future);
+      await container.read(alertsFeedProvider.future);
+      await container.read(
+        customerMetricsReportProvider(customerParams).future,
+      );
+      await container.read(productMetricsReportProvider(productParams).future);
       expect(counts.values.every((v) => v == 1), isTrue);
 
       await container.read(syncCoordinatorProvider.notifier).triggerNow();
@@ -264,24 +313,33 @@ void main() {
       await container.read(expensesListProvider.future);
       await container.read(lowStockProductsProvider.future);
       await container.read(dashboardSummaryProvider.future);
+      await container.read(alertsFeedProvider.future);
+      await container.read(
+        customerMetricsReportProvider(customerParams).future,
+      );
+      await container.read(productMetricsReportProvider(productParams).future);
 
       expect(counts['products'], greaterThanOrEqualTo(2));
       expect(counts['customers'], greaterThanOrEqualTo(2));
       expect(counts['expenses'], greaterThanOrEqualTo(2));
       expect(counts['lowStock'], greaterThanOrEqualTo(2));
       expect(counts['dashboard'], greaterThanOrEqualTo(2));
+      expect(counts['alerts'], greaterThanOrEqualTo(2));
+      expect(counts['customerMetrics'], greaterThanOrEqualTo(2));
+      expect(counts['productMetrics'], greaterThanOrEqualTo(2));
     });
 
     test('partial sync shows warning state instead of clean success', () async {
       final db = await createTestDb('sync_coordinator_partial_warning');
       final fake = _FakeSyncManager(
         queue: SyncQueueService(db),
-        onProcessDetailed: (_) async => const SyncRunResult(
-          pendingAtStart: 2,
-          pushedEvents: 2,
-          ackedEvents: 1,
-          failedEvents: 1,
-        ),
+        onProcessDetailed:
+            (_) async => const SyncRunResult(
+              pendingAtStart: 2,
+              pushedEvents: 2,
+              ackedEvents: 1,
+              failedEvents: 1,
+            ),
       );
       final container = await _buildContainer(
         testDb: db,

@@ -1,13 +1,17 @@
 import 'dart:convert';
 
 import '../../../core/storage/local_db.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/utils/uuid_id.dart';
+import '../../reports/data/metrics_repository.dart';
 import '../domain/customer.dart';
 
 class CustomersRepository {
-  CustomersRepository(this._db);
+  CustomersRepository(this._db, {MetricsRepository? metricsRepository})
+    : _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final MetricsRepository? _metricsRepository;
 
   Future<List<Customer>> listCustomers() async {
     final db = await _db.database;
@@ -16,13 +20,15 @@ class CustomersRepository {
       where: '(is_deleted IS NULL OR is_deleted = 0)',
       // Owing customers first (so "Pay" actions are easy to find), then
       // alphabetical for predictable browsing.
-      orderBy: 'CASE WHEN COALESCE(balance, 0) > 0 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC, updated_at DESC',
+      orderBy:
+          'CASE WHEN COALESCE(balance, 0) > 0 THEN 0 ELSE 1 END, name COLLATE NOCASE ASC, updated_at DESC',
     );
     return rows.map(Customer.fromMap).toList();
   }
 
   Future<String> addCustomer({required String name, String? phone}) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     final id = newUuidV4();
 
@@ -41,6 +47,7 @@ class CustomersRepository {
 
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'customer',
         'entity_id': id,
         'operation': 'UPSERT',
@@ -58,6 +65,7 @@ class CustomersRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
     return id;
   }
 
@@ -72,23 +80,32 @@ class CustomersRepository {
   }
 
   Future<List<Map<String, dynamic>>> getCustomerLedger(
-      String customerId) async {
+    String customerId,
+  ) async {
     final db = await _db.database;
-    final salesRows = await db.rawQuery('''
+    final salesRows = await db.rawQuery(
+      '''
       SELECT id, created_at, total_amount as amount,
              'SALE' as entry_type, sale_type, null as note
       FROM sales
       WHERE customer_id = ? AND sale_type = 'CREDIT'
-    ''', [customerId]);
-    final paymentRows = await db.rawQuery('''
+    ''',
+      [customerId],
+    );
+    final paymentRows = await db.rawQuery(
+      '''
       SELECT id, created_at, amount,
              'PAYMENT' as entry_type, null as sale_type, note
       FROM customer_payments
       WHERE customer_id = ?
-    ''', [customerId]);
+    ''',
+      [customerId],
+    );
     final all = [...salesRows, ...paymentRows];
-    all.sort((a, b) => (b['created_at'] as String)
-        .compareTo(a['created_at'] as String));
+    all.sort(
+      (a, b) =>
+          (b['created_at'] as String).compareTo(a['created_at'] as String),
+    );
     return all;
   }
 
@@ -107,10 +124,12 @@ class CustomersRepository {
       where: 'id = ?',
       whereArgs: [customer.id],
     );
+    await _refreshLocalIntelligence();
   }
 
   Future<void> softDeleteCustomer(String id) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
       await txn.update(
@@ -121,6 +140,7 @@ class CustomersRepository {
       );
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'customer',
         'entity_id': id,
         'operation': 'DELETE',
@@ -137,6 +157,7 @@ class CustomersRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
   }
 
   Future<void> recordPayment({
@@ -146,6 +167,7 @@ class CustomersRepository {
     String? note,
   }) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     if (amount <= 0) throw StateError('Amount must be greater than zero');
 
@@ -181,6 +203,7 @@ class CustomersRepository {
 
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'customer_payment',
         'entity_id': paymentId,
         'operation': 'UPSERT',
@@ -199,5 +222,14 @@ class CustomersRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
+  }
+
+  Future<void> _refreshLocalIntelligence() async {
+    try {
+      await _metricsRepository?.recomputeLocalCaches();
+    } catch (_) {
+      // Keep local customer flows fast/reliable even if analytics cache refresh fails.
+    }
   }
 }

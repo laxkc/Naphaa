@@ -12,6 +12,7 @@ import 'alerts_feed_screen.dart';
 import 'business_health_screen.dart';
 import 'ledger_report_screen.dart';
 import 'product_insights_report_screen.dart';
+import '../../billing/presentation/invoice_list_screen.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -169,6 +170,22 @@ class ReportsScreen extends ConsumerWidget {
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const ProductInsightsReportScreen(),
+                          ),
+                        ),
+                  ),
+                  const Divider(height: 1),
+                  _ReportTile(
+                    icon: Icons.receipt_long_outlined,
+                    iconColor: AppColors.primary,
+                    title: context.tr('Invoices', 'इनभ्वाइसहरू'),
+                    subtitle: context.tr(
+                      'Create, issue and collect invoice payments',
+                      'इनभ्वाइस बनाउनुहोस्, जारी गर्नुहोस् र भुक्तानी लिनुहोस्',
+                    ),
+                    onTap:
+                        () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const InvoiceListScreen(),
                           ),
                         ),
                   ),

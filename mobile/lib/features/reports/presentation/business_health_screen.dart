@@ -203,6 +203,101 @@ class BusinessHealthScreen extends ConsumerWidget {
                 );
               },
             ),
+            const SizedBox(height: AppSpacing.lg),
+            SectionHeader(context.tr('Cash Outlook', 'नगद पूर्वानुमान')),
+            const SizedBox(height: AppSpacing.sm),
+            businessAsync.when(
+              loading: () => const SkeletonListTile(),
+              error:
+                  (_, __) => ErrorRetry(
+                    onRetry: () => ref.invalidate(businessMetricsProvider),
+                  ),
+              data: (summary) {
+                final incoming = _toDouble(summary['expected_incoming_soon']);
+                final outgoing = _toDouble(summary['expected_outgoing_soon']);
+                final net = _toDouble(summary['net_cash_outlook_soon']);
+                final horizonDays = _toInt(summary['cash_horizon_days']);
+                return AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _HealthStatTile(
+                              label: context.tr(
+                                'Expected Incoming',
+                                'अपेक्षित आम्दानी',
+                              ),
+                              value: 'NPR ${currFmt.format(incoming)}',
+                              color: AppColors.success,
+                              icon: Icons.south_west_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: _HealthStatTile(
+                              label: context.tr(
+                                'Expected Outgoing',
+                                'अपेक्षित खर्च',
+                              ),
+                              value: 'NPR ${currFmt.format(outgoing)}',
+                              color: AppColors.error,
+                              icon: Icons.north_east_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color:
+                              (net >= 0
+                                      ? AppColors.success
+                                      : AppColors.error)
+                                  .withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                            color:
+                                (net >= 0
+                                        ? AppColors.success
+                                        : AppColors.error)
+                                    .withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              net >= 0
+                                  ? Icons.trending_up_rounded
+                                  : Icons.trending_down_rounded,
+                              size: 18,
+                              color:
+                                  net >= 0
+                                      ? AppColors.success
+                                      : AppColors.error,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                context.tr(
+                                  'Next ${horizonDays > 0 ? horizonDays : 7} days net outlook: NPR ${currFmt.format(net)}',
+                                  'अर्को ${horizonDays > 0 ? horizonDays : 7} दिनको खुद पूर्वानुमान: NPR ${currFmt.format(net)}',
+                                ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Row(

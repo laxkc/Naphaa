@@ -22,6 +22,57 @@ class SyncQueueScreen extends ConsumerWidget {
         backgroundColor: AppColors.surface,
         actions: [
           IconButton(
+            tooltip: context.tr('Clear Failed Rows', 'असफल पंक्ति हटाउनुहोस्'),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: Text(
+                    context.tr('Clear failed sync rows?', 'असफल सिंक पंक्तिहरू हटाउने?'),
+                  ),
+                  content: Text(
+                    context.tr(
+                      'This is for demo/testing cleanup. Failed offline changes will be removed from the local sync queue.',
+                      'यो डेमो/परीक्षण सफाइका लागि हो। असफल अफलाइन परिवर्तनहरू लोकल सिंक क्यूबाट हटाइनेछन्।',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: Text(context.tr('Cancel', 'रद्द गर्नुहोस्')),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      child: Text(context.tr('Clear Failed', 'असफल हटाउनुहोस्')),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !context.mounted) return;
+
+              final db = await ref.read(localDatabaseProvider).database;
+              final deleted = await db.delete(
+                'sync_queue',
+                where: 'status = ?',
+                whereArgs: const ['failed'],
+              );
+              ref.invalidate(syncQueueRowsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      context.tr(
+                        'Cleared $deleted failed sync rows',
+                        '$deleted असफल सिंक पंक्ति हटाइयो',
+                      ),
+                    ),
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.delete_sweep_outlined),
+          ),
+          IconButton(
             tooltip: context.tr('Retry Sync', 'फेरि सिंक'),
             onPressed: syncState.syncing
                 ? null
@@ -155,14 +206,23 @@ class SyncQueueScreen extends ConsumerWidget {
                           ),
                           if ((row.lastError?.isNotEmpty ?? false)) ...[
                             const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              row.lastError!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: color,
-                                fontWeight: FontWeight.w600,
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: color.withValues(alpha: 0.22)),
+                              ),
+                              child: Text(
+                                row.lastError!,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: color,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],
@@ -275,4 +335,3 @@ class _MiniStat extends StatelessWidget {
     );
   }
 }
-

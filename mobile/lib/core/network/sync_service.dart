@@ -90,6 +90,23 @@ class SyncService {
 
     final db = await _db.database;
     final deviceId = await _prefs.getOrCreateDeviceId();
+    final activeStoreId = await _prefs.getActiveStoreId();
+    if (activeStoreId != null && activeStoreId.isNotEmpty) {
+      final nowIso = DateTime.now().toIso8601String();
+      await db.rawUpdate(
+        '''
+        UPDATE sync_queue
+        SET status = 'archived',
+            last_error = COALESCE(last_error, 'Archived: queued under a different account/store'),
+            updated_at = ?
+        WHERE synced = 0
+          AND store_id IS NOT NULL
+          AND store_id != ?
+          AND COALESCE(status, 'pending') != 'archived'
+        ''',
+        [nowIso, activeStoreId],
+      );
+    }
     final localSalesCount =
         Sqflite.firstIntValue(
           await db.rawQuery('SELECT COUNT(*) FROM sales'),
@@ -113,7 +130,9 @@ class SyncService {
     final pending = await db.query(
       'sync_queue',
       where:
-          "synced = 0 AND COALESCE(status, 'pending') IN ('pending', 'failed')",
+          "synced = 0 AND COALESCE(status, 'pending') IN ('pending', 'failed') "
+          "AND (? IS NULL OR store_id IS NULL OR store_id = ?)",
+      whereArgs: [activeStoreId, activeStoreId],
       // Prioritize new pending dependencies (e.g. product UPSERT recovery) before
       // retrying older failed rows such as dependent sale events.
       orderBy:
@@ -506,6 +525,7 @@ class SyncService {
     Database db,
     Map<String, dynamic> saleQueueRow,
   ) async {
+    final activeStoreId = await _prefs.getActiveStoreId();
     final payloadRaw = saleQueueRow['payload'] as String?;
     if (payloadRaw == null || payloadRaw.isEmpty) return;
     Map<String, dynamic> payload;
@@ -536,9 +556,10 @@ class SyncService {
                 AND operation = 'UPSERT'
                 AND synced = 0
                 AND COALESCE(status, 'pending') IN ('pending', 'syncing', 'failed')
+                AND (? IS NULL OR store_id IS NULL OR store_id = ?)
               LIMIT 1
               ''',
-              [productId],
+              [productId, activeStoreId, activeStoreId],
             ),
           ) ??
           0;
@@ -554,6 +575,7 @@ class SyncService {
       final row = rows.first;
       await db.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'product',
         'entity_id': productId,
         'operation': 'UPSERT',

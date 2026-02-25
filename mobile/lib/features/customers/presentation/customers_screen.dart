@@ -9,7 +9,9 @@ import 'customer_detail_screen.dart';
 import 'customer_form_screen.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
-  const CustomersScreen({super.key});
+  const CustomersScreen({super.key, this.standalone = false});
+
+  final bool standalone;
 
   @override
   ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
@@ -24,7 +26,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     final customers = ref.watch(customersListProvider);
     final riskMetrics = ref.watch(customerRiskMetricsProvider);
 
-    return Column(
+    final content = Column(
       children: [
         // ── search + add ─────────────────────────────────────────────────
         Padding(
@@ -46,11 +48,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               ),
               const SizedBox(width: AppSpacing.sm),
               FilledButton.icon(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(
-                      builder: (_) => const CustomerFormScreen(),
-                    ))
-                    .then((_) => ref.invalidate(customersListProvider)),
+                onPressed:
+                    () => Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) => const CustomerFormScreen(),
+                          ),
+                        )
+                        .then((_) => ref.invalidate(customersListProvider)),
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
                 label: Text(l10n.addCustomer),
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 50)),
@@ -62,14 +67,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         // ── list ─────────────────────────────────────────────────────────
         Expanded(
           child: customers.when(
-            loading: () => ListView.builder(
-              itemCount: 6,
-              itemBuilder: (_, __) => const SkeletonListTile(),
-            ),
-            error: (_, __) => ErrorRetry(
-              onRetry: () => ref.invalidate(customersListProvider),
-              message: 'Failed to load customers',
-            ),
+            loading:
+                () => ListView.builder(
+                  itemCount: 6,
+                  itemBuilder: (_, __) => const SkeletonListTile(),
+                ),
+            error:
+                (_, __) => ErrorRetry(
+                  onRetry: () => ref.invalidate(customersListProvider),
+                  message: 'Failed to load customers',
+                ),
             data: (items) {
               final q = _query.trim().toLowerCase();
               final filtered =
@@ -82,28 +89,36 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                       }).toList();
 
               return filtered.isEmpty
-                ? EmptyState(
+                  ? EmptyState(
                     icon: Icons.people_outline_rounded,
-                    title: q.isEmpty ? l10n.manageCustomers : 'No customers found',
-                    subtitle: q.isEmpty
-                        ? 'Tap "Add Customer" to get started.'
-                        : 'Try a different name or phone number.',
+                    title:
+                        q.isEmpty ? l10n.manageCustomers : 'No customers found',
+                    subtitle:
+                        q.isEmpty
+                            ? 'Tap "Add Customer" to get started.'
+                            : 'Try a different name or phone number.',
                     action: q.isEmpty ? l10n.addCustomer : null,
-                    onAction: q.isEmpty
-                        ? () => Navigator.of(context)
-                            .push(MaterialPageRoute(
-                              builder: (_) => const CustomerFormScreen(),
-                            ))
-                            .then((_) => ref.invalidate(customersListProvider))
-                        : null,
+                    onAction:
+                        q.isEmpty
+                            ? () => Navigator.of(context)
+                                .push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const CustomerFormScreen(),
+                                  ),
+                                )
+                                .then(
+                                  (_) => ref.invalidate(customersListProvider),
+                                )
+                            : null,
                   )
-                : ListView.separated(
+                  : ListView.separated(
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      indent: 72,
-                      endIndent: AppSpacing.lg,
-                      height: 0,
-                    ),
+                    separatorBuilder:
+                        (_, __) => const Divider(
+                          indent: 72,
+                          endIndent: AppSpacing.lg,
+                          height: 0,
+                        ),
                     itemBuilder: (_, i) {
                       final c = filtered[i];
                       final risk = riskMetrics.whenOrNull(data: (m) => m[c.id]);
@@ -113,11 +128,12 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                         key: ValueKey(c.id),
                         direction: DismissDirection.endToStart,
                         background: _DeleteBg(),
-                        confirmDismiss: (_) => showConfirmDialog(
-                          context,
-                          title: 'Delete customer?',
-                          body: '"${c.name}" will be permanently removed.',
-                        ),
+                        confirmDismiss:
+                            (_) => showConfirmDialog(
+                              context,
+                              title: 'Delete customer?',
+                              body: '"${c.name}" will be permanently removed.',
+                            ),
                         onDismissed: (_) {
                           ref.invalidate(customersListProvider);
                         },
@@ -135,106 +151,131 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                               color: AppColors.label,
                             ),
                           ),
-                          subtitle: (c.phone != null || risk != null)
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (c.phone != null)
-                                      Text(
-                                        c.phone!,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.muted,
-                                        ),
-                                      ),
-                                    if (risk != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: _RiskBadge(
-                                          level: risk.riskLevel,
-                                          score: risk.riskScore,
-                                        ),
-                                      ),
-                                  ],
-                                )
-                              : null,
-                          trailing: balance != 0
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
+                          subtitle:
+                              (c.phone != null || risk != null)
+                                  ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (c.phone != null)
                                         Text(
-                                          'Rs ${balance.abs().toStringAsFixed(0)}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDebt
-                                                ? AppColors.warning
-                                                : AppColors.success,
+                                          c.phone!,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.muted,
                                           ),
                                         ),
-                                        Text(
-                                          isDebt ? 'owes you' : 'credit',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: isDebt
-                                                ? AppColors.warning
-                                                : AppColors.success,
+                                      if (risk != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 4,
+                                          ),
+                                          child: _RiskBadge(
+                                            level: risk.riskLevel,
+                                            score: risk.riskScore,
+                                          ),
+                                        ),
+                                    ],
+                                  )
+                                  : null,
+                          trailing:
+                              balance != 0
+                                  ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Rs ${balance.abs().toStringAsFixed(0)}',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color:
+                                                  isDebt
+                                                      ? AppColors.warning
+                                                      : AppColors.success,
+                                            ),
+                                          ),
+                                          Text(
+                                            isDebt ? 'owes you' : 'credit',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color:
+                                                  isDebt
+                                                      ? AppColors.warning
+                                                      : AppColors.success,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (isDebt) ...[
+                                        const SizedBox(width: AppSpacing.xs),
+                                        IconButton(
+                                          tooltip: 'Record payment',
+                                          onPressed:
+                                              () => Navigator.of(context)
+                                                  .push(
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (
+                                                            _,
+                                                          ) => CreditPaymentScreen(
+                                                            customerId: c.id,
+                                                            customerName:
+                                                                c.name,
+                                                            outstandingBalance:
+                                                                c.balance,
+                                                          ),
+                                                    ),
+                                                  )
+                                                  .then(
+                                                    (_) => ref.invalidate(
+                                                      customersListProvider,
+                                                    ),
+                                                  ),
+                                          icon: const Icon(
+                                            Icons.payments_outlined,
+                                            size: 18,
+                                            color: AppColors.primary,
                                           ),
                                         ),
                                       ],
-                                    ),
-                                    if (isDebt) ...[
-                                      const SizedBox(width: AppSpacing.xs),
-                                      IconButton(
-                                        tooltip: 'Record payment',
-                                        onPressed: () =>
-                                            Navigator.of(context)
-                                                .push(MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      CreditPaymentScreen(
-                                                    customerId: c.id,
-                                                    customerName: c.name,
-                                                    outstandingBalance:
-                                                        c.balance,
-                                                  ),
-                                                ))
-                                                .then((_) => ref.invalidate(
-                                                    customersListProvider)),
-                                        icon: const Icon(
-                                          Icons.payments_outlined,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
                                     ],
-                                  ],
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CustomerDetailScreen(customerId: c.id),
-                            ),
-                          ),
-                          onLongPress: isDebt
-                              ? () => Navigator.of(context)
-                                  .push(MaterialPageRoute(
-                                    builder: (_) => CreditPaymentScreen(
-                                      customerId: c.id,
-                                      customerName: c.name,
-                                      outstandingBalance: c.balance,
-                                    ),
-                                  ))
-                                  .then((_) =>
-                                      ref.invalidate(customersListProvider))
-                              : null,
+                                  )
+                                  : null,
+                          onTap:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => CustomerDetailScreen(
+                                        customerId: c.id,
+                                      ),
+                                ),
+                              ),
+                          onLongPress:
+                              isDebt
+                                  ? () => Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => CreditPaymentScreen(
+                                                customerId: c.id,
+                                                customerName: c.name,
+                                                outstandingBalance: c.balance,
+                                              ),
+                                        ),
+                                      )
+                                      .then(
+                                        (_) => ref.invalidate(
+                                          customersListProvider,
+                                        ),
+                                      )
+                                  : null,
                         ),
                       );
                     },
@@ -244,14 +285,22 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         ),
       ],
     );
+
+    if (!widget.standalone) return content;
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        title: Text(l10n.customers),
+        backgroundColor: AppColors.surface,
+      ),
+      body: content,
+    );
   }
 }
 
 class _RiskBadge extends StatelessWidget {
-  const _RiskBadge({
-    required this.level,
-    required this.score,
-  });
+  const _RiskBadge({required this.level, required this.score});
 
   final String level;
   final int score;

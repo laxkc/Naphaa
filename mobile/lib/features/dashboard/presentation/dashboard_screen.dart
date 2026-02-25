@@ -6,10 +6,14 @@ import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../customers/presentation/customer_form_screen.dart';
+import '../../customers/presentation/customers_screen.dart';
 import '../../expenses/presentation/expenses_screen.dart';
 import '../../products/domain/product.dart';
 import '../../products/presentation/product_form_screen.dart';
+import '../../products/presentation/products_screen.dart';
+import '../../reports/presentation/credit_report_screen.dart';
 import '../../sales/presentation/create_sale_screen.dart';
+import '../../sales/presentation/sales_list_screen.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -252,10 +256,7 @@ class _HeroCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 // thin divider
-                Container(
-                  height: 1,
-                  color: Colors.white.withAlpha(25),
-                ),
+                Container(height: 1, color: Colors.white.withAlpha(25)),
                 const SizedBox(height: AppSpacing.md),
                 // sub-stats row
                 Row(
@@ -275,9 +276,10 @@ class _HeroCard extends StatelessWidget {
                     ),
                     Expanded(
                       child: _HeroStat(
-                        icon: profit >= 0
-                            ? Icons.trending_up_rounded
-                            : Icons.trending_down_rounded,
+                        icon:
+                            profit >= 0
+                                ? Icons.trending_up_rounded
+                                : Icons.trending_down_rounded,
                         label: l10n.netAfterExpenses,
                         value: formatCurrency(profit, localeCode),
                         valueColor: profitColor,
@@ -557,7 +559,9 @@ class _LowStockCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.warningBg,
-                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
                             ),
                             child: Text(
                               '${p.stockQty.toStringAsFixed(0)} left',
@@ -592,6 +596,20 @@ class _HealthStatus {
 class _QuickActions extends ConsumerWidget {
   const _QuickActions();
 
+  void _pushAfterFrame(BuildContext context, Widget page) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    });
+  }
+
+  void _showSheetAfterFrame(BuildContext context, Widget child) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      showAppBottomSheet(context, child: child);
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -601,66 +619,125 @@ class _QuickActions extends ConsumerWidget {
         Text(
           'QUICK ACTIONS',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.muted,
-                letterSpacing: 1.0,
-              ),
+            color: AppColors.muted,
+            letterSpacing: 1.0,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickActionButton(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final actions = <_QuickActionItem>[
+              _QuickActionItem(
                 icon: Icons.receipt_outlined,
                 label: 'New Sale',
                 color: AppColors.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateSaleScreen()),
-                ),
+                onTap: () => _pushAfterFrame(context, const CreateSaleScreen()),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickActionButton(
-                icon: Icons.inventory_2_outlined,
-                label: 'Product',
-                color: AppColors.success,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProductFormScreen()),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickActionButton(
-                icon: Icons.person_add_outlined,
-                label: 'Customer',
-                color: AppColors.primaryLight,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const CustomerFormScreen()),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickActionButton(
+              _QuickActionItem(
                 icon: Icons.payments_outlined,
-                label: 'Expense',
+                label: 'Record Pay',
                 color: AppColors.warning,
-                onTap: () => showAppBottomSheet(
-                  context,
-                  child: ExpenseFormSheet(ref: ref, l10n: l10n),
-                ),
+                onTap:
+                    () => _pushAfterFrame(context, const CreditReportScreen()),
               ),
-            ),
-          ],
+              _QuickActionItem(
+                icon: Icons.request_page_outlined,
+                label: 'Expense',
+                color: AppColors.error,
+                onTap:
+                    () => _showSheetAfterFrame(
+                      context,
+                      ExpenseFormSheet(ref: ref, l10n: l10n),
+                    ),
+              ),
+              _QuickActionItem(
+                icon: Icons.history_rounded,
+                label: 'Sales',
+                color: AppColors.primaryLight,
+                onTap:
+                    () => _pushAfterFrame(
+                      context,
+                      const SalesListScreen(standalone: true),
+                    ),
+              ),
+              _QuickActionItem(
+                icon: Icons.group_outlined,
+                label: 'Customers',
+                color: AppColors.primary,
+                onTap:
+                    () => _pushAfterFrame(
+                      context,
+                      const CustomersScreen(standalone: true),
+                    ),
+              ),
+              _QuickActionItem(
+                icon: Icons.inventory_2_outlined,
+                label: 'Products',
+                color: AppColors.success,
+                onTap:
+                    () => _pushAfterFrame(
+                      context,
+                      const ProductsScreen(standalone: true),
+                    ),
+              ),
+              _QuickActionItem(
+                icon: Icons.person_add_outlined,
+                label: 'Add Customer',
+                color: AppColors.primaryLight,
+                onTap:
+                    () => _pushAfterFrame(context, const CustomerFormScreen()),
+              ),
+              _QuickActionItem(
+                icon: Icons.add_box_outlined,
+                label: 'Add Product',
+                color: AppColors.success,
+                onTap:
+                    () => _pushAfterFrame(context, const ProductFormScreen()),
+              ),
+            ];
+
+            const spacing = AppSpacing.sm;
+            const columns = 4;
+            final itemWidth =
+                (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children:
+                  actions
+                      .map(
+                        (item) => SizedBox(
+                          width: itemWidth,
+                          child: _QuickActionButton(
+                            icon: item.icon,
+                            label: item.label,
+                            color: item.color,
+                            onTap: item.onTap,
+                          ),
+                        ),
+                      )
+                      .toList(),
+            );
+          },
         ),
       ],
     );
   }
+}
+
+class _QuickActionItem {
+  const _QuickActionItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 }
 
 class _QuickActionButton extends StatelessWidget {
@@ -706,11 +783,11 @@ class _QuickActionButton extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.labelSub,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColors.labelSub,
+                  fontWeight: FontWeight.w600,
+                ),
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

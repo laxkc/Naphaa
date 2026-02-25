@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
@@ -9,6 +9,7 @@ from app.api.deps import get_current_store
 from app.core.database import get_db
 from app.models.store import Store
 from app.models.product import Product
+from app.models.expense import Expense
 from app.schemas.metrics import (
     AgingBucketBreakdown,
     BusinessMetricsResponse,
@@ -169,6 +170,59 @@ def business_metrics(
     dead_stock_count = int(product_metrics_result["dead_stock_count"])
     open_alerts_count = len(alerts_result["items"])
 
+    # v1 cash outlook heuristic (7-day horizon): explainable and deterministic.
+    cash_horizon_days = 7
+    expected_incoming_soon = Decimal("0")
+    for item in customer_metrics["items"]:
+        outstanding = Decimal(item.get("outstanding_amount") or 0)
+        if outstanding <= 0:
+            continue
+        risk_level = str(item.get("risk_level") or "green").lower()
+        oldest_due_days = int(item.get("oldest_due_days") or 0)
+        weight = {
+            "green": Decimal("0.75"),
+            "yellow": Decimal("0.45"),
+            "red": Decimal("0.20"),
+        }.get(risk_level, Decimal("0.40"))
+        if oldest_due_days > 60:
+            weight *= Decimal("0.50")
+        elif oldest_due_days > 30:
+            weight *= Decimal("0.70")
+        elif oldest_due_days <= 7:
+            weight = min(Decimal("0.90"), weight + Decimal("0.10"))
+        expected_incoming_soon += outstanding * weight
+
+    now_utc = datetime.now(UTC)
+    current_week_start_ordinal = now_utc.date().toordinal() - now_utc.weekday()
+    recent_expenses = db.scalars(
+        select(Expense).where(
+            Expense.store_id == store.id,
+            Expense.deleted_at.is_(None),
+            Expense.created_at >= now_utc - timedelta(days=35),
+        )
+    ).all()
+    weekly_buckets = {i: Decimal("0") for i in range(-4, 1)}
+    for e in recent_expenses:
+        e_dt = e.created_at
+        if e_dt is None:
+            continue
+        if e_dt.tzinfo is None:
+            e_dt = e_dt.replace(tzinfo=UTC)
+        else:
+            e_dt = e_dt.astimezone(UTC)
+        week_start_ordinal = e_dt.date().toordinal() - e_dt.weekday()
+        week_delta = (week_start_ordinal - current_week_start_ordinal) // 7
+        if week_delta < -4 or week_delta > 0:
+            continue
+        weekly_buckets[week_delta] += Decimal(e.amount or 0)
+    prev_4w_avg = sum(
+        (weekly_buckets[i] for i in (-4, -3, -2, -1)),
+        Decimal("0"),
+    ) / Decimal("4")
+    current_week_spend = weekly_buckets[0]
+    expected_outgoing_soon = max(prev_4w_avg, current_week_spend)
+    net_cash_outlook_soon = expected_incoming_soon - expected_outgoing_soon
+
     reasons: list[str] = []
     cash_risk_level = "low"
     if overdue_total > Decimal("0"):
@@ -179,10 +233,21 @@ def business_metrics(
         reasons.append("Estimated profit is negative for the selected period")
     if dead_stock_count > 0:
         reasons.append(f"{dead_stock_count} dead-stock item(s)")
+    if expected_outgoing_soon > expected_incoming_soon:
+        reasons.append(
+            f"Expected 7-day outflow exceeds inflow by NPR {(expected_outgoing_soon - expected_incoming_soon):.2f}"
+        )
     if overdue_total > sales_total and sales_total > 0:
         cash_risk_level = "high"
-    elif overdue_total > Decimal("0") or profit_est < 0 or high_risk_customers > 0:
+    elif (
+        overdue_total > Decimal("0")
+        or profit_est < 0
+        or high_risk_customers > 0
+        or net_cash_outlook_soon < 0
+    ):
         cash_risk_level = "medium"
+    if net_cash_outlook_soon < 0 and (overdue_total > Decimal("0") or high_risk_customers > 0):
+        cash_risk_level = "high"
     if not reasons:
         reasons.append("No major risk signals detected")
 
@@ -196,6 +261,10 @@ def business_metrics(
         outstanding_total=outstanding_total,
         overdue_total=overdue_total,
         cash_risk_level=cash_risk_level,
+        cash_horizon_days=cash_horizon_days,
+        expected_incoming_soon=expected_incoming_soon.quantize(Decimal("0.01")),
+        expected_outgoing_soon=expected_outgoing_soon.quantize(Decimal("0.01")),
+        net_cash_outlook_soon=net_cash_outlook_soon.quantize(Decimal("0.01")),
         low_stock_count=low_stock_count,
         dead_stock_count=dead_stock_count,
         high_risk_customers=high_risk_customers,

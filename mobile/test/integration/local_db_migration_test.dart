@@ -182,4 +182,107 @@ void main() {
       await deleteDatabase(path);
     },
   );
+
+  test(
+    'migrates local db from v10 to v11 adding billing invoice tables',
+    () async {
+      const dbName = 'test_migration_v10_to_v11.db';
+      final path = join(await getDatabasesPath(), dbName);
+      await deleteDatabase(path);
+
+      final legacy = await openDatabase(
+        path,
+        version: 10,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE sync_queue (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              op_id TEXT,
+              store_id TEXT,
+              entity TEXT NOT NULL,
+              entity_id TEXT,
+              operation TEXT NOT NULL,
+              payload TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT,
+              synced INTEGER NOT NULL DEFAULT 0,
+              status TEXT NOT NULL DEFAULT 'pending',
+              retry_count INTEGER NOT NULL DEFAULT 0,
+              last_error TEXT
+            )
+          ''');
+        },
+      );
+      await legacy.close();
+
+      final db = LocalDatabase(dbName: dbName);
+      final upgraded = await db.database;
+
+      final tables = await upgraded.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+      );
+      final indexes = await upgraded.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='index'",
+      );
+      final invoiceInfo = await upgraded.rawQuery('PRAGMA table_info(invoices)');
+      final invoiceItemInfo = await upgraded.rawQuery(
+        'PRAGMA table_info(invoice_items)',
+      );
+      final invoicePaymentInfo = await upgraded.rawQuery(
+        'PRAGMA table_info(invoice_payments)',
+      );
+      final invoiceSeqInfo = await upgraded.rawQuery(
+        'PRAGMA table_info(invoice_sequence)',
+      );
+
+      final tableNames = tables.map((t) => t['name'] as String).toSet();
+      final indexNames = indexes.map((t) => t['name'] as String).toSet();
+      final invoiceCols = invoiceInfo.map((c) => c['name'] as String).toSet();
+      final invoiceItemCols =
+          invoiceItemInfo.map((c) => c['name'] as String).toSet();
+      final invoicePaymentCols =
+          invoicePaymentInfo.map((c) => c['name'] as String).toSet();
+      final invoiceSeqCols =
+          invoiceSeqInfo.map((c) => c['name'] as String).toSet();
+
+      expect(tableNames.contains('invoices'), isTrue);
+      expect(tableNames.contains('invoice_items'), isTrue);
+      expect(tableNames.contains('invoice_payments'), isTrue);
+      expect(tableNames.contains('invoice_sequence'), isTrue);
+
+      expect(invoiceCols.contains('business_id'), isTrue);
+      expect(invoiceCols.contains('invoice_number'), isTrue);
+      expect(invoiceCols.contains('status'), isTrue);
+      expect(invoiceCols.contains('currency_code'), isTrue);
+      expect(invoiceCols.contains('fiscal_calendar_snapshot'), isTrue);
+      expect(invoiceCols.contains('language_snapshot'), isTrue);
+      expect(invoiceCols.contains('vat_enabled_snapshot'), isTrue);
+      expect(invoiceCols.contains('vat_rate_snapshot'), isTrue);
+      expect(invoiceCols.contains('tax_mode_snapshot'), isTrue);
+      expect(invoiceCols.contains('pdf_path'), isTrue);
+      expect(invoiceCols.contains('pdf_status'), isTrue);
+
+      expect(invoiceItemCols.contains('invoice_id'), isTrue);
+      expect(invoiceItemCols.contains('product_name_snapshot'), isTrue);
+      expect(invoiceItemCols.contains('tax_rate_snapshot'), isTrue);
+      expect(invoiceItemCols.contains('line_total'), isTrue);
+
+      expect(invoicePaymentCols.contains('invoice_id'), isTrue);
+      expect(invoicePaymentCols.contains('paid_at'), isTrue);
+      expect(invoicePaymentCols.contains('method'), isTrue);
+
+      expect(invoiceSeqCols.contains('business_id'), isTrue);
+      expect(invoiceSeqCols.contains('year_key'), isTrue);
+      expect(invoiceSeqCols.contains('last_seq'), isTrue);
+
+      expect(indexNames.contains('ix_invoices_business_issue_date'), isTrue);
+      expect(indexNames.contains('ix_invoices_business_status'), isTrue);
+      expect(indexNames.contains('uq_invoices_business_number'), isTrue);
+      expect(indexNames.contains('ix_invoice_items_invoice_id'), isTrue);
+      expect(indexNames.contains('ix_invoice_payments_invoice_id'), isTrue);
+
+      await upgraded.close();
+      await deleteDatabase(path);
+    },
+  );
 }

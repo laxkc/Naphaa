@@ -32,8 +32,12 @@ class SyncQueueRowData {
 
 final syncQueueRowsProvider = FutureProvider<List<SyncQueueRowData>>((ref) async {
   final db = await ref.watch(localDatabaseProvider).database;
+  final activeStoreId = await ref.watch(preferencesProvider).getActiveStoreId();
   final rows = await db.query(
     'sync_queue',
+    where:
+        '(? IS NULL OR store_id IS NULL OR store_id = ?)',
+    whereArgs: [activeStoreId, activeStoreId],
     orderBy: 'synced ASC, CASE status WHEN "failed" THEN 0 WHEN "pending" THEN 1 ELSE 2 END, created_at DESC',
   );
   return rows
@@ -54,4 +58,3 @@ final syncQueueRowsProvider = FutureProvider<List<SyncQueueRowData>>((ref) async
       )
       .toList();
 });
-

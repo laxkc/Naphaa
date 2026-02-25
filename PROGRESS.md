@@ -140,7 +140,7 @@ Make the app reliable in Nepal's unstable internet conditions:
 - [x] Mobile static analysis smoke check (`flutter analyze`)
 - [x] Backend import/startup smoke check (`import app.main`)
 - [x] Manual E2E + rollout checklist documented
-- [ ] Automated migration/repository/sync integration tests (future hardening)
+- [x] Automated migration/repository/sync integration tests (covered by added mobile migration/sync coordinator/sync service integration tests)
 - [ ] Full E2E test automation (future hardening)
 
 ## Suggested Execution Order (Practical)
@@ -712,12 +712,12 @@ Goal:
 - [x] IR0: Foundations / data contract alignment (customer-metrics/alerts initial slice)
 - [x] IR1: Data model extensions (backend + local SQLite cache tables) (customer-metrics/alerts initial slice)
 - [x] IR2: Deterministic metrics engine (server) (v1 core)
-- [ ] IR3: Local metrics cache + offline compute (mobile)
-- [ ] IR4: Sync transport for metrics + alerts
+- [x] IR3: Local metrics cache + offline compute (mobile)
+- [x] IR4: Sync transport for metrics + alerts (v1 core)
 - [x] IR5: Credit aging report + customer risk score UI (v1 core)
-- [ ] IR6: Business Health dashboard + alerts feed (in progress)
+- [x] IR6: Business Health dashboard + alerts feed (v1 core)
 - [x] IR7: Profit-by-product + dead stock + expense spike insights (v1 core)
-- [ ] IR8: Testing + consistency validation + rollout (in progress)
+- [x] IR8: Testing + consistency validation + rollout (v1 core)
 
 ### IR0: Foundations / Data Contract Alignment (P0)
 
@@ -1233,6 +1233,18 @@ Rollout plan
   - Scope note:
     - IR8 targeted intelligence paths are now covered across backend unit/API tests and mobile UI/provider tests
     - remaining IR8 work is broader rollout/feature-flag strategy and local-vs-server metrics cache overwrite flow (IR3/IR4 coupling)
+- IR8 final intelligence regression + rollout signoff slice (2026-02-24):
+  - Backend intelligence regression:
+    - `uv run pytest backend/tests/unit/test_intelligence_service.py backend/tests/api/test_products_customers_sales_expenses_reports.py -q` -> `36 passed`
+  - Mobile intelligence/sync-cache regression:
+    - `flutter test mobile/test/integration/intelligence_ui_test.dart mobile/test/integration/intelligence_providers_test.dart mobile/test/integration/sync_service_test.dart` -> `All tests passed!`
+  - Mobile targeted analyze (IR core screens/providers/sync):
+    - `flutter analyze mobile/lib/core/network/sync_service.dart mobile/lib/core/providers/app_providers.dart mobile/lib/features/reports/presentation/business_health_screen.dart mobile/lib/features/reports/presentation/alerts_feed_screen.dart mobile/lib/features/reports/presentation/credit_aging_report_screen.dart mobile/lib/features/reports/presentation/product_insights_report_screen.dart` -> `No issues found!`
+  - Rollout/signoff note:
+    - IR v1 features are enabled without a dedicated feature flag in current app builds; rollout control currently relies on release sequencing and existing offline/sync diagnostics
+    - future enhancement: add a server-config or local feature flag gate for incremental rollout
+  - Result:
+    - `IR8` v1 core is complete (tests, consistency checks, and rollout signoff baseline documented)
 - IR3/IR4 local intelligence cache overwrite + offline fallback slice (2026-02-24):
   - Mobile sync (`SyncService`)
     - after successful sync run, fetches canonical `/metrics/customers` and `/alerts`
@@ -1280,6 +1292,21 @@ Rollout plan
     - `flutter analyze .../mobile/lib/core/storage/local_db.dart .../mobile/lib/core/network/sync_service.dart .../mobile/lib/core/providers/app_providers.dart` -> `No issues found!`
   - Scope note:
     - current cached `business_metrics` uses a single `default` cache key (no date-range variants yet); acceptable for current Business Health v1 screen which uses the default period
+- IR4 metrics provider invalidation completion slice (2026-02-24):
+  - Mobile sync coordinator (`SyncCoordinatorController`)
+    - on successful sync now invalidates intelligence providers so server-overwritten caches refresh immediately:
+      - `alertsFeedProvider`
+      - `customerMetricsReportProvider(...)`
+      - `productMetricsReportProvider(...)`
+    - file:
+      - `mobile/lib/core/providers/app_providers.dart`
+  - Tests:
+    - expanded `mobile/test/integration/sync_coordinator_test.dart` (`successful sync invalidates common UI providers`) to assert intelligence provider invalidation/recompute
+  - Validation:
+    - `flutter analyze .../mobile/lib/core/providers/app_providers.dart .../mobile/test/integration/sync_coordinator_test.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/integration/sync_coordinator_test.dart` -> `All tests passed!`
+  - Result:
+    - `IR4` v1 core is complete (dedicated metrics endpoints + post-sync cache overwrite + offline fallback + provider refresh invalidation)
 - IR6/IR8 cached-intelligence UI hint slice (2026-02-24):
   - Mobile UI:
     - `BusinessHealthScreen` shows an offline/cached-data banner when any intelligence provider payload reports `source = local_cache`
@@ -1323,6 +1350,55 @@ Rollout plan
     - `flutter test .../mobile/test/integration/intelligence_ui_test.dart` -> `All tests passed!`
   - Scope note:
     - cached-data banner parity now exists across Business Health, Product Insights, and Credit Aging screens
+- IR6 cash outlook upgrade slice (2026-02-24):
+  - Backend `/metrics/business`:
+    - added structured v1 cash outlook fields:
+      - `cash_horizon_days`
+      - `expected_incoming_soon`
+      - `expected_outgoing_soon`
+      - `net_cash_outlook_soon`
+    - upgraded cash-risk reasons to include 7-day inflow/outflow gap signal
+    - file:
+      - `backend/app/api/metrics.py`
+      - `backend/app/schemas/metrics.py`
+  - Mobile `BusinessHealthScreen`:
+    - added `Cash Outlook` section/card showing expected incoming, expected outgoing, and net outlook for the reported horizon
+    - file:
+      - `mobile/lib/features/reports/presentation/business_health_screen.dart`
+  - Tests / validation:
+    - `uv run pytest .../backend/tests/api/test_products_customers_sales_expenses_reports.py -q` -> `31 passed`
+    - `flutter analyze .../mobile/lib/features/reports/presentation/business_health_screen.dart .../mobile/lib/core/network/backend_gateway.dart .../mobile/lib/core/providers/app_providers.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/integration/intelligence_ui_test.dart` -> `All tests passed!`
+  - Result:
+    - `IR6` v1 core is complete (Business Health + alerts feed + CTA routing + cached-data hints + backend business metrics with cash outlook heuristic)
+- IR3 local compute + write-trigger completion slice (2026-02-24):
+  - Mobile local intelligence repositories (new):
+    - `MetricsRepository` (local compute + cache writes for customer/product/business metrics)
+    - `AlertsRepository` (local alerts cache writer)
+    - files:
+      - `mobile/lib/features/reports/data/metrics_repository.dart`
+      - `mobile/lib/features/reports/data/alerts_repository.dart`
+  - Local compute (v1 simplified/provisional) implemented:
+    - credit aging + customer risk score cache (`customer_metrics`)
+    - product metrics cache (`product_metrics`) including 7d/30d quantities, revenue, dead stock, basic profit by cost price
+    - business metrics cache (`business_metrics_cache`) with `source=local_cache` + `provisional=true`
+    - local generated alerts (credit overdue, dead stock)
+  - Recompute triggers integrated into local write paths (best-effort, non-blocking):
+    - `SalesRepository.createSale(...)`
+    - `CustomersRepository.addCustomer/updateCustomer/softDeleteCustomer/recordPayment(...)`
+    - `ExpensesRepository.addExpense(...)`
+    - `ProductsRepository.addProduct/updateProduct/adjustStock(...)`
+    - files:
+      - `mobile/lib/features/sales/data/sales_repository.dart`
+      - `mobile/lib/features/customers/data/customers_repository.dart`
+      - `mobile/lib/features/expenses/data/expenses_repository.dart`
+      - `mobile/lib/features/products/data/products_repository.dart`
+      - `mobile/lib/core/providers/app_providers.dart` (repo/provider wiring)
+  - Validation:
+    - `flutter analyze ...` (IR3 touched production files) -> `No issues found!`
+    - `flutter test .../mobile/test/integration/local_intelligence_metrics_test.dart .../mobile/test/unit/sales_repository_test.dart` -> `All tests passed!`
+  - Scope note:
+    - local IR3 compute is intentionally simplified/provisional (e.g., customer payment behavior defaults for some risk factors); server metrics remain authoritative and overwrite caches after sync (IR4)
 - IR7 expense spike alerts slice (2026-02-24):
   - Backend:
     - Added deterministic expense-spike alert generation (current week vs previous 4-week average)
@@ -1338,3 +1414,475 @@ Rollout plan
     - IR7 still pending:
       - fast movers summary
       - stronger profit reconciliation/assumption labeling in UI
+
+## Billing + PDF + i18n (Mobile-Only, Offline-First) Plan
+
+Status: `In progress` (`BP0`–`BP4` + `BP6` first UI slice complete)
+Spec:
+- `docs/billing_pdf_i18n_mobile.md`
+
+### Phase Tracker (BP0–BP9)
+
+- [x] `BP0` Contract + scope decisions (mobile-only v1 guardrails)
+- [x] `BP1` Local DB schema + migrations (`invoices`, `invoice_items`, `invoice_payments`, `invoice_sequence`, business invoice settings fields)
+- [x] `BP2` Billing domain + repositories (draft, issue, payments, overdue, immutable rules)
+- [x] `BP3` Invoice numbering engine (business-scoped sequence, AD/BS year key hook)
+- [x] `BP4` Tax/VAT calculation engine (exclusive/inclusive, snapshots)
+- [x] `BP5` PDF generation + local file storage + share/print (v1 A4 local PDF + generate/share/print/retry flow)
+- [x] `BP6` Billing UI (invoice list/create/detail, payment actions; PDF actions scaffolded, full PDF flow in `BP5`)
+- [x] `BP7` i18n + formatting (business language, NPR formatting, PDF labels)
+- [x] `BP8` Offline sync compatibility (outbox event payloads for invoice events, deferred until backend handlers exist)
+- [x] `BP9` Testing + rollout checklist (offline/PDF/i18n/integrity) (baseline complete; manual device PDF/share/print checks still required)
+
+### Implementation Plan (Current App Aware)
+
+#### `BP0` Scope & integration decisions
+- Confirm reuse vs new entities:
+  - `sales` vs new `invoices` (recommended: new `invoices` for billing/PDF/immutability)
+- Decide v1 payment storage:
+  - use new `invoice_payments` table (recommended)
+- Decide v1 due date policy:
+  - optional on issue, nullable allowed
+- Decide v1 calendar:
+  - store AD internally, display AD only first; keep BS hook in schema/settings
+
+Deliverable:
+- decision note in `PROGRESS.md` + implementation assumptions section
+
+#### `BP1` Local DB schema + migrations
+- Extend mobile local SQLite schema (`mobile/lib/core/storage/local_db.dart`):
+  - `invoices`
+  - `invoice_items`
+  - `invoice_payments`
+  - `invoice_sequence`
+- Add indexes:
+  - `invoices(business_id, issue_date)`
+  - `invoices(business_id, status)`
+  - `invoice_items(invoice_id)`
+  - `invoice_payments(invoice_id)`
+  - unique `(business_id, invoice_number)`
+  - unique `(business_id, year_key)` on `invoice_sequence`
+- Extend local business/settings storage path with billing settings snapshots (using current business/tax settings sources)
+- DB migration version bump and upgrade path tests
+
+Deliverable:
+- migration-safe local schema with tests
+
+#### `BP2` Billing domain + repositories
+- Add invoice domain models:
+  - `Invoice`
+  - `InvoiceItem`
+  - `InvoicePayment`
+  - `InvoiceStatus`
+- Add `BillingRepository`:
+  - `saveDraft(...)`
+  - `issueInvoice(...)`
+  - `recordInvoicePayment(...)`
+  - `listInvoices(...)`
+  - `getInvoiceById(...)`
+  - `markOverdueIfNeeded(...)`
+- Enforce integrity rules in repository/service:
+  - no issue with zero items
+  - issued invoices immutable
+  - no delete for issued
+  - paid invoice cancellation blocked (or deferred if cancel omitted in v1)
+- Reuse existing local stock/ledger logic patterns for consistency
+
+Deliverable:
+- local-only draft/issue/payment flows with strong invariants
+
+#### `BP3` Invoice numbering engine
+- Add numbering helper/service:
+  - business-scoped
+  - transaction-safe sequence increment in SQLite
+  - format `{PREFIX}-{YEAR}-{SEQ_PAD5}`
+- Year key abstraction:
+  - AD now
+  - BS-ready hook (display only for v1)
+- Tests:
+  - sequence increments
+  - uniqueness under repeated issue operations
+
+Deliverable:
+- deterministic local invoice numbering
+
+#### `BP4` Tax/VAT computation engine
+- Add `billing_calculator.dart` (pure deterministic functions)
+- Support:
+  - VAT disabled
+  - VAT enabled + exclusive
+  - VAT enabled + inclusive
+  - invoice-level discount (v1 simple)
+- Persist snapshots on issue:
+  - currency
+  - fiscal calendar
+  - tax mode
+  - tax rate
+- Tests:
+  - exclusive/inclusive correctness
+  - rounding behavior
+  - totals consistency
+
+Deliverable:
+- trusted calculator reused by UI + issue flow + PDF
+
+#### `BP5` PDF generation + local file storage + share/print
+- Add PDF service:
+  - `generateInvoicePdf(invoiceId)`
+  - `retryPdf(invoiceId)`
+- Packages integration (mobile):
+  - `pdf`
+  - `printing`
+  - `path_provider`
+  - `share_plus`
+- Storage path:
+  - `app_documents/invoices/{business_id}/{invoice_number}.pdf`
+- Persist:
+  - `pdf_path`
+  - `pdf_status`
+- Failure policy:
+  - invoice remains `issued` if PDF fails
+  - user can retry
+- A4 layout first, receipt later
+
+Deliverable:
+- offline PDF generation + share/print working on device
+
+#### `BP6` Billing UI (mobile screens)
+- New screens:
+  - `InvoiceListScreen`
+  - `InvoiceCreateScreen` (draft + issue)
+  - `InvoiceDetailScreen`
+- Features:
+  - filters (status/date/customer)
+  - running totals
+  - status badges
+  - payment actions
+  - PDF actions (view/share/print/retry)
+- Offline UX:
+  - saved locally banners
+  - sync-ready status hints (future invoice sync)
+
+Deliverable:
+- user-facing billing workflow end-to-end on mobile
+
+#### `BP7` i18n + formatting (UI + PDF)
+- Use business language (not device language) for invoice UI and PDF labels
+- Translation keys for invoice flow/PDF labels (English/Nepali)
+- Currency formatting:
+  - NPR with Indian grouping (`en_IN`)
+- Date formatting:
+  - AD first (BS hook retained)
+- PDF font/layout validation for Nepali text wrapping
+
+Deliverable:
+- bilingual-ready invoice UI/PDF with correct formatting
+
+#### `BP8` Offline sync compatibility (future backend-ready)
+- Extend local outbox schema/payload patterns with invoice events:
+  - `invoice_issue`
+  - `invoice_payment`
+  - `invoice_cancel` (if cancel included in v1)
+- Payload snapshots include:
+  - invoice header totals/tax config snapshots/items snapshot
+- Keep mobile-only behavior functional even without backend handlers
+- Integrate with existing `sync_queue` store-scoped protections
+
+Deliverable:
+- no-refactor path for future backend invoice sync
+
+#### `BP9` Testing + rollout checklist
+- Unit tests:
+  - numbering
+  - tax calculator
+  - status transitions
+- Integration tests:
+  - issue invoice offline
+  - restart app -> invoice + PDF path persists
+  - payment updates status/balance
+  - stock + ledger consistency
+- UI/widget tests:
+  - invoice list/detail rendering
+  - i18n labels
+- Manual checklist:
+  - share/print PDF
+  - Nepali/English switch
+  - long item names / Nepali wrapping
+  - 50+ line item PDF
+
+Deliverable:
+- production confidence for mobile billing v1
+
+### Recommended Implementation Order (Practical)
+
+1. `BP0` decisions + `BP1` schema/migrations
+2. `BP4` tax calculator + `BP3` numbering engine (pure/testable first)
+3. `BP2` billing repository issue/draft/payment rules
+4. `BP6` invoice UI (draft + issue without PDF first)
+5. `BP5` PDF generation/share/print
+6. `BP7` i18n/formatting pass (UI + PDF)
+7. `BP8` invoice outbox events
+8. `BP9` tests + rollout checklist
+
+### Immediate Next Slice (Suggested)
+
+- [x] `BP0`: decide `sales` vs `invoices` separation (recommend new `invoices`)
+- [x] `BP1`: add local SQLite tables + migration (`invoices`, `invoice_items`, `invoice_payments`, `invoice_sequence`)
+- [x] `BP4`: add pure tax/VAT calculator with tests
+
+- `BP4` tax/VAT calculator slice completed (2026-02-25):
+  - Added pure billing calculator (mobile):
+    - supports VAT disabled / exclusive / inclusive
+    - invoice-level discount allocation (proportional, clamped)
+    - 2-decimal rounding behavior
+    - file:
+      - `mobile/lib/features/billing/domain/billing_calculator.dart`
+  - Added unit tests:
+    - empty lines
+    - exclusive VAT
+    - inclusive VAT
+    - VAT disabled
+    - over-discount clamp
+    - rounding consistency
+    - file:
+      - `mobile/test/unit/billing_calculator_test.dart`
+  - Validation:
+    - `flutter analyze .../mobile/lib/features/billing/domain/billing_calculator.dart .../mobile/test/unit/billing_calculator_test.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/unit/billing_calculator_test.dart` -> `All tests passed!`
+
+- `BP3` invoice numbering engine slice completed (2026-02-25):
+  - Added transaction-safe local invoice numbering service:
+    - business-scoped sequence (`invoice_sequence`)
+    - format `{PREFIX}-{YEAR}-{SEQ_PAD5}`
+    - collision skip against existing `invoices.invoice_number`
+    - AD/BS year-key hook (v1 returns AD year for both; BS converter hook retained)
+    - file:
+      - `mobile/lib/features/billing/data/invoice_numbering_service.dart`
+  - Added integration tests:
+    - sequence increments per business/year
+    - sequence separation by business and year
+    - collision skip/advance behavior
+    - file:
+      - `mobile/test/integration/invoice_numbering_service_test.dart`
+  - Validation:
+    - `flutter analyze .../mobile/lib/features/billing/data/invoice_numbering_service.dart .../mobile/test/integration/invoice_numbering_service_test.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/integration/invoice_numbering_service_test.dart` -> `All tests passed!`
+
+- `BP2` billing repository core slice completed (2026-02-25):
+  - Added billing domain models:
+    - invoice status parsing
+    - draft line/draft input/payment input
+    - invoice record mapper
+    - file:
+      - `mobile/lib/features/billing/domain/invoice_models.dart`
+  - Added local billing repository:
+    - `saveDraft(...)`
+    - `issueInvoice(...)` (validates, assigns invoice number, deducts stock, writes stock movement, locks draft)
+    - `recordPayment(...)` (partial/full, status transitions, overpayment guard)
+    - `markOverdueInvoices(...)`
+    - `deleteDraftInvoice(...)` (draft-only)
+    - `getInvoiceById(...)`
+    - file:
+      - `mobile/lib/features/billing/data/billing_repository.dart`
+  - Integrity rules enforced (v1 local):
+    - draft must have at least one item
+    - only draft invoices can be issued
+    - issued invoices cannot be deleted
+    - cancelled invoice cannot accept payment
+    - overpayment rejected
+    - issue-time stock validation and deduction for product-backed items
+  - Tests:
+    - added repository lifecycle tests (draft/issue/payment/overdue/delete rule)
+    - file:
+      - `mobile/test/unit/billing_repository_test.dart`
+  - Validation:
+    - `flutter analyze .../mobile/lib/features/billing/domain/invoice_models.dart .../mobile/lib/features/billing/data/billing_repository.dart .../mobile/test/unit/billing_repository_test.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/unit/billing_repository_test.dart` -> `All tests passed!`
+  - Scope note:
+    - local invoice outbox sync events (`invoice_issue`, `invoice_payment`) and PDF generation are intentionally deferred to `BP8` and `BP5`
+
+- `BP6` billing UI first slice completed (2026-02-25):
+  - Added invoice list screen:
+    - list invoices with status badges and totals
+    - create button opens draft/issue flow and navigates to detail
+    - file:
+      - `mobile/lib/features/billing/presentation/invoice_list_screen.dart`
+  - Added invoice create screen (draft + issue):
+    - invoice details form (customer ID, discount, notes)
+    - dynamic invoice line editor
+    - `Save Draft` and `Issue Invoice` actions
+    - file:
+      - `mobile/lib/features/billing/presentation/invoice_create_screen.dart`
+  - Added invoice detail screen:
+    - invoice summary + status
+    - line items list
+    - payments list
+    - actions:
+      - issue draft
+      - record payment
+      - PDF action placeholder (deferred to `BP5`)
+    - file:
+      - `mobile/lib/features/billing/presentation/invoice_detail_screen.dart`
+  - Wired billing repository/providers into app providers and Reports entry:
+    - `billingRepositoryProvider`
+    - invoice list/detail/items/payments providers
+    - `Invoices` tile in `ReportsScreen`
+    - files:
+      - `mobile/lib/core/providers/app_providers.dart`
+      - `mobile/lib/features/reports/presentation/reports_screen.dart`
+  - Validation:
+    - `dart format` on billing UI files and `reports_screen.dart`
+    - `flutter analyze mobile/lib/features/billing/presentation/invoice_list_screen.dart mobile/lib/features/billing/presentation/invoice_create_screen.dart mobile/lib/features/billing/presentation/invoice_detail_screen.dart mobile/lib/features/reports/presentation/reports_screen.dart mobile/lib/core/providers/app_providers.dart` -> `No issues found!`
+  - Scope note:
+    - PDF view/share/print/retry remains pending `BP5`
+    - list filters/search and richer i18n polish can be expanded in later `BP6/BP7` refinements
+
+- `BP5` PDF generation first slice completed (2026-02-25):
+  - Added mobile invoice PDF service (A4 layout, local file storage, share/print):
+    - generates PDF from local invoice/items/payments snapshots
+    - stores files under app documents `invoices/{business_id}/{invoice_number}.pdf`
+    - persists `pdf_path` + `pdf_status` (`generated` / `failed`)
+    - supports:
+      - `generateInvoicePdf(...)`
+      - `shareInvoicePdf(...)`
+      - `printInvoicePdf(...)`
+    - file:
+      - `mobile/lib/features/billing/data/invoice_pdf_service.dart`
+  - Extended invoice model/repository:
+    - `InvoiceRecord.pdfPath`
+    - `BillingRepository.updateInvoicePdfArtifact(...)`
+    - files:
+      - `mobile/lib/features/billing/domain/invoice_models.dart`
+      - `mobile/lib/features/billing/data/billing_repository.dart`
+  - Added provider:
+    - `invoicePdfServiceProvider`
+    - file:
+      - `mobile/lib/core/providers/app_providers.dart`
+  - Invoice UI integration:
+    - `InvoiceDetailScreen` now supports:
+      - Generate PDF
+      - Retry/Regenerate PDF
+      - Share PDF
+      - Print PDF
+    - `InvoiceCreateScreen` now attempts PDF generation after issue (best effort; invoice remains issued on PDF failure)
+    - files:
+      - `mobile/lib/features/billing/presentation/invoice_detail_screen.dart`
+      - `mobile/lib/features/billing/presentation/invoice_create_screen.dart`
+  - Validation:
+    - `flutter pub get` (added `pdf`, `printing`, `share_plus`) -> `Got dependencies!`
+    - `flutter analyze mobile/lib/features/billing/data/invoice_pdf_service.dart mobile/lib/features/billing/data/billing_repository.dart mobile/lib/features/billing/domain/invoice_models.dart mobile/lib/features/billing/presentation/invoice_create_screen.dart mobile/lib/features/billing/presentation/invoice_detail_screen.dart mobile/lib/core/providers/app_providers.dart` -> `No issues found!`
+  - Scope note:
+    - PDF preview/view screen and receipt-width template are still future enhancements
+    - bilingual PDF labels + Nepali text font handling remain `BP7`
+
+- `BP7` i18n/formatting slice (partial) completed (2026-02-25):
+  - Billing UI formatting:
+    - standardized invoice money formatting to `en_IN` grouping in list/detail screens
+    - files:
+      - `mobile/lib/features/billing/presentation/invoice_list_screen.dart`
+      - `mobile/lib/features/billing/presentation/invoice_detail_screen.dart`
+  - Billing create form i18n cleanup:
+    - localized previously hardcoded line-editor labels/validation messages (`Item name`, `Qty`, `Unit`, `Rate`, etc.)
+    - file:
+      - `mobile/lib/features/billing/presentation/invoice_create_screen.dart`
+  - PDF snapshot + label improvements:
+    - `InvoiceRecord` now exposes invoice snapshot fields (`language_snapshot`, `currency_code`, business/terms/footer snapshots)
+    - PDF generation uses invoice snapshots first (immutable behavior) with prefs fallback
+    - PDF labels now support English/Nepali selection hook based on invoice language snapshot
+    - files:
+      - `mobile/lib/features/billing/domain/invoice_models.dart`
+      - `mobile/lib/features/billing/data/invoice_pdf_service.dart`
+  - Validation:
+    - `flutter analyze mobile/lib/features/billing/domain/invoice_models.dart mobile/lib/features/billing/data/invoice_pdf_service.dart mobile/lib/features/billing/presentation/invoice_create_screen.dart mobile/lib/features/billing/presentation/invoice_list_screen.dart mobile/lib/features/billing/presentation/invoice_detail_screen.dart` -> `No issues found!`
+  - Remaining `BP7` work:
+    - ensure billing UI uses **business language** (not device locale) everywhere
+    - Nepali PDF font embedding/wrapping validation for production-quality Nepali text rendering
+    - BS date display mode (optional v1.1 hook)
+
+- `BP8` invoice outbox compatibility slice completed (2026-02-25):
+  - Billing repository now writes future-ready invoice sync events into the existing store-scoped outbox (`sync_queue`) on:
+    - invoice issue (`entity=invoice`, `operation=ISSUE`, `event_type=invoice_issue`)
+    - invoice payment (`entity=invoice_payment`, `operation=UPSERT`, `event_type=invoice_payment`)
+    - file:
+      - `mobile/lib/features/billing/data/billing_repository.dart`
+  - Payloads include v1 snapshots needed for future backend canonicalization:
+    - invoice id/number
+    - totals/balance
+    - currency/tax snapshots (issue event)
+    - item snapshots (issue event)
+    - payment details (payment event)
+  - Safety for current backend (no invoice handlers yet):
+    - outbox rows are stored with `status='deferred'`
+    - not retried by current sync pipeline (`pending/failed` only)
+    - prevents user-facing sync failures while preserving a no-refactor path for future backend support
+  - Tests:
+    - extended `billing_repository_test.dart` to verify deferred outbox rows and payload event types for issue/payment
+    - file:
+      - `mobile/test/unit/billing_repository_test.dart`
+  - Validation:
+    - `flutter test mobile/test/unit/billing_repository_test.dart` -> `All tests passed!`
+    - `flutter analyze mobile/lib/features/billing/data/billing_repository.dart mobile/test/unit/billing_repository_test.dart` -> `No issues found!`
+
+- `BP9` testing + rollout baseline completed (2026-02-25):
+  - Added billing-specific manual rollout checklist:
+    - offline draft/issue/payment flow
+    - stock/tax integrity checks
+    - PDF generate/share/print/retry checks
+    - restart persistence
+    - i18n/formatting checks
+    - deferred invoice sync compatibility checks
+    - file:
+      - `docs/billing_mobile_rollout_checklist.md`
+  - Targeted billing regression run:
+    - `flutter test mobile/test/unit/billing_calculator_test.dart mobile/test/integration/invoice_numbering_service_test.dart mobile/test/unit/billing_repository_test.dart` -> `All tests passed!`
+    - `flutter analyze mobile/lib/features/billing mobile/lib/core/providers/app_providers.dart` -> `No issues found!`
+  - Scope note:
+    - device-level manual validation is still required for `printing` and `share_plus` runtime behavior before production release
+
+- `BP7` final billing i18n/formatting slice completed (2026-02-25):
+  - Billing UI now follows **business billing language** (not device locale) using a locale override in invoice screens:
+    - `InvoiceListScreen`
+    - `InvoiceCreateScreen`
+    - `InvoiceDetailScreen`
+    - files:
+      - `mobile/lib/features/billing/presentation/invoice_list_screen.dart`
+      - `mobile/lib/features/billing/presentation/invoice_create_screen.dart`
+      - `mobile/lib/features/billing/presentation/invoice_detail_screen.dart`
+      - `mobile/lib/core/providers/app_providers.dart` (`billingLanguageCodeProvider`)
+  - PDF Nepali rendering support added:
+    - attempts `PdfGoogleFonts.notoSansDevanagariRegular/Bold()` for Nepali invoice language
+    - safe fallback to default fonts if font fetch is unavailable
+    - file:
+      - `mobile/lib/features/billing/data/invoice_pdf_service.dart`
+  - Validation:
+    - `flutter analyze mobile/lib/core/providers/app_providers.dart mobile/lib/features/billing/presentation/invoice_list_screen.dart mobile/lib/features/billing/presentation/invoice_create_screen.dart mobile/lib/features/billing/presentation/invoice_detail_screen.dart mobile/lib/features/billing/data/invoice_pdf_service.dart` -> `No issues found!`
+  - Scope note:
+    - device-level/manual PDF generation in Nepali must still be run to verify final glyph rendering quality and first-run font fetch behavior
+
+### Billing/PDF/i18n Progress Notes
+
+- `BP0/BP1` foundation slice completed (2026-02-25):
+  - Decision (mobile-only v1, current-app-aware):
+    - Use **new `invoices` tables** (do not overload existing `sales`) for immutability/PDF-specific lifecycle.
+    - Continue using mobile `SharedPreferences` for business/billing settings snapshots source (current app has no local `business` table).
+  - Mobile local DB schema (version `10 -> 11`) added:
+    - `invoices`
+    - `invoice_items`
+    - `invoice_payments`
+    - `invoice_sequence`
+    - indexes/constraints for business scoping and numbering (`uq_invoices_business_number`, sequence PK)
+    - file:
+      - `mobile/lib/core/storage/local_db.dart`
+  - Mobile billing settings helpers added (preferences-backed):
+    - `setBillingSettings(...)`
+    - `getBillingSettings()`
+    - includes language/currency/fiscal calendar/VAT/tax mode/invoice prefix/terms/footer/logo/PAN-VAT/business contact snapshots
+    - file:
+      - `mobile/lib/core/storage/preferences.dart`
+  - Tests:
+    - added migration test `v10 -> v11` for billing invoice tables/indexes
+    - file:
+      - `mobile/test/integration/local_db_migration_test.dart`
+  - Validation:
+    - `flutter analyze .../mobile/lib/core/storage/local_db.dart .../mobile/lib/core/storage/preferences.dart .../mobile/test/integration/local_db_migration_test.dart` -> `No issues found!`
+    - `flutter test .../mobile/test/integration/local_db_migration_test.dart` -> `All tests passed!`

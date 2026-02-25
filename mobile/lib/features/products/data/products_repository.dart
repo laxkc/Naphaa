@@ -2,14 +2,18 @@ import 'dart:convert';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/storage/local_db.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/utils/uuid_id.dart';
+import '../../reports/data/metrics_repository.dart';
 import '../domain/product.dart';
 import '../domain/stock_movement.dart';
 
 class ProductsRepository {
-  ProductsRepository(this._db);
+  ProductsRepository(this._db, {MetricsRepository? metricsRepository})
+    : _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final MetricsRepository? _metricsRepository;
 
   Future<List<Product>> searchProducts(String query) async {
     final db = await _db.database;
@@ -50,6 +54,7 @@ class ProductsRepository {
     String? category,
   }) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     final id = newUuidV4();
 
@@ -68,6 +73,7 @@ class ProductsRepository {
 
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'product',
         'entity_id': id,
         'operation': 'UPSERT',
@@ -89,14 +95,12 @@ class ProductsRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
   }
 
   Future<Product?> getProductById(String id) async {
     final db = await _db.database;
-    final rows = await db.rawQuery(
-      'SELECT * FROM products WHERE id = ?',
-      [id],
-    );
+    final rows = await db.rawQuery('SELECT * FROM products WHERE id = ?', [id]);
     if (rows.isEmpty) return null;
     return Product.fromMap(rows.first);
   }
@@ -105,12 +109,15 @@ class ProductsRepository {
     final db = await _db.database;
     // Try stock_movements table first, fall back to sync_queue for history
     try {
-      final rows = await db.rawQuery('''
+      final rows = await db.rawQuery(
+        '''
         SELECT * FROM stock_movements
         WHERE product_id = ?
         ORDER BY created_at DESC
         LIMIT 50
-      ''', [productId]);
+      ''',
+        [productId],
+      );
       return rows.map((r) => StockMovement.fromMap(r)).toList();
     } catch (_) {
       return [];
@@ -119,6 +126,7 @@ class ProductsRepository {
 
   Future<void> updateProduct(Product product) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     await db.update(
       'products',
@@ -136,6 +144,7 @@ class ProductsRepository {
     );
     await db.insert('sync_queue', {
       'op_id': newUuidV4(),
+      'store_id': activeStoreId,
       'entity': 'product',
       'entity_id': product.id,
       'operation': 'UPSERT',
@@ -156,6 +165,7 @@ class ProductsRepository {
       'status': 'pending',
       'retry_count': 0,
     });
+    await _refreshLocalIntelligence();
   }
 
   Future<void> adjustStock({
@@ -177,6 +187,7 @@ class ProductsRepository {
     required String reason,
   }) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
     final cleanReason = reason.trim();
     if (cleanReason.isEmpty) {
@@ -206,6 +217,7 @@ class ProductsRepository {
 
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'product',
         'entity_id': productId,
         'operation': 'ADJUST_STOCK',
@@ -222,5 +234,14 @@ class ProductsRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
+  }
+
+  Future<void> _refreshLocalIntelligence() async {
+    try {
+      await _metricsRepository?.recomputeLocalCaches();
+    } catch (_) {
+      // Product writes should succeed even if intelligence cache refresh fails.
+    }
   }
 }

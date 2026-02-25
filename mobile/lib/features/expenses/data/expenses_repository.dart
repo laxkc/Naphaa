@@ -1,13 +1,17 @@
 import 'dart:convert';
 
 import '../../../core/storage/local_db.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/utils/uuid_id.dart';
+import '../../reports/data/metrics_repository.dart';
 import '../domain/expense.dart';
 
 class ExpensesRepository {
-  ExpensesRepository(this._db);
+  ExpensesRepository(this._db, {MetricsRepository? metricsRepository})
+    : _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final MetricsRepository? _metricsRepository;
 
   Future<List<Expense>> listExpenses() async {
     final db = await _db.database;
@@ -21,6 +25,7 @@ class ExpensesRepository {
     String? note,
   }) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final id = newUuidV4();
     final createdAt = DateTime.now().toIso8601String();
 
@@ -35,6 +40,7 @@ class ExpensesRepository {
 
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
+        'store_id': activeStoreId,
         'entity': 'expense',
         'entity_id': id,
         'operation': 'UPSERT',
@@ -52,5 +58,14 @@ class ExpensesRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
+  }
+
+  Future<void> _refreshLocalIntelligence() async {
+    try {
+      await _metricsRepository?.recomputeLocalCaches();
+    } catch (_) {
+      // Never block the primary local write path on analytics cache refresh.
+    }
   }
 }

@@ -10,11 +10,15 @@ PODS:
     - FlutterMacOS
   - package_info_plus (0.4.5):
     - Flutter
+  - printing (1.0.0):
+    - Flutter
   - Sentry/HybridSDK (8.56.2)
   - sentry_flutter (9.14.0):
     - Flutter
     - FlutterMacOS
     - Sentry/HybridSDK (= 8.56.2)
+  - share_plus (0.0.1):
+    - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -28,7 +32,9 @@ DEPENDENCIES:
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - local_auth_darwin (from `.symlinks/plugins/local_auth_darwin/darwin`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - printing (from `.symlinks/plugins/printing/ios`)
   - sentry_flutter (from `.symlinks/plugins/sentry_flutter/ios`)
+  - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
 
@@ -47,8 +53,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/local_auth_darwin/darwin"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
+  printing:
+    :path: ".symlinks/plugins/printing/ios"
   sentry_flutter:
     :path: ".symlinks/plugins/sentry_flutter/ios"
+  share_plus:
+    :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sqflite_darwin:
@@ -60,8 +70,10 @@ SPEC CHECKSUMS:
   flutter_secure_storage_darwin: 557817588b80e60213cbecb573c45c76b788018d
   local_auth_darwin: 63c73d6d28cc3e239be2b6aa460ea6e317cd5100
   package_info_plus: c0502532a26c7662a62a356cebe2692ec5fe4ec4
+  printing: 233e1b73bd1f4a05615548e9b5a324c98588640b
   Sentry: b53951377b78e21a734f5dc8318e333dbfc682d7
   sentry_flutter: a9f60d84bfddcae9a0ebf834547702f8854766a1
+  share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
 

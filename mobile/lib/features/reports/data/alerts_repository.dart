@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:sqflite/sqflite.dart';
+
 import '../../../core/storage/local_db.dart';
 
 class AlertsRepository {
@@ -28,11 +30,11 @@ class AlertsRepository {
                   ? null
                   : jsonEncode(raw['action_payload']),
           'created_at':
-              (raw['created_at'] ?? DateTime.now().toIso8601String()).toString(),
+              (raw['created_at'] ?? DateTime.now().toIso8601String())
+                  .toString(),
           'resolved_at': raw['resolved_at']?.toString(),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     });
   }
 }
-

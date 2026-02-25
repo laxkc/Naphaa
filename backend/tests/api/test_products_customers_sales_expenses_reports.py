@@ -935,6 +935,13 @@ def test_metrics_business_returns_summary_and_risk_counts(client, auth_headers, 
     assert body["profit_est"] == "60.00"
     assert body["outstanding_total"] == "100.00"
     assert body["cash_risk_level"] in {"low", "medium", "high"}
+    assert body["cash_horizon_days"] == 7
+    assert Decimal(body["expected_incoming_soon"]) >= Decimal("0")
+    assert Decimal(body["expected_incoming_soon"]) <= Decimal("100.00")
+    assert Decimal(body["expected_outgoing_soon"]) >= Decimal("0")
+    assert Decimal(body["net_cash_outlook_soon"]) == Decimal(
+        body["expected_incoming_soon"]
+    ) - Decimal(body["expected_outgoing_soon"])
     assert body["low_stock_count"] >= 1
     assert "reasons" in body and isinstance(body["reasons"], list)
 

@@ -10,7 +10,9 @@ import 'product_form_screen.dart';
 import 'stock_adjustment_screen.dart';
 
 class ProductsScreen extends ConsumerWidget {
-  const ProductsScreen({super.key});
+  const ProductsScreen({super.key, this.standalone = false});
+
+  final bool standalone;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,7 +20,7 @@ class ProductsScreen extends ConsumerWidget {
     final products = ref.watch(productsListProvider);
     final canAdjustStock = ref.watch(canAdjustStockProvider);
 
-    return Column(
+    final content = Column(
       children: [
         // ── search bar ───────────────────────────────────────────────────
         Padding(
@@ -39,11 +41,14 @@ class ProductsScreen extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               FilledButton.icon(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(
-                      builder: (_) => const ProductFormScreen(),
-                    ))
-                    .then((_) => ref.invalidate(productsListProvider)),
+                onPressed:
+                    () => Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProductFormScreen(),
+                          ),
+                        )
+                        .then((_) => ref.invalidate(productsListProvider)),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text(l10n.addProduct),
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 50)),
@@ -73,11 +78,16 @@ class ProductsScreen extends ConsumerWidget {
                           title: l10n.manageProducts,
                           subtitle: 'Tap "Add Product" to get started.',
                           action: l10n.addProduct,
-                          onAction: () => Navigator.of(context)
-                              .push(MaterialPageRoute(
-                                builder: (_) => const ProductFormScreen(),
-                              ))
-                              .then((_) => ref.invalidate(productsListProvider)),
+                          onAction:
+                              () => Navigator.of(context)
+                                  .push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ProductFormScreen(),
+                                    ),
+                                  )
+                                  .then(
+                                    (_) => ref.invalidate(productsListProvider),
+                                  ),
                         )
                         : ListView.separated(
                           itemCount: items.length,
@@ -153,19 +163,28 @@ class ProductsScreen extends ConsumerWidget {
                                     const SizedBox(width: AppSpacing.xs),
                                     IconButton(
                                       tooltip: 'Adjust stock',
-                                      onPressed: canAdjustStock
-                                          ? () => Navigator.of(context)
-                                              .push(MaterialPageRoute(
-                                                builder: (_) =>
-                                                    StockAdjustmentScreen(
-                                                  productId: p.id,
-                                                  productName: p.name,
-                                                  currentStock: p.stockQty,
-                                                ),
-                                              ))
-                                              .then((_) => ref.invalidate(
-                                                  productsListProvider))
-                                          : null,
+                                      onPressed:
+                                          canAdjustStock
+                                              ? () => Navigator.of(context)
+                                                  .push(
+                                                    MaterialPageRoute(
+                                                      builder:
+                                                          (_) =>
+                                                              StockAdjustmentScreen(
+                                                                productId: p.id,
+                                                                productName:
+                                                                    p.name,
+                                                                currentStock:
+                                                                    p.stockQty,
+                                                              ),
+                                                    ),
+                                                  )
+                                                  .then(
+                                                    (_) => ref.invalidate(
+                                                      productsListProvider,
+                                                    ),
+                                                  )
+                                              : null,
                                       icon: const Icon(
                                         Icons.tune_rounded,
                                         size: 18,
@@ -174,25 +193,42 @@ class ProductsScreen extends ConsumerWidget {
                                     ),
                                   ],
                                 ),
-                                onTap: () => Navigator.of(context)
-                                    .push(MaterialPageRoute(
-                                      builder: (_) =>
-                                          ProductDetailScreen(productId: p.id),
-                                    ))
-                                    .then((_) =>
-                                        ref.invalidate(productsListProvider)),
-                                onLongPress: canAdjustStock
-                                    ? () => Navigator.of(context)
-                                        .push(MaterialPageRoute(
-                                          builder: (_) => StockAdjustmentScreen(
-                                            productId: p.id,
-                                            productName: p.name,
-                                            currentStock: p.stockQty,
+                                onTap:
+                                    () => Navigator.of(context)
+                                        .push(
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => ProductDetailScreen(
+                                                  productId: p.id,
+                                                ),
                                           ),
-                                        ))
-                                        .then((_) => ref.invalidate(
-                                            productsListProvider))
-                                    : null,
+                                        )
+                                        .then(
+                                          (_) => ref.invalidate(
+                                            productsListProvider,
+                                          ),
+                                        ),
+                                onLongPress:
+                                    canAdjustStock
+                                        ? () => Navigator.of(context)
+                                            .push(
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (_) =>
+                                                        StockAdjustmentScreen(
+                                                          productId: p.id,
+                                                          productName: p.name,
+                                                          currentStock:
+                                                              p.stockQty,
+                                                        ),
+                                              ),
+                                            )
+                                            .then(
+                                              (_) => ref.invalidate(
+                                                productsListProvider,
+                                              ),
+                                            )
+                                        : null,
                               ),
                             );
                           },
@@ -201,8 +237,18 @@ class ProductsScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
 
+    if (!standalone) return content;
+
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        title: Text(l10n.manageProducts),
+        backgroundColor: AppColors.surface,
+      ),
+      body: content,
+    );
+  }
 }
 
 // ─── swipe delete background ──────────────────────────────────────────────────

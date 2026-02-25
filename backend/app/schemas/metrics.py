@@ -75,6 +75,10 @@ class BusinessMetricsResponse(BaseModel):
     outstanding_total: Decimal
     overdue_total: Decimal
     cash_risk_level: str
+    cash_horizon_days: int = 7
+    expected_incoming_soon: Decimal = Decimal("0")
+    expected_outgoing_soon: Decimal = Decimal("0")
+    net_cash_outlook_soon: Decimal = Decimal("0")
     low_stock_count: int
     dead_stock_count: int
     high_risk_customers: int

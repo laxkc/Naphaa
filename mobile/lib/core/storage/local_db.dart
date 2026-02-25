@@ -29,7 +29,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     return _openStrategy.open(
       path: join(dbPath, dbName),
-      version: 9,
+      version: 11,
       onCreate: (db, version) async {
         await _createSchema(db);
       },
@@ -254,6 +254,104 @@ class LocalDatabase {
             )
           ''');
         }
+        if (oldVersion < 10) {
+          try {
+            await db.execute("ALTER TABLE sync_queue ADD COLUMN store_id TEXT");
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_sync_queue_store_status ON sync_queue(store_id, synced, status)',
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 11) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS invoices (
+              id TEXT PRIMARY KEY,
+              business_id TEXT NOT NULL,
+              customer_id TEXT,
+              invoice_number TEXT,
+              status TEXT NOT NULL DEFAULT 'draft',
+              issue_date TEXT,
+              due_date TEXT,
+              currency_code TEXT NOT NULL DEFAULT 'NPR',
+              fiscal_calendar_snapshot TEXT NOT NULL DEFAULT 'AD',
+              language_snapshot TEXT NOT NULL DEFAULT 'en',
+              vat_enabled_snapshot INTEGER NOT NULL DEFAULT 0,
+              vat_rate_snapshot REAL NOT NULL DEFAULT 13.0,
+              tax_mode_snapshot TEXT NOT NULL DEFAULT 'exclusive',
+              subtotal REAL NOT NULL DEFAULT 0,
+              discount_amount REAL NOT NULL DEFAULT 0,
+              tax_amount REAL NOT NULL DEFAULT 0,
+              total REAL NOT NULL DEFAULT 0,
+              paid_amount REAL NOT NULL DEFAULT 0,
+              balance_due REAL NOT NULL DEFAULT 0,
+              payment_method_summary TEXT,
+              notes TEXT,
+              terms_snapshot TEXT,
+              footer_snapshot TEXT,
+              business_name_snapshot TEXT,
+              business_address_snapshot TEXT,
+              business_phone_snapshot TEXT,
+              business_email_snapshot TEXT,
+              business_pan_vat_snapshot TEXT,
+              invoice_prefix_snapshot TEXT,
+              pdf_path TEXT,
+              pdf_status TEXT NOT NULL DEFAULT 'none',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_invoices_business_issue_date ON invoices(business_id, issue_date)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_invoices_business_status ON invoices(business_id, status)',
+          );
+          await db.execute(
+            'CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_business_number ON invoices(business_id, invoice_number) WHERE invoice_number IS NOT NULL',
+          );
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS invoice_items (
+              id TEXT PRIMARY KEY,
+              invoice_id TEXT NOT NULL,
+              product_id TEXT,
+              product_name_snapshot TEXT NOT NULL,
+              unit_snapshot TEXT,
+              quantity REAL NOT NULL,
+              unit_price REAL NOT NULL,
+              discount REAL NOT NULL DEFAULT 0,
+              tax_rate_snapshot REAL NOT NULL DEFAULT 0,
+              line_subtotal REAL NOT NULL DEFAULT 0,
+              line_tax REAL NOT NULL DEFAULT 0,
+              line_total REAL NOT NULL DEFAULT 0
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_invoice_items_invoice_id ON invoice_items(invoice_id)',
+          );
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS invoice_payments (
+              id TEXT PRIMARY KEY,
+              invoice_id TEXT NOT NULL,
+              amount REAL NOT NULL,
+              method TEXT NOT NULL,
+              paid_at TEXT NOT NULL,
+              note TEXT
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_invoice_payments_invoice_id ON invoice_payments(invoice_id)',
+          );
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS invoice_sequence (
+              business_id TEXT NOT NULL,
+              year_key TEXT NOT NULL,
+              last_seq INTEGER NOT NULL DEFAULT 0,
+              PRIMARY KEY (business_id, year_key)
+            )
+          ''');
+        }
       },
     );
   }
@@ -377,6 +475,7 @@ class LocalDatabase {
       CREATE TABLE sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         op_id TEXT,
+        store_id TEXT,
         entity TEXT NOT NULL,
         entity_id TEXT,
         operation TEXT NOT NULL,
@@ -389,6 +488,9 @@ class LocalDatabase {
         last_error TEXT
       )
     ''');
+    await db.execute(
+      'CREATE INDEX ix_sync_queue_store_status ON sync_queue(store_id, synced, status)',
+    );
 
     await db.execute('''
       CREATE TABLE customer_metrics (
@@ -463,6 +565,96 @@ class LocalDatabase {
         to_date TEXT,
         payload_json TEXT NOT NULL,
         computed_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE invoices (
+        id TEXT PRIMARY KEY,
+        business_id TEXT NOT NULL,
+        customer_id TEXT,
+        invoice_number TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        issue_date TEXT,
+        due_date TEXT,
+        currency_code TEXT NOT NULL DEFAULT 'NPR',
+        fiscal_calendar_snapshot TEXT NOT NULL DEFAULT 'AD',
+        language_snapshot TEXT NOT NULL DEFAULT 'en',
+        vat_enabled_snapshot INTEGER NOT NULL DEFAULT 0,
+        vat_rate_snapshot REAL NOT NULL DEFAULT 13.0,
+        tax_mode_snapshot TEXT NOT NULL DEFAULT 'exclusive',
+        subtotal REAL NOT NULL DEFAULT 0,
+        discount_amount REAL NOT NULL DEFAULT 0,
+        tax_amount REAL NOT NULL DEFAULT 0,
+        total REAL NOT NULL DEFAULT 0,
+        paid_amount REAL NOT NULL DEFAULT 0,
+        balance_due REAL NOT NULL DEFAULT 0,
+        payment_method_summary TEXT,
+        notes TEXT,
+        terms_snapshot TEXT,
+        footer_snapshot TEXT,
+        business_name_snapshot TEXT,
+        business_address_snapshot TEXT,
+        business_phone_snapshot TEXT,
+        business_email_snapshot TEXT,
+        business_pan_vat_snapshot TEXT,
+        invoice_prefix_snapshot TEXT,
+        pdf_path TEXT,
+        pdf_status TEXT NOT NULL DEFAULT 'none',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_invoices_business_issue_date ON invoices(business_id, issue_date)',
+    );
+    await db.execute(
+      'CREATE INDEX ix_invoices_business_status ON invoices(business_id, status)',
+    );
+    await db.execute(
+      'CREATE UNIQUE INDEX uq_invoices_business_number ON invoices(business_id, invoice_number) WHERE invoice_number IS NOT NULL',
+    );
+
+    await db.execute('''
+      CREATE TABLE invoice_items (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL,
+        product_id TEXT,
+        product_name_snapshot TEXT NOT NULL,
+        unit_snapshot TEXT,
+        quantity REAL NOT NULL,
+        unit_price REAL NOT NULL,
+        discount REAL NOT NULL DEFAULT 0,
+        tax_rate_snapshot REAL NOT NULL DEFAULT 0,
+        line_subtotal REAL NOT NULL DEFAULT 0,
+        line_tax REAL NOT NULL DEFAULT 0,
+        line_total REAL NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_invoice_items_invoice_id ON invoice_items(invoice_id)',
+    );
+
+    await db.execute('''
+      CREATE TABLE invoice_payments (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        method TEXT NOT NULL,
+        paid_at TEXT NOT NULL,
+        note TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_invoice_payments_invoice_id ON invoice_payments(invoice_id)',
+    );
+
+    await db.execute('''
+      CREATE TABLE invoice_sequence (
+        business_id TEXT NOT NULL,
+        year_key TEXT NOT NULL,
+        last_seq INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (business_id, year_key)
       )
     ''');
   }

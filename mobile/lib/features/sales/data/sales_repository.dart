@@ -1,18 +1,23 @@
 import 'dart:convert';
 
 import '../../../core/storage/local_db.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/utils/uuid_id.dart';
 import '../../products/domain/product.dart';
+import '../../reports/data/metrics_repository.dart';
 import '../domain/sale.dart';
 import '../domain/sale_models.dart';
 
 class SalesRepository {
-  SalesRepository(this._db);
+  SalesRepository(this._db, {MetricsRepository? metricsRepository})
+    : _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final MetricsRepository? _metricsRepository;
 
   Future<void> createSale(SaleInput input) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
 
     await db.transaction((txn) async {
       final productRows = await txn.query('products');
@@ -99,6 +104,7 @@ class SalesRepository {
 
       await txn.insert('sync_queue', {
         'op_id': _id(),
+        'store_id': activeStoreId,
         'entity': 'sale',
         'entity_id': saleId,
         'operation': 'UPSERT',
@@ -135,6 +141,7 @@ class SalesRepository {
         'retry_count': 0,
       });
     });
+    await _refreshLocalIntelligence();
   }
 
   Future<double> todaySalesTotal() async {
@@ -164,10 +171,7 @@ class SalesRepository {
     final now = DateTime.now();
     final dayStart = DateTime(now.year, now.month, now.day);
     final nextDayStart = dayStart.add(const Duration(days: 1));
-    final rows = await db.query(
-      'expenses',
-      columns: ['amount', 'created_at'],
-    );
+    final rows = await db.query('expenses', columns: ['amount', 'created_at']);
     var total = 0.0;
     for (final row in rows) {
       final createdAtRaw = row['created_at'] as String?;
@@ -211,34 +215,37 @@ class SalesRepository {
     final localFrom = fromDate?.toLocal();
     final localTo = toDate?.toLocal();
 
-    return rows
-        .map((r) => Sale.fromMap(r))
-        .where((sale) {
-          final createdAt = sale.createdAt.toLocal();
-          if (localFrom != null && createdAt.isBefore(localFrom)) return false;
-          if (localTo != null && createdAt.isAfter(localTo)) return false;
-          return true;
-        })
-        .toList();
+    return rows.map((r) => Sale.fromMap(r)).where((sale) {
+      final createdAt = sale.createdAt.toLocal();
+      if (localFrom != null && createdAt.isBefore(localFrom)) return false;
+      if (localTo != null && createdAt.isAfter(localTo)) return false;
+      return true;
+    }).toList();
   }
 
   Future<Sale?> getSaleById(String id) async {
     final db = await _db.database;
-    final rows = await db.rawQuery('''
+    final rows = await db.rawQuery(
+      '''
       SELECT s.*, c.name as customer_name
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.id
       WHERE s.id = ?
-    ''', [id]);
+    ''',
+      [id],
+    );
     if (rows.isEmpty) return null;
     final sale = Sale.fromMap(rows.first);
 
-    final itemRows = await db.rawQuery('''
+    final itemRows = await db.rawQuery(
+      '''
       SELECT si.*, p.name as product_name
       FROM sale_items si
       LEFT JOIN products p ON si.product_id = p.id
       WHERE si.sale_id = ?
-    ''', [id]);
+    ''',
+      [id],
+    );
     final items = itemRows.map((r) => SaleItem.fromMap(r)).toList();
 
     final paymentRows = await db.rawQuery(
@@ -262,4 +269,12 @@ class SalesRepository {
   }
 
   String _id() => newUuidV4();
+
+  Future<void> _refreshLocalIntelligence() async {
+    try {
+      await _metricsRepository?.recomputeLocalCaches();
+    } catch (_) {
+      // Sales write path must not fail because analytics cache recompute failed.
+    }
+  }
 }

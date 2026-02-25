@@ -9,7 +9,9 @@ import 'create_sale_screen.dart';
 import 'sale_detail_screen.dart';
 
 class SalesListScreen extends ConsumerStatefulWidget {
-  const SalesListScreen({super.key});
+  const SalesListScreen({super.key, this.standalone = false});
+
+  final bool standalone;
 
   @override
   ConsumerState<SalesListScreen> createState() => _SalesListScreenState();
@@ -26,16 +28,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     final tomorrowStart = todayStart.add(const Duration(days: 1));
     switch (_filter) {
       case _DateFilter.today:
-        return SalesListParams(
-          fromDate: todayStart,
-          toDate: tomorrowStart,
-        );
+        return SalesListParams(fromDate: todayStart, toDate: tomorrowStart);
       case _DateFilter.week:
         final weekStart = todayStart.subtract(Duration(days: now.weekday - 1));
-        return SalesListParams(
-          fromDate: weekStart,
-          toDate: tomorrowStart,
-        );
+        return SalesListParams(fromDate: weekStart, toDate: tomorrowStart);
       case _DateFilter.month:
         return SalesListParams(
           fromDate: DateTime(now.year, now.month, 1),
@@ -53,92 +49,109 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      appBar:
+          widget.standalone
+              ? AppBar(
+                title: Text(context.tr('Sales', 'बिक्री')),
+                backgroundColor: AppColors.surface,
+              )
+              : null,
       body: Column(
         children: [
           Container(
             color: AppColors.surface,
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: _DateFilter.values.map((f) {
-                  final selected = _filter == f;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: FilterChip(
-                      label: Text(_filterLabel(f)),
-                      selected: selected,
-                      onSelected: (_) => setState(() => _filter = f),
-                      showCheckmark: false,
-                      backgroundColor: AppColors.surface,
-                      selectedColor: AppColors.primary,
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : AppColors.label,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                      side: BorderSide(
-                        color: selected
-                            ? AppColors.primary
-                            : AppColors.border,
-                        width: 1,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                children:
+                    _DateFilter.values.map((f) {
+                      final selected = _filter == f;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.sm),
+                        child: FilterChip(
+                          label: Text(_filterLabel(f)),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _filter = f),
+                          showCheckmark: false,
+                          backgroundColor: AppColors.surface,
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: selected ? Colors.white : AppColors.label,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w600,
+                          ),
+                          side: BorderSide(
+                            color:
+                                selected ? AppColors.primary : AppColors.border,
+                            width: 1,
+                          ),
+                        ),
+                      );
+                    }).toList(),
               ),
             ),
           ),
           const Divider(height: 1),
           Expanded(
             child: salesAsync.when(
-              loading: () => ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                itemCount: 8,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (_, __) => const SkeletonListTile(),
-              ),
-              error: (e, _) => ErrorRetry(
-                onRetry: () => ref.invalidate(salesListProvider(queryParams)),
-              ),
+              loading:
+                  () => ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    itemCount: 8,
+                    separatorBuilder:
+                        (_, __) => const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (_, __) => const SkeletonListTile(),
+                  ),
+              error:
+                  (e, _) => ErrorRetry(
+                    onRetry:
+                        () => ref.invalidate(salesListProvider(queryParams)),
+                  ),
               data: (sales) {
                 if (sales.isEmpty) {
                   return EmptyState(
                     icon: Icons.receipt_long_outlined,
                     title: context.tr('No sales yet', 'अहिलेसम्म बिक्री छैन'),
-                    subtitle: _filter == _DateFilter.today
-                        ? context.tr(
-                            'Tap + to record your first sale today',
-                            'आजको पहिलो बिक्री रेकर्ड गर्न + थिच्नुहोस्',
-                          )
-                        : context.tr(
-                            'No transactions in this period',
-                            'यो अवधिमा कुनै कारोबार छैन',
-                          ),
+                    subtitle:
+                        _filter == _DateFilter.today
+                            ? context.tr(
+                              'Tap + to record your first sale today',
+                              'आजको पहिलो बिक्री रेकर्ड गर्न + थिच्नुहोस्',
+                            )
+                            : context.tr(
+                              'No transactions in this period',
+                              'यो अवधिमा कुनै कारोबार छैन',
+                            ),
                   );
                 }
                 return RefreshIndicator(
                   color: AppColors.primary,
-                  onRefresh: () async =>
-                      ref.invalidate(salesListProvider(queryParams)),
+                  onRefresh:
+                      () async =>
+                          ref.invalidate(salesListProvider(queryParams)),
                   child: ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     itemCount: sales.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (_, i) => _SaleTile(
-                      sale: sales[i],
-                      fmt: _fmt,
-                      currFmt: _currFmt,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              SaleDetailScreen(saleId: sales[i].id),
+                    separatorBuilder:
+                        (_, __) => const SizedBox(height: AppSpacing.sm),
+                    itemBuilder:
+                        (_, i) => _SaleTile(
+                          sale: sales[i],
+                          fmt: _fmt,
+                          currFmt: _currFmt,
+                          onTap:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) =>
+                                          SaleDetailScreen(saleId: sales[i].id),
+                                ),
+                              ),
                         ),
-                      ),
-                    ),
                   ),
                 );
               },
@@ -151,19 +164,22 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: Text(context.tr('New Sale', 'नयाँ बिक्री')),
-        onPressed: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const CreateSaleScreen()))
-            .then((_) => ref.invalidate(salesListProvider(queryParams))),
+        onPressed:
+            () => Navigator.of(context)
+                .push(
+                  MaterialPageRoute(builder: (_) => const CreateSaleScreen()),
+                )
+                .then((_) => ref.invalidate(salesListProvider(queryParams))),
       ),
     );
   }
 
   String _filterLabel(_DateFilter f) => switch (f) {
-        _DateFilter.today => context.tr('Today', 'आज'),
-        _DateFilter.week => context.tr('This Week', 'यो हप्ता'),
-        _DateFilter.month => context.tr('This Month', 'यो महिना'),
-        _DateFilter.all => context.tr('All', 'सबै'),
-      };
+    _DateFilter.today => context.tr('Today', 'आज'),
+    _DateFilter.week => context.tr('This Week', 'यो हप्ता'),
+    _DateFilter.month => context.tr('This Month', 'यो महिना'),
+    _DateFilter.all => context.tr('All', 'सबै'),
+  };
 }
 
 enum _DateFilter { today, week, month, all }
@@ -193,9 +209,10 @@ class _SaleTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: isCash
-                  ? AppColors.successBg
-                  : isCredit
+              color:
+                  isCash
+                      ? AppColors.successBg
+                      : isCredit
                       ? AppColors.warningBg
                       : AppColors.surfaceAlt,
               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -204,12 +221,13 @@ class _SaleTile extends StatelessWidget {
               isCash
                   ? Icons.payments_outlined
                   : isCredit
-                      ? Icons.credit_card_outlined
-                      : Icons.call_split_outlined,
+                  ? Icons.credit_card_outlined
+                  : Icons.call_split_outlined,
               size: 20,
-              color: isCash
-                  ? AppColors.success
-                  : isCredit
+              color:
+                  isCash
+                      ? AppColors.success
+                      : isCredit
                       ? AppColors.warning
                       : AppColors.muted,
             ),
@@ -220,7 +238,8 @@ class _SaleTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  sale.customerName ?? context.tr('Walk-in Customer', 'वाक-इन ग्राहक'),
+                  sale.customerName ??
+                      context.tr('Walk-in Customer', 'वाक-इन ग्राहक'),
                   style: Theme.of(context).textTheme.titleSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -238,10 +257,9 @@ class _SaleTile extends StatelessWidget {
             children: [
               Text(
                 'NPR ${currFmt.format(sale.totalAmount)}',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(color: AppColors.label),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(color: AppColors.label),
               ),
               const SizedBox(height: 4),
               StatusChip(

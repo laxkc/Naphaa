@@ -11,6 +11,9 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../features/customers/data/customers_repository.dart';
 import '../../features/customers/domain/customer.dart';
 import '../../features/customers/domain/customer_risk_metric.dart';
+import '../../features/billing/data/billing_repository.dart';
+import '../../features/billing/data/invoice_pdf_service.dart';
+import '../../features/billing/domain/invoice_models.dart';
 import '../../features/expenses/data/expenses_repository.dart';
 import '../../features/expenses/domain/expense.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -19,6 +22,8 @@ import '../../features/products/data/products_repository.dart';
 import '../../features/products/domain/product.dart';
 import '../../features/products/domain/stock_movement.dart';
 import '../../features/reports/domain/alert_item.dart';
+import '../../features/reports/data/alerts_repository.dart';
+import '../../features/reports/data/metrics_repository.dart';
 import '../../features/sales/data/sales_repository.dart';
 import '../../features/sales/domain/sale.dart';
 import '../../features/reports/domain/ledger_entry.dart';
@@ -42,6 +47,13 @@ final localDatabaseProvider = Provider<LocalDatabase>(
 );
 
 final preferencesProvider = Provider<AppPreferences>((ref) => AppPreferences());
+
+final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
+  final settings = await ref.watch(preferencesProvider).getBillingSettings();
+  final lang = (settings['language']?.toString() ?? '').trim().toLowerCase();
+  if (lang == 'ne' || lang == 'en') return lang;
+  return ref.watch(localeControllerProvider).languageCode;
+});
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 
@@ -88,11 +100,16 @@ class AuthController extends Notifier<AuthState> {
   Future<void> login({required String phone, required String password}) async {
     state = state.copyWith(loading: true, error: null);
     try {
+      final previousPhone = await _prefs.getUserPhone();
       final locale = ref.read(localeControllerProvider).languageCode;
       await _session.login(
         phone: phone,
         password: password,
         localeCode: locale,
+      );
+      await _handlePostAuthStoreScope(
+        phone: phone,
+        previousPhone: previousPhone,
       );
       await _prefs.setUserPhone(phone);
       final role = await _session.fetchCurrentUserRole(localeCode: locale);
@@ -122,12 +139,17 @@ class AuthController extends Notifier<AuthState> {
   }) async {
     state = state.copyWith(loading: true, error: null);
     try {
+      final previousPhone = await _prefs.getUserPhone();
       final locale = ref.read(localeControllerProvider).languageCode;
       await _session.signup(
         businessName: businessName,
         phone: phone,
         password: password,
         localeCode: locale,
+      );
+      await _handlePostAuthStoreScope(
+        phone: phone,
+        previousPhone: previousPhone,
       );
       await _prefs.setUserPhone(phone);
       final role = await _session.fetchCurrentUserRole(localeCode: locale);
@@ -152,8 +174,10 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> logout() async {
     await _session.logout();
+    await _clearLocalBusinessStateForAccountSwitch();
     await _prefs.clearUserPhone();
     await _prefs.clearUserRole();
+    await _prefs.clearActiveStoreId();
     state = AuthState();
   }
 
@@ -191,6 +215,40 @@ class AuthController extends Notifier<AuthState> {
       }
     }
     return 'Something went wrong. Please try again.';
+  }
+
+  Future<void> _handlePostAuthStoreScope({
+    required String phone,
+    required String? previousPhone,
+  }) async {
+    final gateway = ref.read(backendGatewayProvider);
+    final store = await gateway.getStoreMe();
+    final currentStoreId = store['id']?.toString();
+    if (currentStoreId == null || currentStoreId.isEmpty) return;
+
+    final previousStoreId = await _prefs.getActiveStoreId();
+    final switchedStore =
+        previousStoreId != null &&
+        previousStoreId.isNotEmpty &&
+        previousStoreId != currentStoreId;
+    final switchedPhoneWithoutStoreMarker =
+        (previousStoreId == null || previousStoreId.isEmpty) &&
+        previousPhone != null &&
+        previousPhone.isNotEmpty &&
+        previousPhone != phone;
+
+    if (switchedStore || switchedPhoneWithoutStoreMarker) {
+      await _clearLocalBusinessStateForAccountSwitch();
+    }
+
+    await _prefs.setActiveStoreId(currentStoreId);
+  }
+
+  Future<void> _clearLocalBusinessStateForAccountSwitch() async {
+    final db = ref.read(localDatabaseProvider);
+    await db.reset();
+    await _prefs.clearLastSyncCursor();
+    await _prefs.clearLastSyncAt();
   }
 }
 
@@ -455,6 +513,9 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
       ref.invalidate(creditReportProvider);
       ref.invalidate(salesReportProvider);
       ref.invalidate(customerRiskMetricsProvider);
+      ref.invalidate(alertsFeedProvider);
+      ref.invalidate(customerMetricsReportProvider);
+      ref.invalidate(productMetricsReportProvider);
     } catch (e) {
       if (e is SessionAuthException) {
         await ref.read(authControllerProvider.notifier).logout();
@@ -507,15 +568,35 @@ final syncCoordinatorProvider =
     );
 
 final productsRepositoryProvider = Provider<ProductsRepository>(
-  (ref) => ProductsRepository(ref.watch(localDatabaseProvider)),
+  (ref) => ProductsRepository(
+    ref.watch(localDatabaseProvider),
+    metricsRepository: ref.watch(metricsRepositoryProvider),
+  ),
 );
 
 final customersRepositoryProvider = Provider<CustomersRepository>(
-  (ref) => CustomersRepository(ref.watch(localDatabaseProvider)),
+  (ref) => CustomersRepository(
+    ref.watch(localDatabaseProvider),
+    metricsRepository: ref.watch(metricsRepositoryProvider),
+  ),
 );
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>(
-  (ref) => ExpensesRepository(ref.watch(localDatabaseProvider)),
+  (ref) => ExpensesRepository(
+    ref.watch(localDatabaseProvider),
+    metricsRepository: ref.watch(metricsRepositoryProvider),
+  ),
+);
+
+final alertsRepositoryProvider = Provider<AlertsRepository>(
+  (ref) => AlertsRepository(ref.watch(localDatabaseProvider)),
+);
+
+final metricsRepositoryProvider = Provider<MetricsRepository>(
+  (ref) => MetricsRepository(
+    ref.watch(localDatabaseProvider),
+    ref.watch(alertsRepositoryProvider),
+  ),
 );
 
 final productsListProvider = FutureProvider<List<Product>>(
@@ -541,8 +622,43 @@ final expensesListProvider = FutureProvider<List<Expense>>(
 );
 
 final salesRepositoryProvider = Provider<SalesRepository>(
-  (ref) => SalesRepository(ref.watch(localDatabaseProvider)),
+  (ref) => SalesRepository(
+    ref.watch(localDatabaseProvider),
+    metricsRepository: ref.watch(metricsRepositoryProvider),
+  ),
 );
+
+final billingRepositoryProvider = Provider<BillingRepository>(
+  (ref) => BillingRepository(ref.watch(localDatabaseProvider)),
+);
+
+final invoicePdfServiceProvider = Provider<InvoicePdfService>(
+  (ref) => InvoicePdfService(
+    ref.watch(billingRepositoryProvider),
+    ref.watch(preferencesProvider),
+  ),
+);
+
+final invoicesListProvider = FutureProvider<List<InvoiceRecord>>((ref) async {
+  final storeId = await ref.watch(preferencesProvider).getActiveStoreId();
+  if (storeId == null || storeId.isEmpty) return const [];
+  return ref.watch(billingRepositoryProvider).listInvoices(businessId: storeId);
+});
+
+final invoiceDetailProvider = FutureProvider.autoDispose
+    .family<InvoiceRecord?, String>((ref, invoiceId) {
+      return ref.watch(billingRepositoryProvider).getInvoiceById(invoiceId);
+    });
+
+final invoiceItemsProvider = FutureProvider.autoDispose
+    .family<List<InvoiceItemRecord>, String>((ref, invoiceId) {
+      return ref.watch(billingRepositoryProvider).getInvoiceItems(invoiceId);
+    });
+
+final invoicePaymentsProvider = FutureProvider.autoDispose
+    .family<List<InvoicePaymentRecord>, String>((ref, invoiceId) {
+      return ref.watch(billingRepositoryProvider).getInvoicePayments(invoiceId);
+    });
 
 final salesControllerProvider = NotifierProvider<SalesController, SalesState>(
   SalesController.new,
