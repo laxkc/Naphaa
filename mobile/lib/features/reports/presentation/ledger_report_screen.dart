@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class LedgerReportScreen extends ConsumerWidget {
@@ -11,13 +11,14 @@ class LedgerReportScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final ledgerAsync = ref.watch(ledgerReportProvider);
     final currFmt = NumberFormat('#,##0.00');
     final dtFmt = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Ledger', 'लेजर')),
+        title: Text(l10n.reportsLedgerTitle),
         backgroundColor: AppColors.surface,
       ),
       body: ledgerAsync.when(
@@ -33,11 +34,8 @@ class LedgerReportScreen extends ConsumerWidget {
           if (items.isEmpty) {
             return EmptyState(
               icon: Icons.menu_book_outlined,
-              title: context.tr('No ledger entries yet', 'लेजर प्रविष्टि छैन'),
-              subtitle: context.tr(
-                'Sales, expenses, payments and refunds will appear here.',
-                'बिक्री, खर्च, भुक्तानी र फिर्ता रकम यहाँ देखिनेछन्।',
-              ),
+              title: l10n.ledgerNoEntriesTitle,
+              subtitle: l10n.ledgerNoEntriesSubtitle,
             );
           }
           return ListView.separated(
@@ -108,4 +106,3 @@ class LedgerReportScreen extends ConsumerWidget {
     );
   }
 }
-

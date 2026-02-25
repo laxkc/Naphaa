@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../core/l10n/context_i18n.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/customers/presentation/customers_screen.dart';
@@ -71,7 +70,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SME Digital',
+              l10n.appName,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -127,6 +126,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     BuildContext context,
     SyncStatusState syncStatus,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final hasIssue =
         !syncStatus.online ||
         syncStatus.syncing ||
@@ -140,38 +140,29 @@ class _AppShellState extends ConsumerState<AppShell> {
           AppColors.warningBg,
           AppColors.warning,
           Icons.wifi_off_rounded,
-          context.tr('Offline mode', 'अफलाइन मोड'),
+          l10n.offlineMode,
         ),
       _ when syncStatus.syncing => (
           AppColors.surfaceAlt,
           AppColors.primary,
           Icons.sync_rounded,
           syncStatus.pendingCount > 0
-              ? context.tr(
-                'Syncing ${syncStatus.pendingCount} changes…',
-                '${syncStatus.pendingCount} परिवर्तन सिंक हुँदै…',
-              )
-              : context.tr('Syncing…', 'सिंक हुँदै…'),
+              ? l10n.syncingChanges(syncStatus.pendingCount)
+              : l10n.syncingShort,
         ),
       _ when (syncStatus.lastError?.isNotEmpty ?? false) => (
           isConflict ? AppColors.warningBg : AppColors.errorBg,
           isConflict ? AppColors.warning : AppColors.error,
           isConflict ? Icons.warning_amber_rounded : Icons.sync_problem_rounded,
           isConflict
-              ? context.tr(
-                  'Server has newer data. Pull latest and retry.',
-                  'सर्भरमा नयाँ डाटा छ। नयाँ डाटा तानेर फेरि प्रयास गर्नुहोस्।',
-                )
-              : context.tr('Sync failed. Will retry.', 'सिंक असफल भयो। फेरि प्रयास हुनेछ।'),
+              ? l10n.serverHasNewerDataPullRetry
+              : l10n.syncFailedWillRetry,
         ),
       _ => (
           AppColors.warningBg,
           AppColors.warning,
           Icons.cloud_upload_outlined,
-          context.tr(
-            '${syncStatus.pendingCount} pending changes',
-            '${syncStatus.pendingCount} परिवर्तन बाँकी',
-          ),
+          l10n.pendingChangesCount(syncStatus.pendingCount),
         ),
     };
 
@@ -221,8 +212,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                       child: Text(
                         isConflict
-                            ? context.tr('Pull+Retry', 'तान्नुहोस्+फेरि')
-                            : context.tr('Sync now', 'अहिले सिंक'),
+                            ? l10n.pullRetryShort
+                            : l10n.syncNowLabel,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -240,7 +231,12 @@ class _AppShellState extends ConsumerState<AppShell> {
               Padding(
                 padding: const EdgeInsets.only(left: 20, top: 2),
                 child: Text(
-                  'ack ${syncStatus.lastAcked} • fail ${syncStatus.lastFailed} • pull ${syncStatus.lastPulled} • ${syncStatus.lastDurationMs}ms',
+                  l10n.syncTelemetrySummary(
+                    syncStatus.lastAcked,
+                    syncStatus.lastFailed,
+                    syncStatus.lastPulled,
+                    syncStatus.lastDurationMs ?? 0,
+                  ),
                   style: TextStyle(
                     fontSize: 10,
                     color: fg.withValues(alpha: 0.9),
@@ -283,7 +279,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         NavigationDestination(
           icon: const Icon(Icons.bar_chart_outlined),
           selectedIcon: const Icon(Icons.bar_chart_rounded),
-          label: 'Reports',
+          label: l10n.reports,
         ),
       ],
     );
@@ -294,8 +290,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         1 => l10n.sales,
         2 => l10n.products,
         3 => l10n.customers,
-        4 => 'Reports',
-        _ => 'SME Digital',
+        4 => l10n.reports,
+        _ => l10n.appName,
       };
 }
 
@@ -308,7 +304,7 @@ class _SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(AppLocalizations.of(context)!.settings),
         backgroundColor: AppColors.surface,
       ),
       body: const SettingsScreen(),

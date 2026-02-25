@@ -7,7 +7,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sme_digital/core/providers/app_providers.dart';
 import 'package:sme_digital/core/network/backend_gateway.dart';
 import 'package:sme_digital/core/network/session_service.dart';
-import 'package:sme_digital/core/storage/local_db.dart';
 import 'package:sme_digital/core/storage/secure_storage.dart';
 import 'package:sme_digital/features/reports/domain/alert_item.dart';
 import 'package:sme_digital/features/reports/domain/product_metric_item.dart';

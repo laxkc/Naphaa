@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../customers/domain/customer_risk_metric.dart';
 import '../../customers/presentation/customer_detail_screen.dart';
@@ -12,6 +13,7 @@ class CreditReportScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final reportAsync = ref.watch(creditReportProvider);
     final riskMetricsAsync = ref.watch(customerRiskMetricsProvider);
     final currFmt = NumberFormat('#,##0.00');
@@ -19,7 +21,7 @@ class CreditReportScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Credit Report', 'उधारो रिपोर्ट')),
+        title: Text(l10n.reportsCreditReportTitle),
         backgroundColor: AppColors.surface,
       ),
       body: reportAsync.when(
@@ -38,14 +40,8 @@ class CreditReportScreen extends ConsumerWidget {
           if (customers.isEmpty) {
             return EmptyState(
               icon: Icons.account_balance_wallet_outlined,
-              title: context.tr(
-                'No outstanding credit',
-                'कुनै बाँकी उधारो छैन',
-              ),
-              subtitle: context.tr(
-                'All customers are settled',
-                'सबै ग्राहकको हिसाब मिलेको छ',
-              ),
+              title: l10n.creditReportNoOutstandingTitle,
+              subtitle: l10n.creditReportNoOutstandingSubtitle,
             );
           }
           final totalOutstanding = customers.fold<double>(
@@ -73,7 +69,7 @@ class CreditReportScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            context.tr('Total Outstanding', 'कुल बाँकी उधारो'),
+                            l10n.creditReportTotalOutstanding,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: AppColors.warning),
                           ),
@@ -90,10 +86,7 @@ class CreditReportScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      context.tr(
-                        '${customers.length} customer${customers.length != 1 ? 's' : ''}',
-                        '${customers.length} ग्राहक',
-                      ),
+                      l10n.creditReportCustomerCount(customers.length),
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
@@ -191,11 +184,13 @@ class _CreditRiskBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final level = risk.riskLevel.toLowerCase();
-    final (label, color) = switch (level) {
-      'red' => ('High', AppColors.error),
-      'yellow' => ('Medium', AppColors.warning),
-      _ => ('Low', AppColors.success),
+    final label = riskLevelLabel(context, level, short: true);
+    final color = switch (level) {
+      'red' => AppColors.error,
+      'yellow' => AppColors.warning,
+      _ => AppColors.success,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -205,7 +200,7 @@ class _CreditRiskBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
       child: Text(
-        '$label Risk • ${risk.riskScore}',
+        '${l10n.creditReportRiskBadge(label)} • ${risk.riskScore}',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,

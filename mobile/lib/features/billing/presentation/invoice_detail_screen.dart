@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/l10n/context_i18n.dart';
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/invoice_models.dart';
 
@@ -36,6 +37,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final invoiceAsync = ref.watch(invoiceDetailProvider(widget.invoiceId));
     final itemsAsync = ref.watch(invoiceItemsProvider(widget.invoiceId));
     final paymentsAsync = ref.watch(invoicePaymentsProvider(widget.invoiceId));
@@ -43,7 +45,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Invoice Details', 'इनभ्वाइस विवरण')),
+        title: Text(l10n.invoiceDetailTitle),
         backgroundColor: AppColors.surface,
       ),
       body: invoiceAsync.when(
@@ -70,7 +72,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
           if (invoice == null) {
             return EmptyState(
               icon: Icons.receipt_long_outlined,
-              title: context.tr('Invoice not found', 'इनभ्वाइस भेटिएन'),
+              title: l10n.invoiceDetailNotFound,
             );
           }
 
@@ -90,7 +92,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                         Expanded(
                           child: Text(
                             invoice.invoiceNumber ??
-                                context.tr('Draft Invoice', 'ड्राफ्ट इनभ्वाइस'),
+                                l10n.invoiceDetailDraftFallback,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.label,
@@ -98,7 +100,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                           ),
                         ),
                         StatusChip(
-                          label: invoice.status.name.toUpperCase(),
+                          label: invoiceStatusLabel(context, invoice.status),
                           color: _statusColor(invoice.status),
                         ),
                       ],
@@ -106,16 +108,16 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     const SizedBox(height: AppSpacing.md),
                     _kv(
                       context,
-                      context.tr('Issue Date', 'जारी मिति'),
+                      l10n.invoiceIssueDateLabel,
                       invoice.issueDate == null
-                          ? context.tr('Not issued', 'जारी गरिएको छैन')
+                          ? l10n.invoiceNotIssued
                           : DateFormat(
                             'yyyy-MM-dd HH:mm',
                           ).format(invoice.issueDate!.toLocal()),
                     ),
                     _kv(
                       context,
-                      context.tr('Due Date', 'बुझाउने मिति'),
+                      l10n.invoiceDueDateLabel,
                       invoice.dueDate == null
                           ? '-'
                           : DateFormat(
@@ -124,35 +126,35 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     ),
                     _kv(
                       context,
-                      context.tr('Subtotal', 'जम्मा'),
-                      'NPR ${money.format(invoice.subtotal)}',
+                      l10n.subtotalLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.subtotal)}',
                     ),
                     _kv(
                       context,
-                      context.tr('Discount', 'छुट'),
-                      'NPR ${money.format(invoice.discountAmount)}',
+                      l10n.discountLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.discountAmount)}',
                     ),
                     _kv(
                       context,
-                      context.tr('VAT', 'भ्याट'),
-                      'NPR ${money.format(invoice.taxAmount)}',
+                      l10n.vatLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.taxAmount)}',
                     ),
                     const Divider(height: AppSpacing.lg * 2),
                     _kv(
                       context,
-                      context.tr('Total', 'कुल जम्मा'),
-                      'NPR ${money.format(invoice.total)}',
+                      l10n.totalLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.total)}',
                       bold: true,
                     ),
                     _kv(
                       context,
-                      context.tr('Paid', 'तिरेको'),
-                      'NPR ${money.format(invoice.paidAmount)}',
+                      l10n.paidLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.paidAmount)}',
                     ),
                     _kv(
                       context,
-                      context.tr('Balance', 'बाकी'),
-                      'NPR ${money.format(invoice.balanceDue)}',
+                      l10n.balanceLabel,
+                      '${l10n.nprLabel} ${money.format(invoice.balanceDue)}',
                       bold: true,
                       valueColor:
                           invoice.balanceDue > 0
@@ -162,7 +164,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     if ((invoice.notes ?? '').trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        context.tr('Notes', 'नोट'),
+                        l10n.notesLabel,
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.label,
@@ -185,7 +187,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.tr('Items', 'सामानहरू'),
+                      l10n.itemsLabel,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppColors.label,
@@ -208,7 +210,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       data: (items) {
                         if (items.isEmpty) {
                           return Text(
-                            context.tr('No items', 'कुनै सामान छैन'),
+                            l10n.invoiceDetailNoItems,
                             style: const TextStyle(color: AppColors.muted),
                           );
                         }
@@ -219,10 +221,10 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(item.productNameSnapshot),
                                 subtitle: Text(
-                                  '${item.quantity} ${item.unitSnapshot ?? ''} × NPR ${money.format(item.unitPrice)}',
+                                  '${item.quantity} ${item.unitSnapshot ?? ''} × ${l10n.nprLabel} ${money.format(item.unitPrice)}',
                                 ),
                                 trailing: Text(
-                                  'NPR ${money.format(item.lineTotal)}',
+                                  '${l10n.nprLabel} ${money.format(item.lineTotal)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -243,7 +245,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.tr('Payments', 'भुक्तानीहरू'),
+                      l10n.invoicePaymentsTitle,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppColors.label,
@@ -266,10 +268,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       data: (payments) {
                         if (payments.isEmpty) {
                           return Text(
-                            context.tr(
-                              'No payments recorded',
-                              'भुक्तानी रेकर्ड छैन',
-                            ),
+                            l10n.invoicePaymentsEmpty,
                             style: const TextStyle(color: AppColors.muted),
                           );
                         }
@@ -279,14 +278,14 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                               ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 leading: const Icon(Icons.payments_outlined),
-                                title: Text(p.method),
+                                title: Text(paymentMethodLabel(context, p.method)),
                                 subtitle: Text(
                                   DateFormat(
                                     'yyyy-MM-dd HH:mm',
                                   ).format(p.paidAt.toLocal()),
                                 ),
                                 trailing: Text(
-                                  'NPR ${money.format(p.amount)}',
+                                  '${l10n.nprLabel} ${money.format(p.amount)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -325,12 +324,13 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
   }
 
   Widget _buildActions(BuildContext context, InvoiceRecord invoice) {
+    final l10n = AppLocalizations.of(context)!;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.tr('Actions', 'कार्यहरू'),
+            l10n.actionsLabel,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: AppColors.label,
@@ -345,7 +345,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                 FilledButton.icon(
                   onPressed: _busy ? null : () => _issueInvoice(context),
                   icon: const Icon(Icons.task_alt_outlined),
-                  label: Text(context.tr('Issue', 'जारी गर्नुहोस्')),
+                  label: Text(l10n.issueLabel),
                 ),
               if (invoice.status != InvoiceStatus.cancelled &&
                   invoice.balanceDue > 0 &&
@@ -354,7 +354,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   onPressed:
                       _busy ? null : () => _recordPayment(context, invoice),
                   icon: const Icon(Icons.payments_outlined),
-                  label: Text(context.tr('Record Payment', 'भुक्तानी रेकर्ड')),
+                  label: Text(l10n.invoiceRecordPaymentLabel),
                 ),
               if (invoice.status != InvoiceStatus.cancelled &&
                   invoice.status != InvoiceStatus.draft)
@@ -364,26 +364,23 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   icon: const Icon(Icons.picture_as_pdf_outlined),
                   label: Text(
                     invoice.pdfStatus == 'failed'
-                        ? context.tr('Retry PDF', 'PDF पुन: प्रयास')
+                        ? l10n.invoicePdfRetry
                         : (invoice.pdfStatus == 'generated'
-                            ? context.tr(
-                              'Regenerate PDF',
-                              'PDF पुन: बनाउनुहोस्',
-                            )
-                            : context.tr('Generate PDF', 'PDF बनाउनुहोस्')),
+                            ? l10n.invoicePdfRegenerate
+                            : l10n.invoicePdfGenerate),
                   ),
                 ),
               if ((invoice.pdfPath ?? '').isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _sharePdf(context),
                   icon: const Icon(Icons.share_outlined),
-                  label: Text(context.tr('Share PDF', 'PDF सेयर')),
+                  label: Text(l10n.invoicePdfShare),
                 ),
               if ((invoice.pdfPath ?? '').isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _printPdf(context),
                   icon: const Icon(Icons.print_outlined),
-                  label: Text(context.tr('Print', 'प्रिन्ट')),
+                  label: Text(l10n.printLabel),
                 ),
             ],
           ),
@@ -397,23 +394,14 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       await ref
           .read(billingRepositoryProvider)
           .issueInvoice(invoiceId: widget.invoiceId);
-      _showMessage(
-        context.tr(
-          'Invoice issued successfully',
-          'इनभ्वाइस सफलतापूर्वक जारी भयो',
-        ),
-        BannerType.success,
-      );
+      _showMessage(AppLocalizations.of(context)!.invoiceIssuedSuccess, BannerType.success);
     });
   }
 
   Future<void> _generatePdf(BuildContext context, InvoiceRecord invoice) async {
     await _runAction(context, () async {
       await ref.read(invoicePdfServiceProvider).generateInvoicePdf(invoice.id);
-      _showMessage(
-        context.tr('PDF generated successfully', 'PDF सफलतापूर्वक बन्यो'),
-        BannerType.success,
-      );
+      _showMessage(AppLocalizations.of(context)!.invoicePdfGeneratedSuccess, BannerType.success);
     });
   }
 
@@ -437,6 +425,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     BuildContext context,
     InvoiceRecord invoice,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     String method = 'CASH';
@@ -447,12 +436,14 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
             (ctx) => StatefulBuilder(
               builder: (ctx, setStateDialog) {
                 return AlertDialog(
-                  title: Text(context.tr('Record Payment', 'भुक्तानी रेकर्ड')),
+                  title: Text(l10n.invoiceRecordPaymentLabel),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${context.tr('Balance', 'बाकी')}: NPR ${invoice.balanceDue.toStringAsFixed(2)}',
+                        l10n.invoiceBalanceSummary(
+                          '${l10n.nprLabel} ${invoice.balanceDue.toStringAsFixed(2)}',
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextField(
@@ -461,31 +452,37 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                           decimal: true,
                         ),
                         decoration: InputDecoration(
-                          labelText: context.tr('Amount', 'रकम'),
+                          labelText: l10n.amount,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       DropdownButtonFormField<String>(
                         initialValue: method,
-                        items: const [
-                          DropdownMenuItem(value: 'CASH', child: Text('CASH')),
-                          DropdownMenuItem(value: 'QR', child: Text('QR')),
-                          DropdownMenuItem(value: 'BANK', child: Text('BANK')),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'CASH',
+                            child: Text(paymentMethodLabel(context, 'CASH')),
+                          ),
+                          DropdownMenuItem(
+                            value: 'QR',
+                            child: Text(paymentMethodLabel(context, 'QR')),
+                          ),
+                          DropdownMenuItem(
+                            value: 'BANK',
+                            child: Text(paymentMethodLabel(context, 'BANK')),
+                          ),
                         ],
                         onChanged:
                             (v) => setStateDialog(() => method = v ?? 'CASH'),
                         decoration: InputDecoration(
-                          labelText: context.tr('Method', 'विधि'),
+                          labelText: l10n.paymentMethodLabelTitle,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextField(
                         controller: noteCtrl,
                         decoration: InputDecoration(
-                          labelText: context.tr(
-                            'Note (optional)',
-                            'नोट (वैकल्पिक)',
-                          ),
+                          labelText: l10n.noteOptionalLabel,
                         ),
                       ),
                     ],
@@ -493,11 +490,11 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop(false),
-                      child: Text(context.tr('Cancel', 'रद्द गर्नुहोस्')),
+                      child: Text(l10n.cancel),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.of(ctx).pop(true),
-                      child: Text(context.tr('Save', 'सेभ')),
+                      child: Text(l10n.save),
                     ),
                   ],
                 );
@@ -509,7 +506,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       final amount = double.tryParse(amountCtrl.text.trim());
       if (amount == null || amount <= 0) {
         _showMessage(
-          context.tr('Enter a valid amount', 'सही रकम हाल्नुहोस्'),
+          AppLocalizations.of(context)!.invoiceEnterValidAmount,
           BannerType.error,
         );
         return;
@@ -528,7 +525,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
               ),
             );
         _showMessage(
-          context.tr('Payment recorded', 'भुक्तानी रेकर्ड भयो'),
+          AppLocalizations.of(context)!.invoicePaymentRecordedSuccess,
           BannerType.success,
         );
       });

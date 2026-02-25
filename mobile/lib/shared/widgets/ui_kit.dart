@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -164,6 +165,7 @@ class ErrorRetry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.h),
@@ -174,7 +176,7 @@ class ErrorRetry extends StatelessWidget {
                 size: 40, color: AppColors.muted),
             const SizedBox(height: AppSpacing.md),
             Text(
-              message ?? 'Something went wrong',
+              message ?? l10n.somethingWentWrong,
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -186,7 +188,7 @@ class ErrorRetry extends StatelessWidget {
               width: 140,
               child: OutlinedButton(
                 onPressed: onRetry,
-                child: const Text('Retry'),
+                child: Text(l10n.retry),
               ),
             ),
           ],
@@ -267,9 +269,10 @@ Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String body,
-  String confirmLabel = 'Delete',
+  String? confirmLabel,
   bool destructive = true,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -282,7 +285,7 @@ Future<bool> showConfirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),
@@ -292,7 +295,7 @@ Future<bool> showConfirmDialog(
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
           ),
-          child: Text(confirmLabel),
+          child: Text(confirmLabel ?? l10n.deleteLabel),
         ),
       ],
     ),

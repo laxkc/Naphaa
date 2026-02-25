@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -23,109 +22,153 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final isOwner = ref.watch(canManageSettingsProvider);
     final canManageUsers = ref.watch(canManageUsersProvider);
+    final profileAsync = ref.watch(profileProvider);
+    final apiRole =
+        profileAsync.asData?.value.role?.toString().trim().toLowerCase();
+    final effectiveCanManageSettings =
+        isOwner ||
+        apiRole == 'owner' ||
+        apiRole == 'admin' ||
+        apiRole == 'super_admin' ||
+        apiRole == 'superadmin';
+    final effectiveCanManageUsers =
+        canManageUsers ||
+        apiRole == 'owner' ||
+        apiRole == 'admin' ||
+        apiRole == 'super_admin' ||
+        apiRole == 'superadmin';
 
     return ListView(
       children: [
         // ── Business ────────────────────────────────────────────────────
-        SectionHeader(context.tr('BUSINESS', 'व्यवसाय')),
+        SectionHeader(l10n.settingsSectionBusiness),
         _SettingsCard(
           children: [
             AppListTile(
-              leading: const Icon(Icons.store_outlined,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('Business Settings', 'व्यवसाय सेटिङ'),
-              subtitle: context.tr('Name, address, currency', 'नाम, ठेगाना, मुद्रा'),
-              onTap: isOwner
-                  ? () => Navigator.push(
+              leading: const Icon(
+                Icons.store_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.businessSettings,
+              subtitle: l10n.settingsBusinessSettingsSubtitle,
+              onTap:
+                  effectiveCanManageSettings
+                      ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const BusinessSettingsScreen()),
+                          builder: (_) => const BusinessSettingsScreen(),
+                        ),
                       )
-                  : null,
+                      : null,
             ),
             AppListTile(
-              leading: const Icon(Icons.receipt_outlined,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('Tax Settings', 'कर सेटिङ'),
-              subtitle: context.tr('VAT / PAN / tax rate', 'VAT / PAN / कर दर'),
-              onTap: isOwner
-                  ? () => Navigator.push(
+              leading: const Icon(
+                Icons.receipt_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.taxSettingsTitle,
+              subtitle: l10n.settingsTaxSettingsSubtitle,
+              onTap:
+                  effectiveCanManageSettings
+                      ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const TaxSettingsScreen()),
+                          builder: (_) => const TaxSettingsScreen(),
+                        ),
                       )
-                  : null,
+                      : null,
             ),
           ],
         ),
 
         // ── Team ────────────────────────────────────────────────────────
-        SectionHeader(context.tr('TEAM', 'टोली')),
+        SectionHeader(l10n.settingsSectionTeam),
         _SettingsCard(
           children: [
             AppListTile(
-              leading: const Icon(Icons.manage_accounts_outlined,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('User Management', 'प्रयोगकर्ता व्यवस्थापन'),
-              subtitle: context.tr('Invite staff, set roles', 'कर्मचारी बोलाउनुहोस्, भूमिका सेट गर्नुहोस्'),
-              onTap: canManageUsers
-                  ? () => Navigator.push(
+              leading: const Icon(
+                Icons.manage_accounts_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.userManagementTitle,
+              subtitle: l10n.settingsUserManagementSubtitle,
+              onTap:
+                  effectiveCanManageUsers
+                      ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const UserManagementScreen()),
+                          builder: (_) => const UserManagementScreen(),
+                        ),
                       )
-                  : null,
+                      : null,
             ),
             AppListTile(
-              leading: const Icon(Icons.workspace_premium_outlined,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('Subscription', 'सदस्यता'),
-              subtitle: context.tr('Plan, billing details', 'योजना, बिलिङ विवरण'),
-              onTap: isOwner
-                  ? () => Navigator.push(
+              leading: const Icon(
+                Icons.workspace_premium_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.subscriptionTitle,
+              subtitle: l10n.settingsSubscriptionSubtitle,
+              onTap:
+                  effectiveCanManageSettings
+                      ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const SubscriptionScreen()),
+                          builder: (_) => const SubscriptionScreen(),
+                        ),
                       )
-                  : null,
+                      : null,
             ),
           ],
         ),
 
         // ── Preferences ─────────────────────────────────────────────────
-        SectionHeader(context.tr('PREFERENCES', 'प्राथमिकताहरू')),
+        SectionHeader(l10n.settingsSectionPreferences),
         _SettingsCard(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.language_outlined,
-                          size: 18, color: AppColors.muted),
+                      const Icon(
+                        Icons.language_outlined,
+                        size: 18,
+                        color: AppColors.muted,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(l10n.language,
-                          style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        l10n.language,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
                   SegmentedButton<String>(
                     segments: [
                       ButtonSegment(
-                          value: 'ne',
-                          label: Text('नेपाली'),
-                          icon: Icon(Icons.translate, size: 14)),
+                        value: 'ne',
+                        label: Text('नेपाली'),
+                        icon: Icon(Icons.translate, size: 14),
+                      ),
                       ButtonSegment(
-                          value: 'en',
-                          label: Text(context.tr('English', 'अंग्रेजी')),
-                          icon: Icon(Icons.translate, size: 14)),
+                        value: 'en',
+                        label: Text(l10n.englishLabel),
+                        icon: Icon(Icons.translate, size: 14),
+                      ),
                     ],
                     selected: {locale.languageCode},
-                    onSelectionChanged: (v) async =>
-                        controller.setLocale(v.first),
+                    onSelectionChanged:
+                        (v) async => controller.setLocale(v.first),
                   ),
                 ],
               ),
@@ -134,41 +177,52 @@ class SettingsScreen extends ConsumerWidget {
         ),
 
         // ── Account ─────────────────────────────────────────────────────
-        SectionHeader(context.tr('ACCOUNT', 'खाता')),
+        SectionHeader(l10n.settingsSectionAccount),
         _SettingsCard(
           children: [
             AppListTile(
-              leading: const Icon(Icons.person_outline_rounded,
-                  size: 20, color: AppColors.muted),
-              title: l10n.profile,
-              subtitle: context.tr('View and edit your profile', 'आफ्नो प्रोफाइल हेर्नुहोस् र सम्पादन गर्नुहोस्'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              leading: const Icon(
+                Icons.person_outline_rounded,
+                size: 20,
+                color: AppColors.muted,
               ),
+              title: l10n.profile,
+              subtitle: l10n.settingsProfileSubtitle,
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  ),
             ),
           ],
         ),
 
         // ── About ───────────────────────────────────────────────────────
-        SectionHeader(context.tr('ABOUT', 'बारेमा')),
+        SectionHeader(l10n.settingsSectionAbout),
         _SettingsCard(
           children: [
             AppListTile(
-              leading: const Icon(Icons.sync_problem_outlined,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('Sync Diagnostics', 'सिंक डायग्नोस्टिक्स'),
-              subtitle: context.tr('Queue, retries, sync errors', 'क्यू, पुन:प्रयास, त्रुटिहरू'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
+              leading: const Icon(
+                Icons.sync_problem_outlined,
+                size: 20,
+                color: AppColors.muted,
               ),
+              title: l10n.syncDiagnosticsTitle,
+              subtitle: l10n.settingsSyncDiagnosticsSubtitle,
+              onTap:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
+                  ),
             ),
             const Divider(height: 1),
             AppListTile(
-              leading: const Icon(Icons.info_outline_rounded,
-                  size: 20, color: AppColors.muted),
-              title: context.tr('Version', 'संस्करण'),
+              leading: const Icon(
+                Icons.info_outline_rounded,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.versionLabel,
               subtitle: '1.0.0',
               showDivider: false,
             ),
@@ -183,19 +237,18 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () async {
               final confirm = await showConfirmDialog(
                 context,
-                title: context.tr('Sign out?', 'साइन आउट गर्ने?'),
-                body: context.tr(
-                  'You will be returned to the login screen.',
-                  'तपाईं लगइन स्क्रिनमा फर्कनुहुनेछ।',
-                ),
-                confirmLabel: context.tr('Sign out', 'साइन आउट'),
+                title: l10n.signOutConfirmTitle,
+                body: l10n.signOutConfirmBody,
+                confirmLabel: l10n.signOutLabel,
                 destructive: false,
               );
               if (confirm) {
                 await ref.read(authControllerProvider.notifier).logout();
                 if (context.mounted) {
-                  Navigator.of(context, rootNavigator: true)
-                      .popUntil((route) => route.isFirst);
+                  Navigator.of(
+                    context,
+                    rootNavigator: true,
+                  ).popUntil((route) => route.isFirst);
                 }
               }
             },
@@ -228,10 +281,7 @@ class _SettingsCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.border),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: children,
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: children),
       ),
     );
   }

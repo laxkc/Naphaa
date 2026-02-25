@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -18,44 +19,54 @@ class ProductDetailScreen extends ConsumerWidget {
     final movementsAsync = ref.watch(stockMovementsProvider(productId));
     final currFmt = NumberFormat('#,##0.00');
     final canAdjustStock = ref.watch(canAdjustStockProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Product Details'),
+        title: Text(l10n.productDetailsTitle),
         backgroundColor: AppColors.surface,
         actions: [
           productAsync.whenOrNull(
-                data: (product) => product != null
-                    ? IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => Navigator.of(context)
-                            .push(MaterialPageRoute(
-                              builder: (_) =>
-                                  ProductFormScreen(product: product),
-                            ))
-                            .then((_) {
-                          ref.invalidate(productDetailProvider(productId));
-                          ref.invalidate(productsListProvider);
-                        }),
-                      )
-                    : null,
+                data:
+                    (product) =>
+                        product != null
+                            ? IconButton(
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed:
+                                  () => Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => ProductFormScreen(
+                                                product: product,
+                                              ),
+                                        ),
+                                      )
+                                      .then((_) {
+                                        ref.invalidate(
+                                          productDetailProvider(productId),
+                                        );
+                                        ref.invalidate(productsListProvider);
+                                      }),
+                            )
+                            : null,
               ) ??
               const SizedBox.shrink(),
         ],
       ),
       body: productAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorRetry(
-            onRetry: () =>
-                ref.invalidate(productDetailProvider(productId))),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error:
+            (e, _) => ErrorRetry(
+              onRetry: () => ref.invalidate(productDetailProvider(productId)),
+            ),
         data: (product) {
           if (product == null) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.inventory_2_outlined,
-              title: 'Product not found',
-              subtitle: 'This product may have been removed',
+              title: l10n.productNotFoundTitle,
+              subtitle: l10n.productNotFoundSubtitle,
             );
           }
           final isLowStock =
@@ -77,8 +88,7 @@ class ProductDetailScreen extends ConsumerWidget {
                             height: 52,
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.lg),
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
                             ),
                             child: Center(
                               child: Text(
@@ -98,28 +108,30 @@ class ProductDetailScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(product.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge),
+                                Text(
+                                  product.name,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
                                 if (product.category != null)
-                                  Text(product.category!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall),
+                                  Text(
+                                    product.category!,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
                               ],
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm),
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
                             decoration: BoxDecoration(
-                              color: isLowStock
-                                  ? AppColors.warningBg
-                                  : AppColors.successBg,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              color:
+                                  isLowStock
+                                      ? AppColors.warningBg
+                                      : AppColors.successBg,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             child: Column(
                               children: [
@@ -128,18 +140,20 @@ class ProductDetailScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: isLowStock
-                                        ? AppColors.warning
-                                        : AppColors.success,
+                                    color:
+                                        isLowStock
+                                            ? AppColors.warning
+                                            : AppColors.success,
                                   ),
                                 ),
                                 Text(
                                   product.unit,
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: isLowStock
-                                        ? AppColors.warning
-                                        : AppColors.success,
+                                    color:
+                                        isLowStock
+                                            ? AppColors.warning
+                                            : AppColors.success,
                                   ),
                                 ),
                               ],
@@ -151,24 +165,22 @@ class ProductDetailScreen extends ConsumerWidget {
                       Row(
                         children: [
                           _MetricTile(
-                            label: 'Sell Price',
-                            value:
-                                'NPR ${currFmt.format(product.sellPrice)}',
+                            label: l10n.sellPriceLabel,
+                            value: '${l10n.nprLabel} ${currFmt.format(product.sellPrice)}',
                             color: AppColors.success,
                           ),
                           _MetricTile(
-                            label: 'Cost Price',
-                            value:
-                                'NPR ${currFmt.format(product.costPrice)}',
+                            label: l10n.costPriceLabel,
+                            value: '${l10n.nprLabel} ${currFmt.format(product.costPrice)}',
                             color: AppColors.muted,
                           ),
                           _MetricTile(
-                            label: 'Margin',
-                            value:
-                                '${product.margin.toStringAsFixed(1)}%',
-                            color: product.margin > 0
-                                ? AppColors.success
-                                : AppColors.error,
+                            label: l10n.marginLabel,
+                            value: '${product.margin.toStringAsFixed(1)}%',
+                            color:
+                                product.margin > 0
+                                    ? AppColors.success
+                                    : AppColors.error,
                           ),
                         ],
                       ),
@@ -180,37 +192,46 @@ class ProductDetailScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.tune_rounded),
-                    label: const Text('Adjust Stock'),
-                    onPressed: canAdjustStock
-                        ? () => Navigator.of(context)
-                            .push(MaterialPageRoute(
-                              builder: (_) => StockAdjustmentScreen(
-                                productId: product.id,
-                                productName: product.name,
-                                currentStock: product.stockQty,
-                              ),
-                            ))
-                            .then((_) {
-                          ref.invalidate(productDetailProvider(productId));
-                          ref.invalidate(stockMovementsProvider(productId));
-                          ref.invalidate(productsListProvider);
-                        })
-                        : null,
+                    label: Text(l10n.adjustStockLabel),
+                    onPressed:
+                        canAdjustStock
+                            ? () => Navigator.of(context)
+                                .push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => StockAdjustmentScreen(
+                                          productId: product.id,
+                                          productName: product.name,
+                                          currentStock: product.stockQty,
+                                        ),
+                                  ),
+                                )
+                                .then((_) {
+                                  ref.invalidate(
+                                    productDetailProvider(productId),
+                                  );
+                                  ref.invalidate(
+                                    stockMovementsProvider(productId),
+                                  );
+                                  ref.invalidate(productsListProvider);
+                                })
+                            : null,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                SectionHeader('Stock History'),
+                SectionHeader(l10n.stockHistoryTitle),
                 const SizedBox(height: AppSpacing.sm),
                 movementsAsync.when(
-                  loading: () => Column(
-                    children: List.generate(
-                        4,
-                        (_) => const Padding(
-                              padding:
-                                  EdgeInsets.only(bottom: AppSpacing.sm),
-                              child: SkeletonListTile(),
-                            )),
-                  ),
+                  loading:
+                      () => Column(
+                        children: List.generate(
+                          4,
+                          (_) => const Padding(
+                            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: SkeletonListTile(),
+                          ),
+                        ),
+                      ),
                   error: (_, __) => const SizedBox.shrink(),
                   data: (movements) {
                     if (movements.isEmpty) {
@@ -219,10 +240,8 @@ class ProductDetailScreen extends ConsumerWidget {
                           padding: const EdgeInsets.all(AppSpacing.lg),
                           child: Center(
                             child: Text(
-                              'No stock movements yet',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              l10n.noStockMovementsYetTitle,
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: AppColors.muted),
                             ),
                           ),
@@ -232,16 +251,17 @@ class ProductDetailScreen extends ConsumerWidget {
                     return AppCard(
                       padding: EdgeInsets.zero,
                       child: Column(
-                        children: movements.asMap().entries.map((e) {
-                          final i = e.key;
-                          final m = e.value;
-                          return Column(
-                            children: [
-                              if (i > 0) const Divider(height: 1),
-                              _MovementTile(movement: m),
-                            ],
-                          );
-                        }).toList(),
+                        children:
+                            movements.asMap().entries.map((e) {
+                              final i = e.key;
+                              final m = e.value;
+                              return Column(
+                                children: [
+                                  if (i > 0) const Divider(height: 1),
+                                  _MovementTile(movement: m),
+                                ],
+                              );
+                            }).toList(),
                       ),
                     );
                   },
@@ -257,8 +277,11 @@ class ProductDetailScreen extends ConsumerWidget {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile(
-      {required this.label, required this.value, required this.color});
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -271,9 +294,14 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(label, style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 2),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -290,7 +318,9 @@ class _MovementTile extends StatelessWidget {
     final isAdd = movement.isAddition;
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       child: Row(
         children: [
           Container(
@@ -311,16 +341,21 @@ class _MovementTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(movement.reason,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w500)),
+                Text(
+                  movement.reason,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                ),
                 if (movement.note != null && movement.note!.isNotEmpty)
-                  Text(movement.note!,
-                      style: Theme.of(context).textTheme.bodySmall),
-                Text(fmt.format(movement.createdAt.toLocal()),
-                    style: Theme.of(context).textTheme.labelSmall),
+                  Text(
+                    movement.note!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                Text(
+                  fmt.format(movement.createdAt.toLocal()),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),

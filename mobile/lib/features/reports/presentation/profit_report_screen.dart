@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class ProfitReportScreen extends ConsumerStatefulWidget {
@@ -39,6 +39,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final params = _params;
     final reportAsync = ref.watch(salesReportProvider(params));
     final expensesAsync = ref.watch(expensesListProvider);
@@ -46,7 +47,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Profit Report', 'नाफा रिपोर्ट')),
+        title: Text(l10n.reportsProfitReportTitle),
         backgroundColor: AppColors.surface,
       ),
       body: Column(
@@ -122,7 +123,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(context.tr('Net Profit', 'खुद नाफा'),
+                            Text(l10n.profitReportNetProfit,
                                 style:
                                     Theme.of(context).textTheme.bodySmall),
                             const SizedBox(height: 4),
@@ -142,38 +143,35 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      SectionHeader(context.tr('Breakdown', 'विवरण')),
+                      SectionHeader(l10n.profitReportBreakdown),
                       const SizedBox(height: AppSpacing.sm),
                       AppCard(
                         padding: EdgeInsets.zero,
                         child: Column(
                           children: [
                             _ProfitRow(
-                              label: context.tr('Total Revenue', 'कुल आम्दानी'),
+                              label: l10n.salesReportTotalRevenue,
                               value: revenue,
                               color: AppColors.primary,
                               currFmt: _currFmt,
                             ),
                             const Divider(height: 1),
                             _ProfitRow(
-                              label: context.tr(
-                                'Est. Gross Profit (30%)',
-                                'अनुमानित कुल नाफा (३०%)',
-                              ),
+                              label: l10n.profitReportEstimatedGrossProfit30,
                               value: grossProfit,
                               color: AppColors.success,
                               currFmt: _currFmt,
                             ),
                             const Divider(height: 1),
                             _ProfitRow(
-                              label: context.tr('Total Expenses', 'कुल खर्च'),
+                              label: l10n.profitReportTotalExpenses,
                               value: -expenses,
                               color: AppColors.error,
                               currFmt: _currFmt,
                             ),
                             const Divider(height: 1),
                             _ProfitRow(
-                              label: context.tr('Net Profit', 'खुद नाफा'),
+                              label: l10n.profitReportNetProfit,
                               value: netProfit,
                               color: netProfit >= 0
                                   ? AppColors.success
@@ -188,10 +186,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                       InlineBanner(
                         type: BannerType.info,
                         message:
-                            context.tr(
-                              'Gross profit is estimated. Connect product cost prices for accurate margin calculation.',
-                              'कुल नाफा अनुमानित हो। सही मार्जिनका लागि सामानको लागत मूल्य राख्नुहोस्।',
-                            ),
+                            l10n.profitReportEstimatedNotice,
                       ),
                     ],
                   ),
@@ -205,9 +200,9 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
   }
 
   String _periodLabel(_Period p) => switch (p) {
-        _Period.today => context.tr('Today', 'आज'),
-        _Period.week => context.tr('This Week', 'यो हप्ता'),
-        _Period.month => context.tr('This Month', 'यो महिना'),
+        _Period.today => AppLocalizations.of(context)!.todayLabel,
+        _Period.week => AppLocalizations.of(context)!.thisWeekLabel,
+        _Period.month => AppLocalizations.of(context)!.thisMonthLabel,
       };
 }
 

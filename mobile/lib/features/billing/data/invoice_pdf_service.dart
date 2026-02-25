@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Locale;
 
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/storage/preferences.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/invoice_models.dart';
 import 'billing_repository.dart';
 
@@ -34,12 +36,13 @@ class InvoicePdfService {
                   ? invoice.languageSnapshot
                   : (settings['language']?.toString() ?? 'en'))
               .toLowerCase();
+      final l10n = lookupAppLocalizations(Locale(lang == 'ne' ? 'ne' : 'en'));
       final currencyCode =
           invoice.currencyCode.trim().isNotEmpty ? invoice.currencyCode : 'NPR';
       final businessName = _firstNonEmpty(
         invoice.businessNameSnapshot,
         settings['business_name']?.toString(),
-        fallback: 'Business',
+        fallback: l10n.businessLabel,
       );
       final businessAddress = _firstNonEmpty(
         invoice.businessAddressSnapshot,
@@ -103,15 +106,15 @@ class InvoicePdfService {
                             pw.Text(businessAddress),
                           if (businessPhone.isNotEmpty)
                             pw.Text(
-                              '${_t(lang, 'Phone', 'फोन')}: $businessPhone',
+                              '${l10n.phone}: $businessPhone',
                             ),
                           if (businessEmail.isNotEmpty)
                             pw.Text(
-                              '${_t(lang, 'Email', 'इमेल')}: $businessEmail',
+                              '${l10n.emailLabel}: $businessEmail',
                             ),
                           if (panVat.isNotEmpty)
                             pw.Text(
-                              '${_t(lang, 'PAN/VAT', 'PAN/VAT')}: $panVat',
+                              '${l10n.panVatLabel}: $panVat',
                             ),
                         ],
                       ),
@@ -121,22 +124,22 @@ class InvoicePdfService {
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
                         pw.Text(
-                          _t(lang, 'INVOICE', 'बिल'),
+                          l10n.invoicePdfTitle,
                           style: pw.TextStyle(
                             fontSize: 16,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
                         pw.Text(
-                          invoice.invoiceNumber ?? _t(lang, 'DRAFT', 'ड्राफ्ट'),
+                          invoice.invoiceNumber ?? l10n.draftLabel,
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                         pw.Text(
-                          '${_t(lang, 'Date', 'मिति')}: ${dateFmt.format((invoice.issueDate ?? DateTime.now()).toLocal())}',
+                          '${l10n.dateLabel}: ${dateFmt.format((invoice.issueDate ?? DateTime.now()).toLocal())}',
                         ),
                         if (invoice.dueDate != null)
                           pw.Text(
-                            '${_t(lang, 'Due', 'बुझाउने मिति')}: ${dateFmt.format(invoice.dueDate!.toLocal())}',
+                            '${l10n.invoiceDueShortLabel}: ${dateFmt.format(invoice.dueDate!.toLocal())}',
                           ),
                       ],
                     ),
@@ -150,10 +153,10 @@ class InvoicePdfService {
                     color: PdfColors.grey300,
                   ),
                   headers: [
-                    _t(lang, 'Item', 'सामान'),
-                    _t(lang, 'Qty', 'परिमाण'),
-                    _t(lang, 'Rate', 'दर'),
-                    _t(lang, 'Total', 'कुल'),
+                    l10n.itemLabel,
+                    l10n.qtyLabel,
+                    l10n.rateLabel,
+                    l10n.totalLabel,
                   ],
                   data:
                       items
@@ -175,29 +178,29 @@ class InvoicePdfService {
                     child: pw.Column(
                       children: [
                         _pdfKv(
-                          _t(lang, 'Subtotal', 'जम्मा'),
+                          l10n.subtotalLabel,
                           '$currencyCode ${nf.format(invoice.subtotal)}',
                         ),
                         _pdfKv(
-                          _t(lang, 'Discount', 'छुट'),
+                          l10n.discountLabel,
                           '$currencyCode ${nf.format(invoice.discountAmount)}',
                         ),
                         _pdfKv(
-                          _t(lang, 'VAT', 'भ्याट'),
+                          l10n.vatLabel,
                           '$currencyCode ${nf.format(invoice.taxAmount)}',
                         ),
                         pw.Divider(),
                         _pdfKv(
-                          _t(lang, 'Total', 'कुल जम्मा'),
+                          l10n.totalLabel,
                           '$currencyCode ${nf.format(invoice.total)}',
                           bold: true,
                         ),
                         _pdfKv(
-                          _t(lang, 'Paid', 'तिरेको'),
+                          l10n.paidLabel,
                           '$currencyCode ${nf.format(invoice.paidAmount)}',
                         ),
                         _pdfKv(
-                          _t(lang, 'Balance', 'बाकी'),
+                          l10n.balanceLabel,
                           '$currencyCode ${nf.format(invoice.balanceDue)}',
                           bold: true,
                         ),
@@ -208,7 +211,7 @@ class InvoicePdfService {
                 if ((invoice.notes ?? '').trim().isNotEmpty) ...[
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    _t(lang, 'Notes', 'नोट'),
+                    l10n.notesLabel,
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                   pw.SizedBox(height: 4),
@@ -217,7 +220,7 @@ class InvoicePdfService {
                 if (payments.isNotEmpty) ...[
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    _t(lang, 'Payments', 'भुक्तानीहरू'),
+                    l10n.paymentsLabel,
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                   pw.SizedBox(height: 4),
@@ -230,7 +233,7 @@ class InvoicePdfService {
                 if (terms.isNotEmpty) ...[
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    _t(lang, 'Terms', 'शर्तहरू'),
+                    l10n.termsLabel,
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
                   pw.SizedBox(height: 4),
@@ -265,7 +268,7 @@ class InvoicePdfService {
         pdfPath: null,
         pdfStatus: 'failed',
       );
-      throw StateError('PDF generation failed: $e');
+      throw StateError('${lookupAppLocalizations(const Locale('en')).pdfGenerationFailedPrefix}: $e');
     }
   }
 
@@ -276,7 +279,7 @@ class InvoicePdfService {
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(file.path)],
-        text: invoice.invoiceNumber ?? 'Invoice',
+        text: invoice.invoiceNumber ?? lookupAppLocalizations(const Locale('en')).invoiceLabel,
       ),
     );
   }
@@ -328,8 +331,6 @@ class InvoicePdfService {
 
   NumberFormat get _currencyFormatter => NumberFormat('#,##0.00', 'en_IN');
   DateFormat get _dateFormatter => DateFormat('yyyy-MM-dd');
-
-  String _t(String lang, String en, String ne) => lang == 'ne' ? ne : en;
 
   String _firstNonEmpty(String? a, String? b, {String fallback = ''}) {
     final primary = (a ?? '').trim();

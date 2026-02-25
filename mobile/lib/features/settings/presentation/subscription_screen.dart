@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class SubscriptionScreen extends StatelessWidget {
@@ -7,10 +7,11 @@ class SubscriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Subscription', 'सदस्यता')),
+        title: Text(l10n.subscriptionTitle),
         backgroundColor: AppColors.surface,
       ),
       body: SingleChildScrollView(
@@ -34,7 +35,7 @@ class SubscriptionScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Text(
-                          context.tr('FREE PLAN', 'फ्री योजना'),
+                          l10n.subscriptionFreePlanBadge,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -46,14 +47,11 @@ class SubscriptionScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Text(context.tr('SME Digital Free', 'SME Digital Free'),
+                  Text(l10n.subscriptionFreePlanTitle,
                       style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 4),
                   Text(
-                    context.tr(
-                      'Access core features at no cost',
-                      'मुख्य सुविधाहरू निःशुल्क प्रयोग गर्नुहोस्',
-                    ),
+                    l10n.subscriptionFreePlanSubtitle,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -63,7 +61,7 @@ class SubscriptionScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.h),
-            SectionHeader(context.tr('Free Plan Includes', 'फ्री योजनामा समावेश')),
+            SectionHeader(l10n.subscriptionFreePlanIncludes),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               padding: EdgeInsets.zero,
@@ -71,43 +69,43 @@ class SubscriptionScreen extends StatelessWidget {
                 children: [
                   _FeatureTile(
                     icon: Icons.point_of_sale_outlined,
-                    title: context.tr('Sales Recording', 'बिक्री रेकर्डिङ'),
-                    subtitle: context.tr('Unlimited cash & credit sales', 'असीमित नगद र उधारो बिक्री'),
+                    title: l10n.subscriptionFeatureSalesRecording,
+                    subtitle: l10n.subscriptionFeatureSalesRecordingSubtitle,
                     included: true,
                   ),
                   const Divider(height: 1),
                   _FeatureTile(
                     icon: Icons.inventory_2_outlined,
-                    title: context.tr('Product Management', 'सामान व्यवस्थापन'),
-                    subtitle: context.tr('Up to 100 products', '१०० वस्तुसम्म'),
+                    title: l10n.subscriptionFeatureProductManagement,
+                    subtitle: l10n.subscriptionFeatureProductManagementSubtitle,
                     included: true,
                   ),
                   const Divider(height: 1),
                   _FeatureTile(
                     icon: Icons.people_outline_rounded,
-                    title: context.tr('Customer Ledger', 'ग्राहक लेजर'),
-                    subtitle: context.tr('Track credit customers', 'उधारो ग्राहक ट्रयाक गर्नुहोस्'),
+                    title: l10n.subscriptionFeatureCustomerLedger,
+                    subtitle: l10n.subscriptionFeatureCustomerLedgerSubtitle,
                     included: true,
                   ),
                   const Divider(height: 1),
                   _FeatureTile(
                     icon: Icons.bar_chart_rounded,
-                    title: context.tr('Basic Reports', 'आधारभूत रिपोर्ट'),
-                    subtitle: context.tr('Sales & credit reports', 'बिक्री र उधारो रिपोर्ट'),
+                    title: l10n.subscriptionFeatureBasicReports,
+                    subtitle: l10n.subscriptionFeatureBasicReportsSubtitle,
                     included: true,
                   ),
                   const Divider(height: 1),
                   _FeatureTile(
                     icon: Icons.cloud_sync_outlined,
-                    title: context.tr('Cloud Sync', 'क्लाउड सिंक'),
-                    subtitle: context.tr('Multi-device sync', 'धेरै डिभाइस सिंक'),
+                    title: l10n.subscriptionFeatureCloudSync,
+                    subtitle: l10n.subscriptionFeatureCloudSyncSubtitle,
                     included: false,
                   ),
                   const Divider(height: 1),
                   _FeatureTile(
                     icon: Icons.receipt_long_outlined,
-                    title: context.tr('Invoice Generation', 'इनभ्वाइस बनाउने'),
-                    subtitle: context.tr('PDF invoices & billing', 'PDF इनभ्वाइस र बिलिङ'),
+                    title: l10n.subscriptionFeatureInvoiceGeneration,
+                    subtitle: l10n.subscriptionFeatureInvoiceGenerationSubtitle,
                     included: false,
                   ),
                 ],
@@ -118,15 +116,12 @@ class SubscriptionScreen extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 icon: const Icon(Icons.workspace_premium_outlined, size: 18),
-                label: Text(context.tr('Upgrade to Pro', 'Pro मा अपग्रेड')),
+                label: Text(l10n.subscriptionUpgradeToPro),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        context.tr(
-                          'Pro plan coming soon. Stay tuned!',
-                          'Pro योजना चाँडै आउँदैछ। प्रतीक्षा गर्नुहोस्!',
-                        ),
+                        l10n.subscriptionProComingSoon,
                       ),
                     ),
                   );

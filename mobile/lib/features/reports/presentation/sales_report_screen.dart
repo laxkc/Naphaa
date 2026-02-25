@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class SalesReportScreen extends ConsumerStatefulWidget {
@@ -38,13 +38,14 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final params = _params;
     final reportAsync = ref.watch(salesReportProvider(params));
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Sales Report', 'बिक्री रिपोर्ट')),
+        title: Text(l10n.reportsSalesReportTitle),
         backgroundColor: AppColors.surface,
       ),
       body: Column(
@@ -105,7 +106,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(context.tr('Total Revenue', 'कुल आम्दानी'),
+                            Text(l10n.salesReportTotalRevenue,
                                 style:
                                     Theme.of(context).textTheme.bodySmall),
                             const SizedBox(height: 4),
@@ -121,10 +122,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              context.tr(
-                                '$totalOrders transaction${totalOrders != 1 ? 's' : ''}',
-                                '$totalOrders कारोबार',
-                              ),
+                              l10n.salesReportTransactionCount(totalOrders),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -134,14 +132,14 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      SectionHeader(context.tr('Breakdown by Type', 'प्रकार अनुसार विवरण')),
+                      SectionHeader(l10n.salesReportBreakdownByType),
                       const SizedBox(height: AppSpacing.sm),
                       AppCard(
                         padding: EdgeInsets.zero,
                         child: Column(
                           children: [
                             _BreakdownRow(
-                              label: context.tr('Cash Sales', 'नगद बिक्री'),
+                              label: l10n.salesReportCashSales,
                               amount: cashRevenue,
                               total: totalRevenue,
                               color: AppColors.success,
@@ -149,7 +147,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                             ),
                             const Divider(height: 1),
                             _BreakdownRow(
-                              label: context.tr('Credit Sales', 'उधारो बिक्री'),
+                              label: l10n.salesReportCreditSales,
                               amount: creditRevenue,
                               total: totalRevenue,
                               color: AppColors.warning,
@@ -170,9 +168,9 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   }
 
   String _periodLabel(_Period p) => switch (p) {
-        _Period.today => context.tr('Today', 'आज'),
-        _Period.week => context.tr('This Week', 'यो हप्ता'),
-        _Period.month => context.tr('This Month', 'यो महिना'),
+        _Period.today => AppLocalizations.of(context)!.todayLabel,
+        _Period.week => AppLocalizations.of(context)!.thisWeekLabel,
+        _Period.month => AppLocalizations.of(context)!.thisMonthLabel,
       };
 }
 

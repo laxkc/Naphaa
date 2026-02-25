@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/sale.dart';
@@ -46,13 +46,14 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   Widget build(BuildContext context) {
     final queryParams = _queryParams;
     final salesAsync = ref.watch(salesListProvider(queryParams));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar:
           widget.standalone
               ? AppBar(
-                title: Text(context.tr('Sales', 'बिक्री')),
+                title: Text(l10n.sales),
                 backgroundColor: AppColors.surface,
               )
               : null,
@@ -115,17 +116,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 if (sales.isEmpty) {
                   return EmptyState(
                     icon: Icons.receipt_long_outlined,
-                    title: context.tr('No sales yet', 'अहिलेसम्म बिक्री छैन'),
+                    title: l10n.salesNoSalesYetTitle,
                     subtitle:
                         _filter == _DateFilter.today
-                            ? context.tr(
-                              'Tap + to record your first sale today',
-                              'आजको पहिलो बिक्री रेकर्ड गर्न + थिच्नुहोस्',
-                            )
-                            : context.tr(
-                              'No transactions in this period',
-                              'यो अवधिमा कुनै कारोबार छैन',
-                            ),
+                            ? l10n.salesNoSalesYetTodaySubtitle
+                            : l10n.salesNoTransactionsInPeriodSubtitle,
                   );
                 }
                 return RefreshIndicator(
@@ -163,7 +158,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: Text(context.tr('New Sale', 'नयाँ बिक्री')),
+        label: Text(l10n.newSale),
         onPressed:
             () => Navigator.of(context)
                 .push(
@@ -175,10 +170,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   }
 
   String _filterLabel(_DateFilter f) => switch (f) {
-    _DateFilter.today => context.tr('Today', 'आज'),
-    _DateFilter.week => context.tr('This Week', 'यो हप्ता'),
-    _DateFilter.month => context.tr('This Month', 'यो महिना'),
-    _DateFilter.all => context.tr('All', 'सबै'),
+    _DateFilter.today => AppLocalizations.of(context)!.todayLabel,
+    _DateFilter.week => AppLocalizations.of(context)!.thisWeekLabel,
+    _DateFilter.month => AppLocalizations.of(context)!.thisMonthLabel,
+    _DateFilter.all => AppLocalizations.of(context)!.allLabel,
   };
 }
 
@@ -198,6 +193,7 @@ class _SaleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isCash = sale.saleType == 'CASH';
     final isCredit = sale.saleType == 'CREDIT';
 
@@ -239,7 +235,7 @@ class _SaleTile extends StatelessWidget {
               children: [
                 Text(
                   sale.customerName ??
-                      context.tr('Walk-in Customer', 'वाक-इन ग्राहक'),
+                      l10n.walkInCustomer,
                   style: Theme.of(context).textTheme.titleSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

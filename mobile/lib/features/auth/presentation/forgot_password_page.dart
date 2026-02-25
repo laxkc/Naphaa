@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -20,10 +21,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Forgot Password'),
+        title: Text(l10n.forgotPassword),
         backgroundColor: AppColors.surface,
       ),
       body: Padding(
@@ -33,40 +35,39 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           children: [
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Reset your password',
+              l10n.authForgotResetTitle,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Enter your registered phone number and we will send you reset instructions.',
+              l10n.authForgotResetBody,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.muted,
-                    height: 1.5,
-                  ),
+                color: AppColors.muted,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: AppSpacing.h),
             if (_submitted) ...[
-              const InlineBanner(
+              InlineBanner(
                 type: BannerType.success,
-                message:
-                    'If an account exists with this number, you will receive reset instructions. Contact support if you need further help.',
+                message: l10n.authForgotSuccessBanner,
               ),
               const SizedBox(height: AppSpacing.h),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Back to Login'),
+                  child: Text(l10n.authForgotBackToLogin),
                 ),
               ),
             ] else ...[
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
+                decoration: InputDecoration(
+                  labelText: l10n.phoneNumberLabel,
                   hintText: '98XXXXXXXX',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixIcon: const Icon(Icons.phone_outlined),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -74,10 +75,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _phoneController.text.isEmpty
-                      ? null
-                      : () => setState(() => _submitted = true),
-                  child: const Text('Send Reset Instructions'),
+                  onPressed:
+                      _phoneController.text.isEmpty
+                          ? null
+                          : () => setState(() => _submitted = true),
+                  child: Text(
+                    l10n.authForgotSendResetInstructions,
+                  ),
                 ),
               ),
             ],

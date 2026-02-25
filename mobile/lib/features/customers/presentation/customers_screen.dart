@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../sales/presentation/credit_payment_screen.dart';
@@ -36,13 +37,13 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               Expanded(
                 child: TextField(
                   onChanged: (value) => setState(() => _query = value),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(
                       Icons.search_rounded,
                       size: 19,
                       color: AppColors.muted,
                     ),
-                    hintText: 'Search customers…',
+                    hintText: l10n.searchCustomersHint,
                   ),
                 ),
               ),
@@ -75,7 +76,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
             error:
                 (_, __) => ErrorRetry(
                   onRetry: () => ref.invalidate(customersListProvider),
-                  message: 'Failed to load customers',
+                  message: l10n.failedToLoadCustomers,
                 ),
             data: (items) {
               final q = _query.trim().toLowerCase();
@@ -92,11 +93,13 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   ? EmptyState(
                     icon: Icons.people_outline_rounded,
                     title:
-                        q.isEmpty ? l10n.manageCustomers : 'No customers found',
+                        q.isEmpty
+                            ? l10n.manageCustomers
+                            : l10n.noCustomersFoundTitle,
                     subtitle:
                         q.isEmpty
-                            ? 'Tap "Add Customer" to get started.'
-                            : 'Try a different name or phone number.',
+                            ? l10n.customersEmptySubtitle
+                            : l10n.customersTryDifferentSearchSubtitle,
                     action: q.isEmpty ? l10n.addCustomer : null,
                     onAction:
                         q.isEmpty
@@ -131,8 +134,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                         confirmDismiss:
                             (_) => showConfirmDialog(
                               context,
-                              title: 'Delete customer?',
-                              body: '"${c.name}" will be permanently removed.',
+                              title: l10n.deleteCustomerDialogTitle,
+                              body: l10n.customerDeletePermanentBody(c.name),
                             ),
                         onDismissed: (_) {
                           ref.invalidate(customersListProvider);
@@ -202,7 +205,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                                             ),
                                           ),
                                           Text(
-                                            isDebt ? 'owes you' : 'credit',
+                                            isDebt
+                                                ? l10n.owesYouLabel
+                                                : l10n.creditLabel,
                                             style: TextStyle(
                                               fontSize: 10,
                                               color:
@@ -216,7 +221,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                                       if (isDebt) ...[
                                         const SizedBox(width: AppSpacing.xs),
                                         IconButton(
-                                          tooltip: 'Record payment',
+                                          tooltip: l10n.recordPaymentTooltip,
                                           onPressed:
                                               () => Navigator.of(context)
                                                   .push(
@@ -309,9 +314,9 @@ class _RiskBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = level.toLowerCase();
     final (label, color) = switch (normalized) {
-      'red' => ('High Risk', AppColors.error),
-      'yellow' => ('Medium Risk', AppColors.warning),
-      _ => ('Low Risk', AppColors.success),
+      'red' => (riskLevelLabel(context, 'red'), AppColors.error),
+      'yellow' => (riskLevelLabel(context, 'yellow'), AppColors.warning),
+      _ => (riskLevelLabel(context, 'green'), AppColors.success),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

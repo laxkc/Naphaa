@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/invoice_models.dart';
 
@@ -45,10 +45,11 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Create Invoice', 'इनभ्वाइस बनाउनुहोस्')),
+        title: Text(l10n.invoiceCreateTitle),
         backgroundColor: AppColors.surface,
       ),
       body: Form(
@@ -65,18 +66,13 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.tr('Invoice Details', 'इनभ्वाइस विवरण'),
+                    l10n.invoiceDetailsTitle,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
                     controller: _customerIdCtrl,
-                    decoration: InputDecoration(
-                      labelText: context.tr(
-                        'Customer ID (optional)',
-                        'ग्राहक ID (वैकल्पिक)',
-                      ),
-                    ),
+                    decoration: InputDecoration(labelText: l10n.invoiceCustomerIdOptional),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
@@ -85,7 +81,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: context.tr('Invoice Discount', 'इनभ्वाइस छुट'),
+                      labelText: l10n.invoiceDiscountLabel,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -93,7 +89,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                     controller: _notesCtrl,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: context.tr('Notes', 'नोट'),
+                      labelText: l10n.notesLabel,
                     ),
                   ),
                 ],
@@ -108,7 +104,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          context.tr('Items', 'सामानहरू'),
+                          l10n.itemsLabel,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -117,7 +113,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                             () =>
                                 setState(() => _lines.add(const _LineDraft())),
                         icon: const Icon(Icons.add),
-                        label: Text(context.tr('Add Line', 'लाइन थप्नुहोस्')),
+                        label: Text(l10n.invoiceAddLine),
                       ),
                     ],
                   ),
@@ -143,7 +139,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _issuing ? null : _saveDraftOnly,
-                    child: Text(context.tr('Save Draft', 'ड्राफ्ट सेभ')),
+                    child: Text(l10n.invoiceSaveDraft),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -152,11 +148,8 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                     onPressed: _issuing ? null : _saveAndIssue,
                     child: Text(
                       _issuing
-                          ? context.tr('Issuing...', 'जारी गर्दै...')
-                          : context.tr(
-                            'Issue Invoice',
-                            'इनभ्वाइस जारी गर्नुहोस्',
-                          ),
+                          ? l10n.invoiceIssuing
+                          : l10n.invoiceIssueAction,
                     ),
                   ),
                 ),
@@ -177,6 +170,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
   }
 
   Future<void> _submit({required bool issue}) async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _error = null;
     });
@@ -185,10 +179,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
     final storeId = await ref.read(preferencesProvider).getActiveStoreId();
     if (storeId == null || storeId.isEmpty) {
       setState(() {
-        _error = context.tr(
-          'No active business/store found. Please login again.',
-          'सक्रिय व्यवसाय/स्टोर भेटिएन। फेरि लगइन गर्नुहोस्।',
-        );
+        _error = l10n.invoiceNoActiveStore;
       });
       return;
     }
@@ -209,10 +200,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
             .toList();
     if (lines.isEmpty) {
       setState(() {
-        _error = context.tr(
-          'Add at least one item',
-          'कम्तीमा एक सामान थप्नुहोस्',
-        );
+        _error = l10n.invoiceAddAtLeastOneItem;
       });
       return;
     }
@@ -347,6 +335,7 @@ class _LineEditorState extends State<_LineEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Container(
@@ -364,13 +353,13 @@ class _LineEditorState extends State<_LineEditor> {
                   child: TextFormField(
                     controller: _nameCtrl,
                     decoration: InputDecoration(
-                      labelText: context.tr('Item name', 'सामानको नाम'),
+                      labelText: l10n.invoiceLineItemName,
                     ),
                     onChanged: (_) => _emit(),
                     validator:
                         (v) =>
                             (v == null || v.trim().isEmpty)
-                                ? context.tr('Required', 'अनिवार्य')
+                                ? l10n.requiredLabel
                                 : null,
                   ),
                 ),
@@ -387,10 +376,7 @@ class _LineEditorState extends State<_LineEditor> {
             TextFormField(
               controller: _productIdCtrl,
               decoration: InputDecoration(
-                labelText: context.tr(
-                  'Product ID (optional)',
-                  'उत्पादन ID (वैकल्पिक)',
-                ),
+                labelText: l10n.invoiceProductIdOptional,
               ),
               onChanged: (_) => _emit(),
             ),
@@ -404,13 +390,13 @@ class _LineEditorState extends State<_LineEditor> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: context.tr('Qty', 'परिमाण'),
+                      labelText: l10n.qtyLabel,
                     ),
                     onChanged: (_) => _emit(),
                     validator: (v) {
                       final n = double.tryParse(v ?? '');
                       if (n == null || n <= 0) {
-                        return context.tr('Qty > 0', 'परिमाण ० भन्दा बढी');
+                        return l10n.invoiceQtyPositive;
                       }
                       return null;
                     },
@@ -421,7 +407,7 @@ class _LineEditorState extends State<_LineEditor> {
                   child: TextFormField(
                     controller: _unitCtrl,
                     decoration: InputDecoration(
-                      labelText: context.tr('Unit', 'एकाइ'),
+                      labelText: l10n.unitLabel,
                     ),
                     onChanged: (_) => _emit(),
                   ),
@@ -434,13 +420,13 @@ class _LineEditorState extends State<_LineEditor> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: context.tr('Rate', 'दर'),
+                      labelText: l10n.rateLabel,
                     ),
                     onChanged: (_) => _emit(),
                     validator: (v) {
                       final n = double.tryParse(v ?? '');
                       if (n == null || n < 0) {
-                        return context.tr('Invalid', 'अमान्य');
+                        return l10n.invalidLabel;
                       }
                       return null;
                     },

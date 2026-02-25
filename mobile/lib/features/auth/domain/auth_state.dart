@@ -13,9 +13,19 @@ class AuthState {
   final String? phone;
   final String? role;
 
-  String get effectiveRole => (role == null || role!.isEmpty) ? 'owner' : role!;
+  String get effectiveRole {
+    final raw = role?.trim().toLowerCase();
+    if (raw == null || raw.isEmpty) return 'owner';
+    // Be tolerant to legacy/backend aliases so owner-capable users are not blocked.
+    if (raw == 'admin' || raw == 'superadmin' || raw == 'super_admin') {
+      return 'owner';
+    }
+    return raw;
+  }
+
   bool get isOwner => effectiveRole == 'owner';
-  bool get canAdjustStock => effectiveRole == 'owner' || effectiveRole == 'staff';
+  bool get canAdjustStock =>
+      effectiveRole == 'owner' || effectiveRole == 'staff';
   bool get canManageSettings => effectiveRole == 'owner';
   bool get canManageUsers => effectiveRole == 'owner';
 

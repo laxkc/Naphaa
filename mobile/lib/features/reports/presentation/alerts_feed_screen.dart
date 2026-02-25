@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import 'alert_action_router.dart';
@@ -12,14 +12,32 @@ class AlertsFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final alertsAsync = ref.watch(alertsFeedProvider);
+    final alertsAsync = ref.watch(alertsUnreadFeedProvider);
+    final readCtrl = ref.read(alertReadControllerProvider);
     final dateFmt = DateFormat('MMM d, h:mm a');
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Alerts Feed', 'अलर्ट फिड')),
+        title: Text(l10n.reportsAlertsFeedTitle),
         backgroundColor: AppColors.surface,
+        actions: [
+          alertsAsync.maybeWhen(
+            data:
+                (items) =>
+                    items.isEmpty
+                        ? const SizedBox.shrink()
+                        : IconButton(
+                          tooltip: l10n.alertsFeedMarkAllRead,
+                          onPressed: () async {
+                            await readCtrl.markAllRead(items.map((e) => e.id));
+                          },
+                          icon: const Icon(Icons.done_all_rounded),
+                        ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: alertsAsync.when(
         loading:
@@ -37,11 +55,8 @@ class AlertsFeedScreen extends ConsumerWidget {
           if (alerts.isEmpty) {
             return EmptyState(
               icon: Icons.notifications_none_rounded,
-              title: context.tr('No active alerts', 'कुनै सक्रिय अलर्ट छैन'),
-              subtitle: context.tr(
-                'Everything looks stable right now',
-                'अहिले सबै ठीक देखिन्छ',
-              ),
+              title: l10n.businessHealthNoActiveAlerts,
+              subtitle: l10n.alertsFeedEverythingStableSubtitle,
             );
           }
           return RefreshIndicator(
@@ -121,20 +136,31 @@ class AlertsFeedScreen extends ConsumerWidget {
                             ),
                         ],
                       ),
-                      if (canOpen) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            onPressed: () => AlertActionRouter.open(context, a),
-                            icon: const Icon(
-                              Icons.open_in_new_rounded,
-                              size: 16,
-                            ),
-                            label: Text(context.tr('Open', 'खोल्नुहोस्')),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () async {
+                              await readCtrl.markRead(a.id);
+                            },
+                            icon: const Icon(Icons.done_rounded, size: 16),
+                            label: Text(l10n.alertsFeedMarkRead),
                           ),
-                        ),
-                      ],
+                          if (canOpen) ...[
+                            const SizedBox(width: 4),
+                            TextButton.icon(
+                              onPressed:
+                                  () => AlertActionRouter.open(context, a),
+                              icon: const Icon(
+                                Icons.open_in_new_rounded,
+                                size: 16,
+                              ),
+                              label: Text(l10n.openLabel),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 );

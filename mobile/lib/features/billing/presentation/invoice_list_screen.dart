@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/invoice_models.dart';
@@ -28,10 +29,11 @@ class InvoiceListScreen extends ConsumerWidget {
   Widget _buildScaffold(BuildContext context, WidgetRef ref) {
     final invoicesAsync = ref.watch(invoicesListProvider);
     final money = NumberFormat('#,##0.00', 'en_IN');
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Invoices', 'इनभ्वाइसहरू')),
+        title: Text(l10n.invoices),
         backgroundColor: AppColors.surface,
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -49,7 +51,7 @@ class InvoiceListScreen extends ConsumerWidget {
           }
         },
         icon: const Icon(Icons.receipt_long_outlined),
-        label: Text(context.tr('New Invoice', 'नयाँ इनभ्वाइस')),
+        label: Text(l10n.invoiceListNewInvoice),
       ),
       body: invoicesAsync.when(
         loading:
@@ -71,12 +73,9 @@ class InvoiceListScreen extends ConsumerWidget {
           if (invoices.isEmpty) {
             return EmptyState(
               icon: Icons.receipt_long_outlined,
-              title: context.tr('No invoices yet', 'अहिलेसम्म इनभ्वाइस छैन'),
-              subtitle: context.tr(
-                'Create your first invoice and issue it offline.',
-                'पहिलो इनभ्वाइस बनाउनुहोस् र अफलाइनमै जारी गर्नुहोस्।',
-              ),
-              action: context.tr('Create Invoice', 'इनभ्वाइस बनाउनुहोस्'),
+              title: l10n.invoiceListNoInvoicesTitle,
+              subtitle: l10n.invoiceListNoInvoicesSubtitle,
+              action: l10n.invoiceListCreateInvoiceAction,
               onAction: () async {
                 final created = await Navigator.of(context).push<String>(
                   MaterialPageRoute(
@@ -109,7 +108,7 @@ class InvoiceListScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            inv.invoiceNumber ?? context.tr('Draft', 'ड्राफ्ट'),
+                            inv.invoiceNumber ?? l10n.invoiceListDraftFallback,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.label,
@@ -117,15 +116,17 @@ class InvoiceListScreen extends ConsumerWidget {
                           ),
                         ),
                         StatusChip(
-                          label: inv.status.name.toUpperCase(),
+                          label: invoiceStatusLabel(context, inv.status),
                           color: statusColor,
                         ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '${context.tr('Total', 'कुल')}: NPR ${money.format(inv.total)}'
-                      '   •   ${context.tr('Balance', 'बाकी')}: NPR ${money.format(inv.balanceDue)}',
+                      l10n.invoiceListTotalsSummary(
+                        money.format(inv.total),
+                        money.format(inv.balanceDue),
+                      ),
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,
@@ -137,10 +138,7 @@ class InvoiceListScreen extends ConsumerWidget {
                           ? DateFormat(
                             'yyyy-MM-dd HH:mm',
                           ).format(inv.issueDate!.toLocal())
-                          : context.tr(
-                            'Draft (not issued)',
-                            'ड्राफ्ट (जारी गरिएको छैन)',
-                          ),
+                          : l10n.invoiceListDraftNotIssued,
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,

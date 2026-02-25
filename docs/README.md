@@ -40,6 +40,10 @@ This folder contains a mix of:
   - mobile local DB encryption plan and migration assessment
 - `localization-strategy.md`
   - i18n/l10n strategy and implementation guidance
+- `i18n-migration-plan.md`
+  - full-application ARB migration plan (production-scale i18n refactor)
+- `i18n-migration-tracker.md`
+  - execution tracker for screen-by-screen ARB migration progress
 
 ## API / Contract Reference Docs
 

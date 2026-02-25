@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/product.dart';
@@ -18,23 +18,32 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final _nameCtl = TextEditingController(text: widget.product?.name ?? '');
   late final _sellCtl = TextEditingController(
-      text: widget.product != null
-          ? widget.product!.sellPrice.toStringAsFixed(2)
-          : '');
+    text:
+        widget.product != null
+            ? widget.product!.sellPrice.toStringAsFixed(2)
+            : '',
+  );
   late final _costCtl = TextEditingController(
-      text: widget.product != null
-          ? widget.product!.costPrice.toStringAsFixed(2)
-          : '');
+    text:
+        widget.product != null
+            ? widget.product!.costPrice.toStringAsFixed(2)
+            : '',
+  );
   late final _stockCtl = TextEditingController(
-      text: widget.product != null
-          ? widget.product!.stockQty.toStringAsFixed(0)
-          : '0');
+    text:
+        widget.product != null
+            ? widget.product!.stockQty.toStringAsFixed(0)
+            : '0',
+  );
   late final _lowStockCtl = TextEditingController(
-      text: widget.product != null
-          ? widget.product!.lowStockThreshold.toStringAsFixed(0)
-          : '0');
-  late final _categoryCtl =
-      TextEditingController(text: widget.product?.category ?? '');
+    text:
+        widget.product != null
+            ? widget.product!.lowStockThreshold.toStringAsFixed(0)
+            : '0',
+  );
+  late final _categoryCtl = TextEditingController(
+    text: widget.product?.category ?? '',
+  );
   late String _unit = widget.product?.unit ?? 'pcs';
   bool _saving = false;
   String? _error;
@@ -56,13 +65,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: Text(
           _isEdit
-              ? context.tr('Edit Product', 'सामान सम्पादन')
-              : context.tr('Add Product', 'सामान थप्नुहोस्'),
+              ? l10n.editProductTitle
+              : l10n.addProduct,
         ),
         backgroundColor: AppColors.surface,
       ),
@@ -77,9 +87,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               TextFormField(
                 controller: _nameCtl,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Product Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                decoration: InputDecoration(
+                  labelText: l10n.productNameLabel,
+                ),
+                validator:
+                    (v) =>
+                        (v == null || v.trim().isEmpty)
+                            ? l10n.productNameRequired
+                            : null,
               ),
               const SizedBox(height: AppSpacing.md),
 
@@ -87,9 +102,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               TextFormField(
                 controller: _categoryCtl,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Category (optional)',
-                  hintText: 'e.g. Snacks, Beverages',
+                decoration: InputDecoration(
+                  labelText: l10n.categoryOptionalLabel,
+                  hintText: l10n.productCategoryHint,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -100,15 +115,18 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _sellCtl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Sell Price',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.sellPriceLabel,
                         prefixText: 'NPR ',
                       ),
                       validator: (v) {
                         final p = double.tryParse(v ?? '');
-                        if (p == null || p <= 0) return 'Enter valid price';
+                        if (p == null || p <= 0) {
+                          return l10n.enterValidPrice;
+                        }
                         return null;
                       },
                     ),
@@ -117,10 +135,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _costCtl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Cost Price',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.costPriceLabel,
                         prefixText: 'NPR ',
                       ),
                     ),
@@ -135,25 +154,28 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   controller: _stockCtl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(labelText: 'Opening Stock'),
+                  decoration: InputDecoration(
+                    labelText: l10n.openingStockLabel,
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.md),
 
               TextFormField(
                 controller: _lowStockCtl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
-                  labelText: context.tr('Low Stock Threshold', 'कम स्टक सीमा'),
-                  hintText: context.tr('0 to disable alert', 'अलर्ट बन्द गर्न ०'),
+                  labelText: l10n.lowStockThresholdLabel,
+                  hintText: l10n.lowStockThresholdHint,
                 ),
                 validator: (v) {
-                  final t = double.tryParse((v ?? '').trim().isEmpty ? '0' : v!.trim());
+                  final t = double.tryParse(
+                    (v ?? '').trim().isEmpty ? '0' : v!.trim(),
+                  );
                   if (t == null || t < 0) {
-                    return context.tr(
-                      'Enter a valid threshold',
-                      'मान्य सीमा लेख्नुहोस्',
-                    );
+                    return l10n.enterValidThreshold;
                   }
                   return null;
                 },
@@ -161,30 +183,35 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Unit selector
-              Text(context.tr('Unit', 'एकाइ'),
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                l10n.unitLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.xs,
-                children: _units.map((u) {
-                  return ChoiceChip(
-                    label: Text(u),
-                    selected: _unit == u,
-                    onSelected: (_) => setState(() => _unit = u),
-                    showCheckmark: false,
-                    backgroundColor: AppColors.surface,
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: _unit == u ? Colors.white : AppColors.label,
-                      fontWeight: _unit == u ? FontWeight.w700 : FontWeight.w600,
-                    ),
-                    side: BorderSide(
-                      color: _unit == u ? AppColors.primary : AppColors.border,
-                      width: 1,
-                    ),
-                  );
-                }).toList(),
+                children:
+                    _units.map((u) {
+                      return ChoiceChip(
+                        label: Text(u),
+                        selected: _unit == u,
+                        onSelected: (_) => setState(() => _unit = u),
+                        showCheckmark: false,
+                        backgroundColor: AppColors.surface,
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: _unit == u ? Colors.white : AppColors.label,
+                          fontWeight:
+                              _unit == u ? FontWeight.w700 : FontWeight.w600,
+                        ),
+                        side: BorderSide(
+                          color:
+                              _unit == u ? AppColors.primary : AppColors.border,
+                          width: 1,
+                        ),
+                      );
+                    }).toList(),
               ),
 
               if (_error != null) ...[
@@ -197,18 +224,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(
-                          _isEdit
-                              ? context.tr('Save Changes', 'परिवर्तन सेभ')
-                              : context.tr('Add Product', 'सामान थप्नुहोस्'),
-                        ),
+                  child:
+                      _saving
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : Text(
+                            _isEdit
+                                ? l10n.saveChanges
+                                : l10n.addProduct,
+                          ),
                 ),
               ),
             ],
@@ -227,7 +257,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     try {
       final repo = ref.read(productsRepositoryProvider);
       final lowStockThreshold =
-          double.tryParse(_lowStockCtl.text.trim().isEmpty ? '0' : _lowStockCtl.text.trim()) ?? 0;
+          double.tryParse(
+            _lowStockCtl.text.trim().isEmpty ? '0' : _lowStockCtl.text.trim(),
+          ) ??
+          0;
       if (_isEdit) {
         final updated = widget.product!.copyWith(
           name: _nameCtl.text.trim(),
@@ -235,9 +268,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           costPrice: double.tryParse(_costCtl.text.trim()) ?? 0,
           lowStockThreshold: lowStockThreshold,
           unit: _unit,
-          category: _categoryCtl.text.trim().isEmpty
-              ? null
-              : _categoryCtl.text.trim(),
+          category:
+              _categoryCtl.text.trim().isEmpty
+                  ? null
+                  : _categoryCtl.text.trim(),
         );
         await repo.updateProduct(updated);
       } else {
@@ -248,9 +282,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           stockQty: double.tryParse(_stockCtl.text.trim()) ?? 0,
           lowStockThreshold: lowStockThreshold,
           unit: _unit,
-          category: _categoryCtl.text.trim().isEmpty
-              ? null
-              : _categoryCtl.text.trim(),
+          category:
+              _categoryCtl.text.trim().isEmpty
+                  ? null
+                  : _categoryCtl.text.trim(),
         );
       }
       ref.invalidate(productsListProvider);
@@ -260,10 +295,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     } catch (e) {
       setState(() {
         _saving = false;
-        _error = context.tr(
-          'Failed to save product. Try again.',
-          'सामान सेभ गर्न सकेन। फेरि प्रयास गर्नुहोस्।',
-        );
+        _error = AppLocalizations.of(context)!.productSaveFailedTryAgain;
       });
     }
   }

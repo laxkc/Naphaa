@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../customers/presentation/customer_detail_screen.dart';
@@ -31,11 +31,12 @@ class _CreditAgingReportScreenState
   Widget build(BuildContext context) {
     final params = _params;
     final reportAsync = ref.watch(customerMetricsReportProvider(params));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Credit Aging', 'उधारो उमेर रिपोर्ट')),
+        title: Text(l10n.creditAging),
         backgroundColor: AppColors.surface,
       ),
       body: Column(
@@ -51,7 +52,7 @@ class _CreditAgingReportScreenState
               runSpacing: AppSpacing.xs,
               children: [
                 FilterChip(
-                  label: Text(context.tr('Overdue Only', 'समय नाघेको मात्र')),
+                  label: Text(l10n.creditAgingOverdueOnly),
                   selected: _overdueOnly,
                   onSelected: (v) => setState(() => _overdueOnly = v),
                   showCheckmark: false,
@@ -67,7 +68,7 @@ class _CreditAgingReportScreenState
                   ),
                 ),
                 FilterChip(
-                  label: Text(context.tr('High Risk Only', 'उच्च जोखिम मात्र')),
+                  label: Text(l10n.creditAgingHighRiskOnly),
                   selected: _highRiskOnly,
                   onSelected: (v) => setState(() => _highRiskOnly = v),
                   showCheckmark: false,
@@ -124,11 +125,8 @@ class _CreditAgingReportScreenState
     if (items.isEmpty) {
       return EmptyState(
         icon: Icons.query_stats_rounded,
-        title: context.tr('No credit aging data', 'उधारो उमेर डेटा छैन'),
-        subtitle: context.tr(
-          'No customers match the selected filters',
-          'छनोट गरिएका फिल्टरमा कुनै ग्राहक छैन',
-        ),
+        title: AppLocalizations.of(context)!.creditAgingNoDataTitle,
+        subtitle: AppLocalizations.of(context)!.creditAgingNoDataSubtitle,
       );
     }
 
@@ -148,10 +146,7 @@ class _CreditAgingReportScreenState
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    context.tr(
-                      'Showing cached credit aging data (offline). Refresh when internet is available.',
-                      'क्यास गरिएको उधारो उमेर डेटा देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।',
-                    ),
+                    AppLocalizations.of(context)!.creditAgingCachedDataBanner,
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -167,7 +162,7 @@ class _CreditAgingReportScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                context.tr('Credit Aging Summary', 'उधारो उमेर सारांश'),
+                AppLocalizations.of(context)!.creditAgingSummaryTitle,
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -177,7 +172,7 @@ class _CreditAgingReportScreenState
                 children: [
                   Expanded(
                     child: _SummaryStat(
-                      label: context.tr('Outstanding', 'कुल बाँकी'),
+                      label: AppLocalizations.of(context)!.creditAgingOutstandingLabel,
                       value: 'NPR ${_currFmt.format(totalOutstanding)}',
                       color: AppColors.warning,
                     ),
@@ -185,7 +180,7 @@ class _CreditAgingReportScreenState
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _SummaryStat(
-                      label: context.tr('Overdue', 'समय नाघेको'),
+                      label: AppLocalizations.of(context)!.creditAgingOverdueLabel,
                       value: 'NPR ${_currFmt.format(totalOverdue)}',
                       color: AppColors.error,
                     ),
@@ -194,9 +189,8 @@ class _CreditAgingReportScreenState
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                context.tr(
-                  '$highRiskCount high-risk customer${highRiskCount == 1 ? '' : 's'}',
-                  '$highRiskCount उच्च जोखिम ग्राहक',
+                AppLocalizations.of(context)!.creditAgingHighRiskCustomersCount(
+                  highRiskCount,
                 ),
                 style: Theme.of(
                   context,
@@ -206,35 +200,35 @@ class _CreditAgingReportScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        SectionHeader(context.tr('Aging Buckets', 'उमेर समूह')),
+        SectionHeader(AppLocalizations.of(context)!.creditAgingBucketsTitle),
         const SizedBox(height: AppSpacing.sm),
         AppCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               _BucketRow(
-                label: '0–7 ${context.tr('days', 'दिन')}',
+                label: AppLocalizations.of(context)!.creditAgingBucket0to7,
                 amount: _toDouble(totals['d0_7']),
                 color: AppColors.success,
                 fmt: _currFmt,
               ),
               const Divider(height: 1),
               _BucketRow(
-                label: '8–30 ${context.tr('days', 'दिन')}',
+                label: AppLocalizations.of(context)!.creditAgingBucket8to30,
                 amount: _toDouble(totals['d8_30']),
                 color: AppColors.warning,
                 fmt: _currFmt,
               ),
               const Divider(height: 1),
               _BucketRow(
-                label: '31–60 ${context.tr('days', 'दिन')}',
+                label: AppLocalizations.of(context)!.creditAgingBucket31to60,
                 amount: _toDouble(totals['d31_60']),
                 color: const Color(0xFFE67E22),
                 fmt: _currFmt,
               ),
               const Divider(height: 1),
               _BucketRow(
-                label: '60+ ${context.tr('days', 'दिन')}',
+                label: AppLocalizations.of(context)!.creditAgingBucket60Plus,
                 amount: _toDouble(totals['d60_plus']),
                 color: AppColors.error,
                 fmt: _currFmt,
@@ -243,7 +237,7 @@ class _CreditAgingReportScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        SectionHeader(context.tr('Customers', 'ग्राहकहरू')),
+        SectionHeader(AppLocalizations.of(context)!.customers),
         const SizedBox(height: AppSpacing.sm),
         ...items.map(
           (item) => Padding(
@@ -352,7 +346,8 @@ class _CustomerAgingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final customerId = item['customer_id']?.toString() ?? '';
-    final name = item['customer_name']?.toString() ?? 'Unknown';
+    final l10n = AppLocalizations.of(context)!;
+    final name = item['customer_name']?.toString() ?? l10n.unknownLabel;
     final phone = item['phone']?.toString();
     final riskLevel = (item['risk_level']?.toString() ?? 'green').toLowerCase();
     final riskScore = _toInt(item['risk_score']);
@@ -360,9 +355,9 @@ class _CustomerAgingCard extends StatelessWidget {
     final outstandingAmount = _toDouble(item['outstanding_amount']);
     final aging = _asMap(item['aging']);
     final (riskLabel, riskColor) = switch (riskLevel) {
-      'red' => ('High', AppColors.error),
-      'yellow' => ('Medium', AppColors.warning),
-      _ => ('Low', AppColors.success),
+      'red' => (l10n.highLabel, AppColors.error),
+      'yellow' => (l10n.mediumLabel, AppColors.warning),
+      _ => (l10n.lowLabel, AppColors.success),
     };
 
     return AppCard(
@@ -422,7 +417,7 @@ class _CustomerAgingCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  context.tr('Outstanding', 'बाँकी'),
+                  l10n.creditAgingOutstandingLabel,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -442,14 +437,14 @@ class _CustomerAgingCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  context.tr('Oldest Due', 'सबैभन्दा पुरानो बाँकी'),
+                  l10n.creditAgingOldestDueLabel,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
               ),
               Text(
-                '$oldestDueDays ${context.tr('days', 'दिन')}',
+                l10n.creditAgingDaysCount(oldestDueDays),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color:

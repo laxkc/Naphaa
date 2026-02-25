@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -9,12 +9,13 @@ class UserManagementScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('User Management', 'प्रयोगकर्ता व्यवस्थापन')),
+        title: Text(l10n.userManagementTitle),
         backgroundColor: AppColors.surface,
       ),
       body: profileAsync.when(
@@ -42,23 +43,23 @@ class UserManagementScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            profile.storeName ?? context.tr('Owner', 'मालिक'),
+                            profile.storeName ?? l10n.ownerLabel,
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                           Text(
-                            context.tr('Owner · Full access', 'मालिक · पूर्ण पहुँच'),
+                            l10n.userManagementOwnerFullAccess,
                             style: const TextStyle(
                                 fontSize: 12, color: AppColors.muted),
                           ),
                         ],
                       ),
                     ),
-                    StatusChip(label: context.tr('Owner', 'मालिक'), color: AppColors.primary),
+                    StatusChip(label: l10n.ownerLabel, color: AppColors.primary),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.h),
-              SectionHeader(context.tr('Staff Members', 'कर्मचारी सदस्यहरू')),
+              SectionHeader(l10n.userManagementStaffMembers),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -72,7 +73,7 @@ class UserManagementScreen extends ConsumerWidget {
                                 size: 32, color: AppColors.muted),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              context.tr('No staff members yet', 'अहिलेसम्म कर्मचारी सदस्य छैनन्'),
+                              l10n.userManagementNoStaffMembers,
                               style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -80,10 +81,7 @@ class UserManagementScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              context.tr(
-                                'Invite staff to manage your shop',
-                                'पसल व्यवस्थापनका लागि कर्मचारी बोलाउनुहोस्',
-                              ),
+                              l10n.userManagementInviteStaffSubtitle,
                               style: TextStyle(
                                   fontSize: 12, color: AppColors.muted),
                             ),
@@ -99,7 +97,7 @@ class UserManagementScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.person_add_outlined, size: 18),
-                  label: Text(context.tr('Invite Staff Member', 'कर्मचारी निमन्त्रणा गर्नुहोस्')),
+                  label: Text(l10n.userManagementInviteStaffMember),
                   onPressed: () => _showInviteDialog(context),
                 ),
               ),
@@ -111,19 +109,17 @@ class UserManagementScreen extends ConsumerWidget {
   }
 
   void _showInviteDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final phoneCtl = TextEditingController();
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.tr('Invite Staff', 'कर्मचारी निमन्त्रणा')),
+        title: Text(l10n.userManagementInviteStaffTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              context.tr(
-                'Enter the phone number of the staff member to invite.',
-                'निमन्त्रणा गर्नुपर्ने कर्मचारीको फोन नम्बर लेख्नुहोस्।',
-              ),
+              l10n.userManagementInviteStaffDialogBody,
               style: const TextStyle(fontSize: 13, color: AppColors.muted),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -131,7 +127,7 @@ class UserManagementScreen extends ConsumerWidget {
               controller: phoneCtl,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                labelText: context.tr('Phone Number', 'फोन नम्बर'),
+                labelText: l10n.phoneNumberLabel,
                 hintText: '98XXXXXXXX',
               ),
             ),
@@ -140,7 +136,7 @@ class UserManagementScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(context.tr('Cancel', 'रद्द')),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -148,15 +144,12 @@ class UserManagementScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    context.tr(
-                      'Invitation feature coming soon',
-                      'निमन्त्रणा सुविधा चाँडै आउँदैछ',
-                    ),
+                    l10n.userManagementInviteComingSoon,
                   ),
                 ),
               );
             },
-            child: Text(context.tr('Send Invite', 'निमन्त्रणा पठाउनुहोस्')),
+            child: Text(l10n.userManagementSendInvite),
           ),
         ],
       ),

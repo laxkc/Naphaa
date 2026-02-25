@@ -10,6 +10,7 @@ class AppPreferences {
   static const _phoneKey = 'user_phone';
   static const _roleKey = 'user_role';
   static const _storeIdKey = 'active_store_id';
+  static const _alertReadIdsPrefix = 'alert_read_ids_';
 
   Future<String> getLocaleCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -160,17 +161,24 @@ class AppPreferences {
     if (fiscalCalendar != null) {
       await prefs.setString('billing_fiscal_calendar', fiscalCalendar);
     }
-    if (vatEnabled != null) await prefs.setBool('billing_vat_enabled', vatEnabled);
+    if (vatEnabled != null)
+      await prefs.setBool('billing_vat_enabled', vatEnabled);
     if (vatRate != null) await prefs.setDouble('billing_vat_rate', vatRate);
     if (taxMode != null) await prefs.setString('billing_tax_mode', taxMode);
     if (invoicePrefix != null) {
       await prefs.setString('billing_invoice_prefix', invoicePrefix);
     }
     if (invoiceTermsDefault != null) {
-      await prefs.setString('billing_invoice_terms_default', invoiceTermsDefault);
+      await prefs.setString(
+        'billing_invoice_terms_default',
+        invoiceTermsDefault,
+      );
     }
     if (invoiceFooterDefault != null) {
-      await prefs.setString('billing_invoice_footer_default', invoiceFooterDefault);
+      await prefs.setString(
+        'billing_invoice_footer_default',
+        invoiceFooterDefault,
+      );
     }
     if (businessName != null) {
       await prefs.setString('billing_business_name', businessName);
@@ -197,8 +205,10 @@ class AppPreferences {
       'language': prefs.getString('billing_language') ?? await getLocaleCode(),
       'currency_code': prefs.getString('billing_currency_code') ?? 'NPR',
       'fiscal_calendar': prefs.getString('billing_fiscal_calendar') ?? 'AD',
-      'vat_enabled': prefs.getBool('billing_vat_enabled') ?? (tax['enabled'] as bool),
-      'vat_rate': prefs.getDouble('billing_vat_rate') ?? (tax['rate'] as double),
+      'vat_enabled':
+          prefs.getBool('billing_vat_enabled') ?? (tax['enabled'] as bool),
+      'vat_rate':
+          prefs.getDouble('billing_vat_rate') ?? (tax['rate'] as double),
       'tax_mode': prefs.getString('billing_tax_mode') ?? 'exclusive',
       'invoice_prefix': prefs.getString('billing_invoice_prefix') ?? 'INV',
       'invoice_terms_default':
@@ -212,5 +222,42 @@ class AppPreferences {
       'pan_vat_number': prefs.getString('billing_pan_vat_number') ?? '',
       'logo_path': prefs.getString('billing_logo_path'),
     };
+  }
+
+  String _alertReadIdsKey(String? storeId) =>
+      '${_alertReadIdsPrefix}${(storeId == null || storeId.isEmpty) ? 'global' : storeId}';
+
+  Future<Set<String>> getReadAlertIds({String? storeId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids =
+        prefs.getStringList(_alertReadIdsKey(storeId)) ?? const <String>[];
+    return ids.where((e) => e.isNotEmpty).toSet();
+  }
+
+  Future<void> markAlertRead(String alertId, {String? storeId}) async {
+    if (alertId.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = _alertReadIdsKey(storeId);
+    final ids = (prefs.getStringList(key) ?? const <String>[]).toSet();
+    ids.add(alertId);
+    await prefs.setStringList(key, ids.toList()..sort());
+  }
+
+  Future<void> markAlertsRead(
+    Iterable<String> alertIds, {
+    String? storeId,
+  }) async {
+    final clean = alertIds.where((e) => e.isNotEmpty).toSet();
+    if (clean.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = _alertReadIdsKey(storeId);
+    final ids = (prefs.getStringList(key) ?? const <String>[]).toSet();
+    ids.addAll(clean);
+    await prefs.setStringList(key, ids.toList()..sort());
+  }
+
+  Future<void> clearReadAlertIds({String? storeId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_alertReadIdsKey(storeId));
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import 'auth_screen.dart';
 
@@ -7,6 +8,7 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
@@ -21,40 +23,46 @@ class LandingPage extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha:0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
-                child: const Icon(Icons.storefront_rounded,
-                    color: Colors.white, size: 32),
+                child: const Icon(
+                  Icons.storefront_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
               ),
               const SizedBox(height: AppSpacing.xxl),
               Text(
                 'SME Digital',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'The digital ledger for your shop.\nFast. Offline. Trusted.',
+                l10n.authLandingSubtitle,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha:0.85),
-                      height: 1.6,
-                    ),
+                  color: Colors.white.withValues(alpha: 0.85),
+                  height: 1.6,
+                ),
               ),
               const SizedBox(height: AppSpacing.h),
-              const _FeatureBullet(
-                  icon: Icons.bolt_rounded,
-                  label: 'Record sales in under 10 seconds'),
+              _FeatureBullet(
+                icon: Icons.bolt_rounded,
+                label: l10n.authLandingFeatureFastSales,
+              ),
               const SizedBox(height: AppSpacing.md),
-              const _FeatureBullet(
-                  icon: Icons.wifi_off_rounded,
-                  label: 'Works offline, syncs when connected'),
+              _FeatureBullet(
+                icon: Icons.wifi_off_rounded,
+                label: l10n.authLandingFeatureOfflineSync,
+              ),
               const SizedBox(height: AppSpacing.md),
-              const _FeatureBullet(
-                  icon: Icons.people_rounded,
-                  label: 'Track customer credit reliably'),
+              _FeatureBullet(
+                icon: Icons.people_rounded,
+                label: l10n.authLandingFeatureCreditTracking,
+              ),
               const Spacer(),
               // CTA buttons
               SizedBox(
@@ -69,9 +77,13 @@ class LandingPage extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => _goToAuth(context, showRegister: true),
-                  child: const Text('Start Free',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    l10n.authLandingStartFree,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -87,9 +99,13 @@ class LandingPage extends StatelessWidget {
                     side: const BorderSide(color: Colors.white54),
                   ),
                   onPressed: () => _goToAuth(context, showRegister: false),
-                  child: const Text('Login',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    l10n.login,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -122,7 +138,7 @@ class _FeatureBullet extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha:0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Icon(icon, color: Colors.white, size: 17),

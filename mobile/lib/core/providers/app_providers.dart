@@ -514,6 +514,7 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
       ref.invalidate(salesReportProvider);
       ref.invalidate(customerRiskMetricsProvider);
       ref.invalidate(alertsFeedProvider);
+      ref.invalidate(alertsUnreadFeedProvider);
       ref.invalidate(customerMetricsReportProvider);
       ref.invalidate(productMetricsReportProvider);
     } catch (e) {
@@ -715,7 +716,11 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
       auth.phone ?? await ref.watch(preferencesProvider).getUserPhone();
   var role = auth.role ?? await ref.watch(preferencesProvider).getUserRole();
   String? storeName;
+  String? storeAddress;
+  String? storePhone;
+  String? businessType;
   String? localeDefault;
+  String? currency;
   try {
     final locale = ref.watch(localeControllerProvider).languageCode;
     await ref.watch(sessionServiceProvider).ensureReady(localeCode: locale);
@@ -724,7 +729,11 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
     // Prefer /auth/me because it includes user + store snapshot together.
     final profile = await gateway.getAuthMe();
     storeName = profile['store_name']?.toString();
+    storeAddress = profile['store_address']?.toString();
+    storePhone = profile['store_phone']?.toString();
+    businessType = profile['business_type']?.toString();
     localeDefault = profile['locale_default']?.toString();
+    currency = profile['currency']?.toString();
     final apiRole = profile['role']?.toString().trim().toLowerCase();
     if (apiRole != null && apiRole.isNotEmpty) {
       role = apiRole;
@@ -737,16 +746,41 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
 
     final missingStoreName = (storeName?.trim().isEmpty ?? true);
     final missingLocaleDefault = (localeDefault?.trim().isEmpty ?? true);
-    if (missingStoreName || missingLocaleDefault) {
+    final missingStoreAddress = (storeAddress?.trim().isEmpty ?? true);
+    final missingStorePhone = (storePhone?.trim().isEmpty ?? true);
+    final missingBusinessType = (businessType?.trim().isEmpty ?? true);
+    final missingCurrency = (currency?.trim().isEmpty ?? true);
+    if (missingStoreName ||
+        missingLocaleDefault ||
+        missingStoreAddress ||
+        missingStorePhone ||
+        missingBusinessType ||
+        missingCurrency) {
       final store = await gateway.getStoreMe();
       storeName =
           storeName?.trim().isNotEmpty == true
               ? storeName
               : store['name']?.toString();
+      storeAddress =
+          storeAddress?.trim().isNotEmpty == true
+              ? storeAddress
+              : store['address']?.toString();
+      storePhone =
+          storePhone?.trim().isNotEmpty == true
+              ? storePhone
+              : store['phone']?.toString();
+      businessType =
+          businessType?.trim().isNotEmpty == true
+              ? businessType
+              : store['business_type']?.toString();
       localeDefault =
           localeDefault?.trim().isNotEmpty == true
               ? localeDefault
               : store['locale_default']?.toString();
+      currency =
+          currency?.trim().isNotEmpty == true
+              ? currency
+              : store['currency']?.toString();
     }
   } catch (_) {
     // Offline or unauthenticated fallback
@@ -754,7 +788,11 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
   return ProfileData(
     phone: phone,
     storeName: storeName,
+    storeAddress: storeAddress,
+    storePhone: storePhone,
+    businessType: businessType,
     localeDefault: localeDefault,
+    currency: currency,
     role: role,
   );
 });
@@ -886,6 +924,47 @@ final customerMetricsReportProvider = FutureProvider.autoDispose
         return _loadCachedCustomerMetricsReport(ref, params);
       }
     });
+
+final alertReadIdsProvider = FutureProvider.autoDispose<Set<String>>((
+  ref,
+) async {
+  final prefs = ref.watch(preferencesProvider);
+  final storeId = await prefs.getActiveStoreId();
+  return prefs.getReadAlertIds(storeId: storeId);
+});
+
+final alertsUnreadFeedProvider = FutureProvider.autoDispose<List<AlertItem>>((
+  ref,
+) async {
+  final alerts = await ref.watch(alertsFeedProvider.future);
+  final readIds = await ref.watch(alertReadIdsProvider.future);
+  return alerts.where((a) => !readIds.contains(a.id)).toList();
+});
+
+class AlertReadController {
+  AlertReadController(this._ref);
+  final Ref _ref;
+
+  Future<void> markRead(String alertId) async {
+    final prefs = _ref.read(preferencesProvider);
+    final storeId = await prefs.getActiveStoreId();
+    await prefs.markAlertRead(alertId, storeId: storeId);
+    _ref.invalidate(alertReadIdsProvider);
+    _ref.invalidate(alertsUnreadFeedProvider);
+  }
+
+  Future<void> markAllRead(Iterable<String> alertIds) async {
+    final prefs = _ref.read(preferencesProvider);
+    final storeId = await prefs.getActiveStoreId();
+    await prefs.markAlertsRead(alertIds, storeId: storeId);
+    _ref.invalidate(alertReadIdsProvider);
+    _ref.invalidate(alertsUnreadFeedProvider);
+  }
+}
+
+final alertReadControllerProvider = Provider<AlertReadController>((ref) {
+  return AlertReadController(ref);
+});
 
 final alertsFeedProvider = FutureProvider.autoDispose<List<AlertItem>>((
   ref,

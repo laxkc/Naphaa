@@ -222,7 +222,7 @@ class _LoginFormState extends State<_LoginForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _Brand(),
+            _Brand(labelSubtitle: l.authBrandSubtitle),
             const SizedBox(height: 48),
 
             Text(l.welcomeBack, style: _headStyle(context)),
@@ -359,17 +359,17 @@ class _SignupFormState extends State<_SignupForm> {
             GestureDetector(
               onTap: widget.onBack,
               behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.arrow_back_ios_new_rounded,
+                    const Icon(Icons.arrow_back_ios_new_rounded,
                         size: 13, color: _label),
-                    SizedBox(width: 5),
+                    const SizedBox(width: 5),
                     Text(
-                      'Back',
-                      style: TextStyle(
+                      l.authBackLabel,
+                      style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: _label),
@@ -502,7 +502,8 @@ OutlineInputBorder _ob(Color c, {double w = 1.0}) => OutlineInputBorder(
 
 // brand
 class _Brand extends StatelessWidget {
-  const _Brand();
+  const _Brand({required this.labelSubtitle});
+  final String labelSubtitle;
 
   @override
   Widget build(BuildContext ctx) => Row(
@@ -518,10 +519,10 @@ class _Brand extends StatelessWidget {
                 Icons.store_rounded, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'SME Digital',
                 style: TextStyle(
                   fontSize: 16,
@@ -531,8 +532,8 @@ class _Brand extends StatelessWidget {
                 ),
               ),
               Text(
-                'Business Manager',
-                style: TextStyle(
+                labelSubtitle,
+                style: const TextStyle(
                     fontSize: 11, color: _muted, letterSpacing: 0.1),
               ),
             ],

@@ -5,6 +5,79 @@
   "customers": "Customers",
   "expenses": "Expenses",
   "settings": "Settings",
+  "reports": "Reports",
+  "reportsQuickStatTodaySales": "Today's Sales",
+  "reportsQuickStatPendingCredit": "Pending Credit",
+  "reportsBusinessHealthSubtitle": "Profit, credit risk, stock health, alerts",
+  "reportsSalesReportTitle": "Sales Report",
+  "reportsSalesReportSubtitle": "Revenue, transactions by period",
+  "salesReportTotalRevenue": "Total Revenue",
+  "salesReportTransactionCount": "{count} transaction(s)",
+  "@salesReportTransactionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesReportBreakdownByType": "Breakdown by Type",
+  "salesReportCashSales": "Cash Sales",
+  "salesReportCreditSales": "Credit Sales",
+  "reportsProfitReportTitle": "Profit Report",
+  "reportsProfitReportSubtitle": "Gross & net profit breakdown",
+  "profitReportNetProfit": "Net Profit",
+  "profitReportBreakdown": "Breakdown",
+  "profitReportEstimatedGrossProfit30": "Est. Gross Profit (30%)",
+  "profitReportTotalExpenses": "Total Expenses",
+  "profitReportEstimatedNotice": "Gross profit is estimated. Connect product cost prices for accurate margin calculation.",
+  "reportsCreditReportTitle": "Credit Report",
+  "reportsCreditReportSubtitle": "Outstanding customer balances",
+  "creditReportNoOutstandingTitle": "No outstanding credit",
+  "creditReportNoOutstandingSubtitle": "All customers are settled",
+  "creditReportTotalOutstanding": "Total Outstanding",
+  "creditReportCustomerCount": "{count} customer(s)",
+  "@creditReportCustomerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditReportRiskBadge": "{label} Risk",
+  "@creditReportRiskBadge": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsCreditAgingSubtitle": "Outstanding by age buckets and risk",
+  "reportsAlertsFeedTitle": "Alerts Feed",
+  "reportsAlertsFeedSubtitle": "Actionable risk and business alerts",
+  "reportsProductInsightsTitle": "Product Insights",
+  "reportsProductInsightsSubtitle": "Profit by product and dead stock",
+  "productInsightsDeadStockOnly": "Dead Stock Only",
+  "productInsightsNoDataTitle": "No product metrics yet",
+  "productInsightsNoDataSubtitle": "Create sales and sync to see product insights",
+  "productInsightsCachedDataBanner": "Showing cached product insights (offline). Refresh when internet is available.",
+  "productInsightsDeadStockItemsLabel": "Dead Stock Items",
+  "productInsightsLockedValueLabel": "Locked Value",
+  "productInsightsProfitNote": "Profit is estimated using product cost price (sell price - cost price) x quantity sold. It does not subtract allocated business expenses. Products without cost price are excluded from profit ranking.",
+  "productInsightsTopProfitProductsTitle": "Top Profit Products",
+  "productInsightsProfitLabel": "Profit",
+  "productInsightsFastMovers7dTitle": "Fast Movers (7d)",
+  "productInsightsQtySold7dLabel": "Qty sold (7d)",
+  "productInsightsDeadStockTitle": "Dead Stock",
+  "productInsightsNoSalesYet": "No sales yet",
+  "productInsightsLastSaleLabel": "Last sale",
+  "productInsightsCostNotSet": "Cost not set",
+  "productInsightsValueLabel": "Value",
+  "reportsInvoicesSubtitle": "Create, issue and collect invoice payments",
+  "reportsLedgerTitle": "Ledger",
+  "reportsLedgerSubtitle": "Unified financial audit trail",
+  "ledgerNoEntriesTitle": "No ledger entries yet",
+  "ledgerNoEntriesSubtitle": "Sales, expenses, payments and refunds will appear here.",
+  "appName": "SME Digital",
   "newSale": "New Sale",
   "searchProducts": "Search products",
   "saveCashSale": "Save Cash Sale",
@@ -24,14 +97,158 @@
   "addExpense": "Add Expense",
   "productName": "Product name",
   "customerName": "Customer name",
+  "businessLabel": "Business",
   "phone": "Phone",
+  "emailLabel": "Email",
+  "panVatLabel": "PAN/VAT",
   "price": "Price",
   "stock": "Stock",
   "amount": "Amount",
   "note": "Note",
+  "dateLabel": "Date",
   "save": "Save",
+  "saveChanges": "Save Changes",
   "cancel": "Cancel",
+  "continueLabel": "Continue",
+  "createLabel": "Create",
+  "deleteLabel": "Delete",
   "dashboardOverview": "Dashboard overview",
+  "failedToLoadDashboard": "Failed to load dashboard",
+  "loadingLabel": "Loading",
+  "errorLabel": "Error",
+  "criticalLabel": "Critical",
+  "warningLabel": "Warning",
+  "clearLabel": "Clear",
+  "unknownLabel": "Unknown",
+  "alertsLabel": "Alerts",
+  "openLabel": "Open",
+  "alertsFeedMarkAllRead": "Mark all read",
+  "alertsFeedMarkRead": "Mark Read",
+  "alertsFeedEverythingStableSubtitle": "Everything looks stable right now",
+  "alertsActionUnavailable": "Action not available yet for this alert",
+  "alertCount": "{count} alerts",
+  "@alertCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "alertsCountWithStatus": "{count} alerts ({status})",
+  "@alertsCountWithStatus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "lowStockItemsTitle": "Low stock items",
+  "checkingStock": "Checking stock...",
+  "unableLoadLowStockData": "Unable to load low stock data",
+  "allProductsAboveThreshold": "All products are above threshold.",
+  "stockLeftCount": "{count} left",
+  "@stockLeftCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "quickActionsTitle": "QUICK ACTIONS",
+  "recordPay": "Record Pay",
+  "businessHealth": "Business Health",
+  "businessHealthCachedDataBanner": "Showing cached intelligence data (offline). Pull to refresh when internet is available.",
+  "businessHealthProfitSnapshotTitle": "Profit Snapshot",
+  "businessHealthEstimatedProfitLabel": "Est. Profit",
+  "businessHealthOutstandingCreditLabel": "Outstanding Credit",
+  "businessHealthProfitMarginLabel": "Profit Margin",
+  "businessHealthCashRiskLabel": "Cash Risk",
+  "businessHealthCashOutlookTitle": "Cash Outlook",
+  "businessHealthExpectedIncomingLabel": "Expected Incoming",
+  "businessHealthExpectedOutgoingLabel": "Expected Outgoing",
+  "businessHealthNetOutlookNextDays": "Next {days} days net outlook: NPR {amount}",
+  "@businessHealthNetOutlookNextDays": {
+    "placeholders": {
+      "days": {"type": "int"},
+      "amount": {}
+    }
+  },
+  "businessHealthProfitSnapshotNote": "Estimated Profit here is a simple operational snapshot (today sales - today expenses). Product-level profit reports use cost price and may not match this total exactly.",
+  "businessHealthCreditRiskSummaryTitle": "Credit Risk Summary",
+  "businessHealthStockHealthTitle": "Stock Health",
+  "businessHealthFastMoversTitle": "Fast Movers",
+  "businessHealthAlertsPreviewTitle": "Alerts Preview",
+  "businessHealthDaysShort": "{count}d",
+  "@businessHealthDaysShort": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "businessHealthNoLowStockAlerts": "No low stock alerts right now",
+  "businessHealthLowStockItemsCount": "{count} low-stock items",
+  "@businessHealthLowStockItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "businessHealthNoActiveAlerts": "No active alerts",
+  "businessHealthNoFastMovers7d": "No fast movers in the last 7 days",
+  "businessHealthSevenDayQtySoldLabel": "7-day quantity sold",
+  "thresholdLabel": "Threshold",
+  "revenueLabel": "Revenue",
+  "customerLabel": "Customer",
+  "creditAging": "Credit Aging",
+  "creditAgingOverdueOnly": "Overdue Only",
+  "creditAgingHighRiskOnly": "High Risk Only",
+  "creditAgingNoDataTitle": "No credit aging data",
+  "creditAgingNoDataSubtitle": "No customers match the selected filters",
+  "creditAgingCachedDataBanner": "Showing cached credit aging data (offline). Refresh when internet is available.",
+  "creditAgingSummaryTitle": "Credit Aging Summary",
+  "creditAgingOutstandingLabel": "Outstanding",
+  "creditAgingOverdueLabel": "Overdue",
+  "creditAgingHighRiskCustomersCount": "{count} high-risk customers",
+  "@creditAgingHighRiskCustomersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditAgingBucketsTitle": "Aging Buckets",
+  "creditAgingBucket0to7": "0–7 days",
+  "creditAgingBucket8to30": "8–30 days",
+  "creditAgingBucket31to60": "31–60 days",
+  "creditAgingBucket60Plus": "60+ days",
+  "creditAgingOldestDueLabel": "Oldest Due",
+  "creditAgingDaysCount": "{count} days",
+  "@creditAgingDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "invoices": "Invoices",
+  "invoiceLabel": "Invoice",
+  "invoicePdfTitle": "INVOICE",
+  "draftLabel": "DRAFT",
+  "invoiceDueShortLabel": "Due",
+  "invoiceListNewInvoice": "New Invoice",
+  "invoiceListNoInvoicesTitle": "No invoices yet",
+  "invoiceListNoInvoicesSubtitle": "Create your first invoice and issue it offline.",
+  "invoiceListCreateInvoiceAction": "Create Invoice",
+  "invoiceListDraftFallback": "Draft",
+  "invoiceListDraftNotIssued": "Draft (not issued)",
+  "invoiceListTotalsSummary": "Total: NPR {total}   •   Balance: NPR {balance}",
+  "@invoiceListTotalsSummary": {
+    "placeholders": {
+      "total": {},
+      "balance": {}
+    }
+  },
   "netAfterExpenses": "Net after expenses",
   "cashflowHealth": "Cashflow health",
   "creditExposure": "Credit exposure",
@@ -64,4 +281,488 @@
   "switchToSignup": "Switch to signup",
   "switchToLogin": "Switch to login",
   "forgotPasswordHint": "Please contact support to reset your password."
+  ,
+  "offlineMode": "Offline mode",
+  "syncingShort": "Syncing…",
+  "syncingChanges": "Syncing {count} changes…",
+  "@syncingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayLabel": "Today",
+  "thisWeekLabel": "This Week",
+  "thisMonthLabel": "This Month",
+  "allLabel": "All",
+  "walkInCustomer": "Walk-in Customer",
+  "nprLabel": "NPR",
+  "itemsLabel": "Items",
+  "paymentsLabel": "Payments",
+  "totalLabel": "Total",
+  "totalAmountLabel": "Total Amount",
+  "saleDetailsTitle": "Sale Details",
+  "saleNotFoundTitle": "Sale not found",
+  "saleNotFoundSubtitle": "This sale may have been removed",
+  "salesNoSalesYetTitle": "No sales yet",
+  "salesNoSalesYetTodaySubtitle": "Tap + to record your first sale today",
+  "salesNoTransactionsInPeriodSubtitle": "No transactions in this period",
+  "salesNoProductsYetTitle": "No products yet",
+  "salesNoProductsQuickCreateHint": "Search a product name and quick create it from here.",
+  "salesNoMatchForQuery": "No match for \"{query}\"",
+  "@salesNoMatchForQuery": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "salesCreateProductQuicklyCta": "Create Product Quickly",
+  "salesCreateProductQuicklyFor": "Create \"{query}\" quickly",
+  "@salesCreateProductQuicklyFor": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "salesCreateProductQuicklySubtitle": "Enter only selling price and continue sale",
+  "salesQuickAddProductTitle": "Quick Add Product",
+  "salesQuickCreditCustomerTitle": "Quick Credit Customer",
+  "salesCreditRiskWarningTitle": "Credit Risk Warning",
+  "salesCreditRiskExistingCustomerMarked": "Existing customer \"{name}\" is marked {label}.",
+  "@salesCreditRiskExistingCustomerMarked": {
+    "placeholders": {
+      "name": {},
+      "label": {}
+    }
+  },
+  "salesCreditRiskOutstandingNpr": "Outstanding: NPR {amount}",
+  "@salesCreditRiskOutstandingNpr": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "salesCreditRiskOldestDueDays": "Oldest due: {count} days",
+  "@salesCreditRiskOldestDueDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesCreditRiskScore": "Risk score: {score}",
+  "@salesCreditRiskScore": {
+    "placeholders": {
+      "score": {}
+    }
+  },
+  "salesCreditRiskContinueWarning": "Continue only if you are comfortable extending more credit.",
+  "salesCartItemsCount": "{count} items",
+  "@salesCartItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchCustomersHint": "Search customers…",
+  "failedToLoadCustomers": "Failed to load customers",
+  "noCustomersFoundTitle": "No customers found",
+  "customersEmptySubtitle": "Tap \"Add Customer\" to get started.",
+  "customersTryDifferentSearchSubtitle": "Try a different name or phone number.",
+  "deleteCustomerDialogTitle": "Delete customer?",
+  "customerDeletePermanentBody": "\"{name}\" will be permanently removed.",
+  "@customerDeletePermanentBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "owesYouLabel": "owes you",
+  "creditLabel": "credit",
+  "recordPaymentTooltip": "Record payment",
+  "editCustomerTitle": "Edit Customer",
+  "fullNameLabel": "Full Name",
+  "customerNameRequired": "Name is required",
+  "phoneOptionalLabel": "Phone Number (optional)",
+  "addressOptionalLabel": "Address (optional)",
+  "streetCityHint": "Street, City",
+  "notesOptionalLabel": "Notes (optional)",
+  "customerNotesHint": "Any additional notes",
+  "customerSaveFailedTryAgain": "Failed to save customer. Try again.",
+  "searchProductsHint": "Search products…",
+  "failedToLoadProducts": "Failed to load products",
+  "productsEmptySubtitle": "Tap \"Add Product\" to get started.",
+  "deleteProductDialogTitle": "Delete product?",
+  "productDeletePermanentBody": "\"{name}\" will be permanently removed.",
+  "@productDeletePermanentBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "lowStockBadgeLabel": "Low stock",
+  "rsLabel": "Rs",
+  "adjustStockLabel": "Adjust Stock",
+  "editProductTitle": "Edit Product",
+  "productNameLabel": "Product Name",
+  "productNameRequired": "Name is required",
+  "categoryOptionalLabel": "Category (optional)",
+  "productCategoryHint": "e.g. Snacks, Beverages",
+  "sellPriceLabel": "Sell Price",
+  "enterValidPrice": "Enter valid price",
+  "costPriceLabel": "Cost Price",
+  "openingStockLabel": "Opening Stock",
+  "lowStockThresholdLabel": "Low Stock Threshold",
+  "lowStockThresholdHint": "0 to disable alert",
+  "enterValidThreshold": "Enter a valid threshold",
+  "unitLabel": "Unit",
+  "productSaveFailedTryAgain": "Failed to save product. Try again.",
+  "productDetailsTitle": "Product Details",
+  "productNotFoundTitle": "Product not found",
+  "productNotFoundSubtitle": "This product may have been removed",
+  "marginLabel": "Margin",
+  "stockHistoryTitle": "Stock History",
+  "noStockMovementsYetTitle": "No stock movements yet",
+  "customerDetailsTitle": "Customer Details",
+  "customerNotFoundTitle": "Customer not found",
+  "customerNotFoundSubtitle": "This customer may have been removed",
+  "outstandingBalanceLabel": "Outstanding Balance",
+  "recordPaymentLabel": "Record Payment",
+  "transactionHistoryTitle": "Transaction History",
+  "loadingTransactions": "Loading transactions...",
+  "failedToLoadCustomerTransactions": "Failed to load customer transactions",
+  "noTransactionsYetTitle": "No transactions yet",
+  "paymentReceivedLabel": "Payment Received",
+  "creditSaleLabel": "Credit Sale",
+  "riskExplanationTitle": "Risk Explanation",
+  "oldestOverdueLabel": "Oldest overdue",
+  "averageDaysToPayLabel": "Average days to pay",
+  "onTimeRateLabel": "On-time rate",
+  "outstandingSpikeLabel": "Outstanding spike",
+  "daysValue": "{count} days",
+  "@daysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysValueDecimal": "{value} days",
+  "@daysValueDecimal": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "oldestDueChipDays": "Oldest due: {days}d",
+  "@oldestDueChipDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "highLabel": "High",
+  "mediumLabel": "Medium",
+  "lowLabel": "Low",
+  "normalLabel": "Normal",
+  "failedToLoadExpenses": "Failed to load expenses",
+  "expensesEmptySubtitle": "Tap \"Add Expense\" to record your first expense.",
+  "expenseCategoryRent": "Rent",
+  "expenseCategoryTransport": "Transport",
+  "expenseCategoryUtilities": "Utilities",
+  "expenseCategorySalary": "Salary",
+  "expenseCategoryOther": "Other",
+  "categoryLabel": "Category",
+  "failedToSaveWithError": "Failed to save: {error}",
+  "@failedToSaveWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "enterValidAmount": "Enter a valid amount",
+  "amountCannotExceedOutstandingBalance": "Amount cannot exceed outstanding balance",
+  "paymentRecordedSuccessfully": "Payment recorded successfully",
+  "failedToRecordPaymentTryAgain": "Failed to record payment. Try again.",
+  "creditCustomerLabel": "Credit Customer",
+  "paymentDetailsTitle": "Payment Details",
+  "amountReceivedLabel": "Amount Received",
+  "fullLabel": "Full",
+  "paymentMethodLabelTitle": "Payment Method",
+  "balanceLabel": "Balance",
+  "notesLabel": "Notes",
+  "typeLabel": "Type",
+  "addStockLabel": "Add Stock",
+  "removeStockLabel": "Remove Stock",
+  "quantityLabel": "Quantity",
+  "egTenHint": "e.g. 10",
+  "reasonLabel": "Reason",
+  "additionalDetailsHint": "Additional details…",
+  "saveAdjustmentLabel": "Save Adjustment",
+  "enterValidQuantity": "Enter a valid quantity",
+  "failedToAdjustStockTryAgain": "Failed to adjust stock. Try again.",
+  "currentStockValue": "Current stock: {value}",
+  "@currentStockValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "serverHasNewerDataPullRetry": "Server has newer data. Pull latest and retry.",
+  "syncFailedWillRetry": "Sync failed. Will retry.",
+  "pendingChangesCount": "{count} pending changes",
+  "@pendingChangesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pullRetryShort": "Pull+Retry",
+  "syncNowLabel": "Sync now"
+  ,
+  "syncDiagnosticsTitle": "Sync Diagnostics",
+  "clearFailedRowsTooltip": "Clear Failed Rows",
+  "clearFailedRowsConfirmTitle": "Clear failed sync rows?",
+  "clearFailedRowsConfirmBody": "This is for demo/testing cleanup. Failed offline changes will be removed from the local sync queue.",
+  "clearFailedAction": "Clear Failed",
+  "clearedFailedRowsCount": "Cleared {count} failed sync rows",
+  "@clearedFailedRowsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retrySyncTooltip": "Retry Sync",
+  "refreshLabel": "Refresh",
+  "pendingLabel": "Pending",
+  "ackedLabel": "Acked",
+  "failedLabel": "Failed",
+  "noSyncQueueItemsTitle": "No sync queue items",
+  "noSyncQueueItemsSubtitle": "Offline changes and sync errors will appear here.",
+  "retryCountShort": "retry {count}",
+  "@retryCountShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "Status",
+  "entityIdLabel": "Entity ID",
+  "opIdLabel": "Op ID",
+  "retriesLabel": "Retries",
+  "createdLabel": "Created",
+  "updatedLabel": "Updated",
+  "lastErrorLabel": "Last Error",
+  "copiedErrorDetails": "Copied error details",
+  "copyLabel": "Copy"
+  ,
+  "retry": "Retry",
+  "somethingWentWrong": "Something went wrong",
+  "itemLabel": "Item",
+  "termsLabel": "Terms",
+  "pdfGenerationFailedPrefix": "PDF generation failed",
+  "syncTelemetrySummary": "ack {acked} • fail {failed} • pull {pulled} • {durationMs}ms",
+  "@syncTelemetrySummary": {
+    "placeholders": {
+      "acked": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "pulled": {
+        "type": "int"
+      },
+      "durationMs": {
+        "type": "int"
+      }
+    }
+  },
+  "invoiceDetailTitle": "Invoice Details",
+  "invoiceDetailNotFound": "Invoice not found",
+  "invoiceDetailDraftFallback": "Draft Invoice",
+  "invoiceIssueDateLabel": "Issue Date",
+  "invoiceNotIssued": "Not issued",
+  "invoiceDueDateLabel": "Due Date",
+  "subtotalLabel": "Subtotal",
+  "discountLabel": "Discount",
+  "vatLabel": "VAT",
+  "paidLabel": "Paid",
+  "invoiceDetailNoItems": "No items",
+  "invoicePaymentsTitle": "Payments",
+  "invoicePaymentsEmpty": "No payments recorded",
+  "actionsLabel": "Actions",
+  "issueLabel": "Issue",
+  "invoiceRecordPaymentLabel": "Record Payment",
+  "invoicePdfRetry": "Retry PDF",
+  "invoicePdfRegenerate": "Regenerate PDF",
+  "invoicePdfGenerate": "Generate PDF",
+  "invoicePdfShare": "Share PDF",
+  "printLabel": "Print",
+  "invoiceIssuedSuccess": "Invoice issued successfully",
+  "invoicePdfGeneratedSuccess": "PDF generated successfully",
+  "invoiceBalanceSummary": "Balance: {value}",
+  "@invoiceBalanceSummary": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "noteOptionalLabel": "Note (optional)",
+  "invoiceEnterValidAmount": "Enter a valid amount",
+  "invoicePaymentRecordedSuccess": "Payment recorded",
+  "invoiceCreateTitle": "Create Invoice",
+  "invoiceDetailsTitle": "Invoice Details",
+  "invoiceCustomerIdOptional": "Customer ID (optional)",
+  "invoiceDiscountLabel": "Invoice Discount",
+  "invoiceAddLine": "Add Line",
+  "invoiceSaveDraft": "Save Draft",
+  "invoiceIssuing": "Issuing...",
+  "invoiceIssueAction": "Issue Invoice",
+  "invoiceNoActiveStore": "No active business/store found. Please login again.",
+  "invoiceAddAtLeastOneItem": "Add at least one item",
+  "invoiceLineItemName": "Item name",
+  "requiredLabel": "Required",
+  "invoiceProductIdOptional": "Product ID (optional)",
+  "qtyLabel": "Qty",
+  "invoiceQtyPositive": "Qty > 0",
+  "rateLabel": "Rate",
+  "invalidLabel": "Invalid",
+  "settingsSectionBusiness": "BUSINESS",
+  "businessSettings": "Business Settings",
+  "taxSettingsTitle": "Tax Settings",
+  "settingsBusinessSettingsSubtitle": "Name, address, currency",
+  "settingsTaxSettingsSubtitle": "VAT / PAN / tax rate",
+  "settingsSectionTeam": "TEAM",
+  "userManagementTitle": "User Management",
+  "subscriptionTitle": "Subscription",
+  "settingsUserManagementSubtitle": "Invite staff, set roles",
+  "settingsSubscriptionSubtitle": "Plan, billing details",
+  "settingsSectionPreferences": "PREFERENCES",
+  "englishLabel": "English",
+  "nepaliLabel": "Nepali",
+  "settingsSectionAccount": "ACCOUNT",
+  "settingsProfileSubtitle": "View and edit your profile",
+  "settingsSectionAbout": "ABOUT",
+  "settingsSyncDiagnosticsSubtitle": "Queue, retries, sync errors",
+  "versionLabel": "Version",
+  "signOutConfirmTitle": "Sign out?",
+  "signOutConfirmBody": "You will be returned to the login screen.",
+  "signOutLabel": "Sign out",
+  "myStoreLabel": "My Store",
+  "storePhoneLabel": "Store Phone",
+  "storeAddressLabel": "Store Address",
+  "businessTypeLabel": "Business Type",
+  "currencyLabel": "Currency",
+  "roleLabel": "Role"
+  ,
+  "authLandingSubtitle": "The digital ledger for your shop.\nFast. Offline. Trusted.",
+  "authLandingFeatureFastSales": "Record sales in under 10 seconds",
+  "authLandingFeatureOfflineSync": "Works offline, syncs when connected",
+  "authLandingFeatureCreditTracking": "Track customer credit reliably",
+  "authLandingStartFree": "Start Free",
+  "authForgotResetTitle": "Reset your password",
+  "authForgotResetBody": "Enter your registered phone number and we will send you reset instructions.",
+  "authForgotSuccessBanner": "If an account exists with this number, you will receive reset instructions. Contact support if you need further help.",
+  "authForgotBackToLogin": "Back to Login",
+  "phoneNumberLabel": "Phone Number",
+  "authForgotSendResetInstructions": "Send Reset Instructions",
+  "authBackLabel": "Back",
+  "authBrandSubtitle": "Business Manager",
+  "businessSettingsAddressHint": "Street, City, District",
+  "businessSettingsAddressOptionalLabel": "Address (optional)",
+  "businessSettingsNameLabel": "Business Name",
+  "businessSettingsNameRequired": "Name is required",
+  "businessSettingsPhoneOptionalLabel": "Business Phone (optional)",
+  "businessSettingsSaveFailed": "Failed to save. Check connection and try again.",
+  "businessSettingsSaved": "Business settings saved",
+  "businessTypeElectronics": "Electronics",
+  "businessTypeGrocery": "Grocery",
+  "businessTypePharmacy": "Pharmacy",
+  "businessTypeRestaurant": "Restaurant",
+  "businessTypeRetail": "Retail",
+  "nextLabel": "Next",
+  "skipLabel": "Skip",
+  "otherLabel": "Other",
+  "ownerLabel": "Owner",
+  "onboardingBusinessTypeGeneralStore": "General Store",
+  "onboardingDefaultMeasurementUnit": "Default Measurement Unit",
+  "onboardingDoneOpenStore": "Done - Open My Store",
+  "onboardingEnableTaxVat": "Enable Tax (VAT)",
+  "onboardingNoTaxApplied": "No tax applied",
+  "onboardingSetupStoreTitle": "Setup Your Store",
+  "onboardingStepOfTotal": "Step {step} of {total}",
+  "@onboardingStepOfTotal": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingTaxWillApply": "Tax will be applied to sales",
+  "onboardingUnitKg": "kg",
+  "onboardingUnitLitre": "litre",
+  "onboardingUnitOverrideHint": "You can override this per product.",
+  "onboardingUnitPacket": "packet",
+  "onboardingUnitPiece": "piece",
+  "subscriptionFeatureBasicReports": "Basic Reports",
+  "subscriptionFeatureBasicReportsSubtitle": "Sales & credit reports",
+  "subscriptionFeatureCloudSync": "Cloud Sync",
+  "subscriptionFeatureCloudSyncSubtitle": "Multi-device sync",
+  "subscriptionFeatureCustomerLedger": "Customer Ledger",
+  "subscriptionFeatureCustomerLedgerSubtitle": "Track credit customers",
+  "subscriptionFeatureInvoiceGeneration": "Invoice Generation",
+  "subscriptionFeatureInvoiceGenerationSubtitle": "PDF invoices & billing",
+  "subscriptionFeatureProductManagement": "Product Management",
+  "subscriptionFeatureProductManagementSubtitle": "Up to 100 products",
+  "subscriptionFeatureSalesRecording": "Sales Recording",
+  "subscriptionFeatureSalesRecordingSubtitle": "Unlimited cash & credit sales",
+  "subscriptionFreePlanBadge": "FREE PLAN",
+  "subscriptionFreePlanIncludes": "Free Plan Includes",
+  "subscriptionFreePlanSubtitle": "Access core features at no cost",
+  "subscriptionFreePlanTitle": "SME Digital Free",
+  "subscriptionProComingSoon": "Pro plan coming soon. Stay tuned!",
+  "subscriptionUpgradeToPro": "Upgrade to Pro",
+  "taxSettingsEnableVat": "Enable VAT",
+  "taxSettingsEnableVatSubtitle": "Apply VAT to sales automatically",
+  "taxSettingsPanHint": "9-digit PAN",
+  "taxSettingsPanOptionalLabel": "PAN Number (optional)",
+  "taxSettingsSaveAction": "Save Tax Settings",
+  "taxSettingsSaveFailed": "Failed to save. Try again.",
+  "taxSettingsSaved": "Tax settings saved",
+  "taxSettingsVatRateLabel": "VAT Rate (%)",
+  "userManagementInviteComingSoon": "Invitation feature coming soon",
+  "userManagementInviteStaffDialogBody": "Enter the phone number of the staff member to invite.",
+  "userManagementInviteStaffMember": "Invite Staff Member",
+  "userManagementInviteStaffSubtitle": "Invite staff to manage your shop",
+  "userManagementInviteStaffTitle": "Invite Staff",
+  "userManagementNoStaffMembers": "No staff members yet",
+  "userManagementOwnerFullAccess": "Owner · Full access",
+  "userManagementSendInvite": "Send Invite",
+  "userManagementStaffMembers": "Staff Members",
+  "highRiskLabel": "High Risk",
+  "mediumRiskLabel": "Medium Risk",
+  "lowRiskLabel": "Low Risk",
+  "infoLabel": "Info",
+  "paymentMethodCashLabel": "CASH",
+  "paymentMethodBankLabel": "BANK",
+  "paymentMethodQrLabel": "QR",
+  "paymentMethodCreditLabel": "CREDIT",
+  "invoiceStatusDraftLabel": "DRAFT",
+  "invoiceStatusIssuedLabel": "ISSUED",
+  "invoiceStatusPaidLabel": "PAID",
+  "invoiceStatusOverdueLabel": "OVERDUE",
+  "invoiceStatusCancelledLabel": "CANCELLED"
 }

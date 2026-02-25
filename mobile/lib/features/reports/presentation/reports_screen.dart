@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import 'sales_report_screen.dart';
@@ -21,6 +21,7 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final currFmt = NumberFormat('#,##0.00');
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -37,14 +38,14 @@ class ReportsScreen extends ConsumerWidget {
                   (summary) => Row(
                     children: [
                       _QuickStatCard(
-                        label: context.tr("Today's Sales", 'आजको बिक्री'),
+                        label: l10n.reportsQuickStatTodaySales,
                         value: 'NPR ${currFmt.format(summary.todaySales)}',
                         icon: Icons.trending_up_rounded,
                         color: AppColors.success,
                       ),
                       const SizedBox(width: AppSpacing.md),
                       _QuickStatCard(
-                        label: context.tr('Pending Credit', 'बाँकी उधारो'),
+                        label: l10n.reportsQuickStatPendingCredit,
                         value:
                             'NPR ${currFmt.format(summary.creditOutstanding)}',
                         icon: Icons.warning_amber_rounded,
@@ -55,7 +56,7 @@ class ReportsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.h),
 
-            SectionHeader(context.tr('Reports', 'रिपोर्टहरू')),
+            SectionHeader(l10n.reports),
             const SizedBox(height: AppSpacing.sm),
 
             AppCard(
@@ -65,11 +66,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.health_and_safety_outlined,
                     iconColor: AppColors.primary,
-                    title: context.tr('Business Health', 'व्यवसाय स्वास्थ्य'),
-                    subtitle: context.tr(
-                      'Profit, credit risk, stock health, alerts',
-                      'नाफा, उधारो जोखिम, स्टक स्वास्थ्य, अलर्ट',
-                    ),
+                    title: l10n.businessHealth,
+                    subtitle: l10n.reportsBusinessHealthSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -81,11 +79,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.bar_chart_rounded,
                     iconColor: AppColors.primary,
-                    title: context.tr('Sales Report', 'बिक्री रिपोर्ट'),
-                    subtitle: context.tr(
-                      'Revenue, transactions by period',
-                      'अवधिअनुसार आम्दानी र कारोबार',
-                    ),
+                    title: l10n.reportsSalesReportTitle,
+                    subtitle: l10n.reportsSalesReportSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -97,11 +92,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.account_balance_wallet_outlined,
                     iconColor: AppColors.success,
-                    title: context.tr('Profit Report', 'नाफा रिपोर्ट'),
-                    subtitle: context.tr(
-                      'Gross & net profit breakdown',
-                      'कुल र खुद नाफा विवरण',
-                    ),
+                    title: l10n.reportsProfitReportTitle,
+                    subtitle: l10n.reportsProfitReportSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -113,11 +105,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.credit_card_outlined,
                     iconColor: AppColors.warning,
-                    title: context.tr('Credit Report', 'उधारो रिपोर्ट'),
-                    subtitle: context.tr(
-                      'Outstanding customer balances',
-                      'ग्राहकहरूको बाँकी उधारो',
-                    ),
+                    title: l10n.reportsCreditReportTitle,
+                    subtitle: l10n.reportsCreditReportSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -129,11 +118,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.schedule_outlined,
                     iconColor: AppColors.error,
-                    title: context.tr('Credit Aging', 'उधारो उमेर रिपोर्ट'),
-                    subtitle: context.tr(
-                      'Outstanding by age buckets and risk',
-                      'उमेर समूह र जोखिम अनुसार बाँकी उधारो',
-                    ),
+                    title: l10n.creditAging,
+                    subtitle: l10n.reportsCreditAgingSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -145,11 +131,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.notifications_active_outlined,
                     iconColor: AppColors.error,
-                    title: context.tr('Alerts Feed', 'अलर्ट फिड'),
-                    subtitle: context.tr(
-                      'Actionable risk and business alerts',
-                      'कार्यात्मक जोखिम र व्यवसायिक अलर्टहरू',
-                    ),
+                    title: l10n.reportsAlertsFeedTitle,
+                    subtitle: l10n.reportsAlertsFeedSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -161,11 +144,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.inventory_outlined,
                     iconColor: AppColors.success,
-                    title: context.tr('Product Insights', 'वस्तु अन्तर्दृष्टि'),
-                    subtitle: context.tr(
-                      'Profit by product and dead stock',
-                      'वस्तु अनुसार नाफा र नचल्ने स्टक',
-                    ),
+                    title: l10n.reportsProductInsightsTitle,
+                    subtitle: l10n.reportsProductInsightsSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -177,11 +157,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.receipt_long_outlined,
                     iconColor: AppColors.primary,
-                    title: context.tr('Invoices', 'इनभ्वाइसहरू'),
-                    subtitle: context.tr(
-                      'Create, issue and collect invoice payments',
-                      'इनभ्वाइस बनाउनुहोस्, जारी गर्नुहोस् र भुक्तानी लिनुहोस्',
-                    ),
+                    title: l10n.invoices,
+                    subtitle: l10n.reportsInvoicesSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -193,11 +170,8 @@ class ReportsScreen extends ConsumerWidget {
                   _ReportTile(
                     icon: Icons.menu_book_outlined,
                     iconColor: AppColors.muted,
-                    title: context.tr('Ledger', 'लेजर'),
-                    subtitle: context.tr(
-                      'Unified financial audit trail',
-                      'एकीकृत वित्तीय अडिट ट्रेल',
-                    ),
+                    title: l10n.reportsLedgerTitle,
+                    subtitle: l10n.reportsLedgerSubtitle,
                     onTap:
                         () => Navigator.of(context).push(
                           MaterialPageRoute(

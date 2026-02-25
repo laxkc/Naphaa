@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -32,8 +32,7 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
         setState(() {
           _vatEnabled = settings['enabled'] as bool? ?? false;
           _panCtl.text = settings['name'] as String? ?? '';
-          _vatRateCtl.text =
-              (settings['rate'] as num?)?.toString() ?? '13';
+          _vatRateCtl.text = (settings['rate'] as num?)?.toString() ?? '13';
         });
       }
     } catch (_) {}
@@ -48,10 +47,11 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Tax Settings', 'कर सेटिङ')),
+        title: Text(l10n.taxSettingsTitle),
         backgroundColor: AppColors.surface,
       ),
       body: SingleChildScrollView(
@@ -69,16 +69,13 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(context.tr('Enable VAT', 'VAT सक्षम गर्नुहोस्'),
-                                style: Theme.of(context).textTheme.titleSmall),
                             Text(
-                              context.tr(
-                                'Apply VAT to sales automatically',
-                                'बिक्रीमा VAT स्वतः लागू गर्नुहोस्',
-                              ),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              l10n.taxSettingsEnableVat,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            Text(
+                              l10n.taxSettingsEnableVatSubtitle,
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: AppColors.muted),
                             ),
                           ],
@@ -92,9 +89,10 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
                         inactiveThumbColor: Colors.white,
                         inactiveTrackColor: AppColors.border,
                         trackOutlineColor: WidgetStateProperty.resolveWith(
-                          (states) => states.contains(WidgetState.selected)
-                              ? AppColors.primary
-                              : AppColors.border,
+                          (states) =>
+                              states.contains(WidgetState.selected)
+                                  ? AppColors.primary
+                                  : AppColors.border,
                         ),
                       ),
                     ],
@@ -105,9 +103,9 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
             const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _panCtl,
-              decoration: const InputDecoration(
-                labelText: 'PAN Number (optional)',
-                hintText: '9-digit PAN',
+              decoration: InputDecoration(
+                labelText: l10n.taxSettingsPanOptionalLabel,
+                hintText: l10n.taxSettingsPanHint,
               ),
               maxLength: 9,
               keyboardType: TextInputType.number,
@@ -115,10 +113,11 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
             const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _vatRateCtl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'VAT Rate (%)',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: l10n.taxSettingsVatRateLabel,
                 hintText: '13',
                 suffixText: '%',
               ),
@@ -133,14 +132,19 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(context.tr('Save Tax Settings', 'कर सेटिङ सेभ गर्नुहोस्')),
+                child:
+                    _saving
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : Text(
+                          l10n.taxSettingsSaveAction,
+                        ),
               ),
             ),
           ],
@@ -150,6 +154,7 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _saving = true;
       _error = null;
@@ -158,19 +163,24 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
       final prefs = ref.read(preferencesProvider);
       await prefs.setTaxSettings(
         enabled: _vatEnabled,
-        name: _panCtl.text.trim().isEmpty ? 'VAT' : _panCtl.text.trim(),
+        name:
+            _panCtl.text.trim().isEmpty
+                ? l10n.vatLabel
+                : _panCtl.text.trim(),
         rate: double.tryParse(_vatRateCtl.text.trim()) ?? 13.0,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.tr('Tax settings saved', 'कर सेटिङ सेभ भयो'))),
+          SnackBar(
+            content: Text(l10n.taxSettingsSaved),
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       setState(() {
         _saving = false;
-        _error = 'Failed to save. Try again.';
+        _error = l10n.taxSettingsSaveFailed;
       });
     }
   }

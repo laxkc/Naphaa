@@ -5,6 +5,79 @@
   "customers": "ग्राहक",
   "expenses": "खर्च",
   "settings": "सेटिङ",
+  "reports": "रिपोर्ट",
+  "reportsQuickStatTodaySales": "आजको बिक्री",
+  "reportsQuickStatPendingCredit": "बाँकी उधारो",
+  "reportsBusinessHealthSubtitle": "नाफा, उधारो जोखिम, स्टक स्वास्थ्य, अलर्ट",
+  "reportsSalesReportTitle": "बिक्री रिपोर्ट",
+  "reportsSalesReportSubtitle": "अवधिअनुसार आम्दानी र कारोबार",
+  "salesReportTotalRevenue": "कुल आम्दानी",
+  "salesReportTransactionCount": "{count} कारोबार",
+  "@salesReportTransactionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesReportBreakdownByType": "प्रकार अनुसार विवरण",
+  "salesReportCashSales": "नगद बिक्री",
+  "salesReportCreditSales": "उधारो बिक्री",
+  "reportsProfitReportTitle": "नाफा रिपोर्ट",
+  "reportsProfitReportSubtitle": "कुल र खुद नाफा विवरण",
+  "profitReportNetProfit": "खुद नाफा",
+  "profitReportBreakdown": "विवरण",
+  "profitReportEstimatedGrossProfit30": "अनुमानित कुल नाफा (३०%)",
+  "profitReportTotalExpenses": "कुल खर्च",
+  "profitReportEstimatedNotice": "कुल नाफा अनुमानित हो। सही मार्जिनका लागि सामानको लागत मूल्य राख्नुहोस्।",
+  "reportsCreditReportTitle": "उधारो रिपोर्ट",
+  "reportsCreditReportSubtitle": "ग्राहकहरूको बाँकी उधारो",
+  "creditReportNoOutstandingTitle": "कुनै बाँकी उधारो छैन",
+  "creditReportNoOutstandingSubtitle": "सबै ग्राहकको हिसाब मिलेको छ",
+  "creditReportTotalOutstanding": "कुल बाँकी उधारो",
+  "creditReportCustomerCount": "{count} ग्राहक",
+  "@creditReportCustomerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditReportRiskBadge": "{label} जोखिम",
+  "@creditReportRiskBadge": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "reportsCreditAgingSubtitle": "उमेर समूह र जोखिम अनुसार बाँकी उधारो",
+  "reportsAlertsFeedTitle": "अलर्ट फिड",
+  "reportsAlertsFeedSubtitle": "कार्यात्मक जोखिम र व्यवसायिक अलर्टहरू",
+  "reportsProductInsightsTitle": "वस्तु अन्तर्दृष्टि",
+  "reportsProductInsightsSubtitle": "वस्तु अनुसार नाफा र नचल्ने स्टक",
+  "productInsightsDeadStockOnly": "नचल्ने स्टक मात्र",
+  "productInsightsNoDataTitle": "अहिलेसम्म वस्तु मेट्रिक्स छैन",
+  "productInsightsNoDataSubtitle": "वस्तु अन्तर्दृष्टि हेर्न बिक्री र सिङ्क गर्नुहोस्",
+  "productInsightsCachedDataBanner": "क्यास गरिएको वस्तु अन्तर्दृष्टि देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।",
+  "productInsightsDeadStockItemsLabel": "नचल्ने स्टक",
+  "productInsightsLockedValueLabel": "अड्किएको मूल्य",
+  "productInsightsProfitNote": "नाफा अनुमानित हो (बिक्री मूल्य - लागत मूल्य) x बिक्री मात्रा। यसमा व्यवसायिक खर्च बाँडेर घटाइएको छैन। लागत मूल्य नभएका वस्तु नाफा सूचीमा समावेश हुँदैनन्।",
+  "productInsightsTopProfitProductsTitle": "उच्च नाफा वस्तु",
+  "productInsightsProfitLabel": "नाफा",
+  "productInsightsFastMovers7dTitle": "छिटो बिक्ने वस्तु (७ दिन)",
+  "productInsightsQtySold7dLabel": "७ दिनको बिक्री मात्रा",
+  "productInsightsDeadStockTitle": "नचल्ने स्टक",
+  "productInsightsNoSalesYet": "अहिलेसम्म बिक्री छैन",
+  "productInsightsLastSaleLabel": "अन्तिम बिक्री",
+  "productInsightsCostNotSet": "लागत सेट छैन",
+  "productInsightsValueLabel": "मूल्य",
+  "reportsInvoicesSubtitle": "इनभ्वाइस बनाउनुहोस्, जारी गर्नुहोस् र भुक्तानी लिनुहोस्",
+  "reportsLedgerTitle": "लेजर",
+  "reportsLedgerSubtitle": "एकीकृत वित्तीय अडिट ट्रेल",
+  "ledgerNoEntriesTitle": "लेजर प्रविष्टि छैन",
+  "ledgerNoEntriesSubtitle": "बिक्री, खर्च, भुक्तानी र फिर्ता रकम यहाँ देखिनेछन्।",
+  "appName": "SME Digital",
   "newSale": "नयाँ बिक्री",
   "searchProducts": "सामान खोज्नुहोस्",
   "saveCashSale": "नगद बिक्री सेभ",
@@ -24,14 +97,158 @@
   "addExpense": "खर्च थप्नुहोस्",
   "productName": "सामानको नाम",
   "customerName": "ग्राहकको नाम",
+  "businessLabel": "व्यवसाय",
   "phone": "फोन",
+  "emailLabel": "इमेल",
+  "panVatLabel": "PAN/VAT",
   "price": "मूल्य",
   "stock": "स्टक",
   "amount": "रकम",
   "note": "टिप्पणी",
+  "dateLabel": "मिति",
   "save": "सेभ",
+  "saveChanges": "परिवर्तन सेभ गर्नुहोस्",
   "cancel": "रद्द",
+  "continueLabel": "जारी राख्नुहोस्",
+  "createLabel": "सिर्जना गर्नुहोस्",
+  "deleteLabel": "मेटाउनुहोस्",
   "dashboardOverview": "ड्यासबोर्ड सारांश",
+  "failedToLoadDashboard": "ड्यासबोर्ड लोड गर्न सकिएन",
+  "loadingLabel": "लोड हुँदैछ",
+  "errorLabel": "त्रुटि",
+  "criticalLabel": "गम्भीर",
+  "warningLabel": "चेतावनी",
+  "clearLabel": "सफा",
+  "unknownLabel": "अज्ञात",
+  "alertsLabel": "सूचनाहरू",
+  "openLabel": "खोल्नुहोस्",
+  "alertsFeedMarkAllRead": "सबै पढियो चिन्ह लगाउनुहोस्",
+  "alertsFeedMarkRead": "पढियो",
+  "alertsFeedEverythingStableSubtitle": "अहिले सबै ठीक देखिन्छ",
+  "alertsActionUnavailable": "यो अलर्टको कार्य अहिले उपलब्ध छैन",
+  "alertCount": "{count} सूचना",
+  "@alertCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "alertsCountWithStatus": "{count} सूचना ({status})",
+  "@alertsCountWithStatus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "lowStockItemsTitle": "कम स्टक वस्तुहरू",
+  "checkingStock": "स्टक जाँच्दै...",
+  "unableLoadLowStockData": "कम स्टक डेटा लोड गर्न सकिएन",
+  "allProductsAboveThreshold": "सबै सामानहरू थ्रेसहोल्डभन्दा माथि छन्।",
+  "stockLeftCount": "{count} बाँकी",
+  "@stockLeftCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "quickActionsTitle": "छिटो कार्यहरू",
+  "recordPay": "भुक्तानी रेकर्ड",
+  "businessHealth": "व्यवसाय स्वास्थ्य",
+  "businessHealthCachedDataBanner": "क्यास गरिएको विश्लेषण डेटा देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।",
+  "businessHealthProfitSnapshotTitle": "नाफा झलक",
+  "businessHealthEstimatedProfitLabel": "अनुमानित नाफा",
+  "businessHealthOutstandingCreditLabel": "बाँकी उधारो",
+  "businessHealthProfitMarginLabel": "नाफा मार्जिन",
+  "businessHealthCashRiskLabel": "नगद जोखिम",
+  "businessHealthCashOutlookTitle": "नगद पूर्वानुमान",
+  "businessHealthExpectedIncomingLabel": "अपेक्षित आम्दानी",
+  "businessHealthExpectedOutgoingLabel": "अपेक्षित खर्च",
+  "businessHealthNetOutlookNextDays": "अर्को {days} दिनको खुद पूर्वानुमान: NPR {amount}",
+  "@businessHealthNetOutlookNextDays": {
+    "placeholders": {
+      "days": {"type": "int"},
+      "amount": {}
+    }
+  },
+  "businessHealthProfitSnapshotNote": "यहाँको अनुमानित नाफा सरल सञ्चालन झलक हो (आजको बिक्री - आजको खर्च)। वस्तु-स्तर नाफा रिपोर्टले लागत मूल्य प्रयोग गर्छ र यो कुलसँग ठ्याक्कै मिल्न नपर्न सक्छ।",
+  "businessHealthCreditRiskSummaryTitle": "उधारो जोखिम सारांश",
+  "businessHealthStockHealthTitle": "स्टक स्वास्थ्य",
+  "businessHealthFastMoversTitle": "छिटो बिक्ने वस्तु",
+  "businessHealthAlertsPreviewTitle": "अलर्ट झलक",
+  "businessHealthDaysShort": "{count}दिन",
+  "@businessHealthDaysShort": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "businessHealthNoLowStockAlerts": "अहिले कम स्टक अलर्ट छैन",
+  "businessHealthLowStockItemsCount": "{count} कम-स्टक वस्तु",
+  "@businessHealthLowStockItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "businessHealthNoActiveAlerts": "कुनै सक्रिय अलर्ट छैन",
+  "businessHealthNoFastMovers7d": "पछिल्लो ७ दिनमा छिटो बिक्ने वस्तु छैन",
+  "businessHealthSevenDayQtySoldLabel": "७ दिनमा बिक्री मात्रा",
+  "thresholdLabel": "सीमा",
+  "revenueLabel": "आम्दानी",
+  "customerLabel": "ग्राहक",
+  "creditAging": "उधारो उमेर",
+  "creditAgingOverdueOnly": "समय नाघेको मात्र",
+  "creditAgingHighRiskOnly": "उच्च जोखिम मात्र",
+  "creditAgingNoDataTitle": "उधारो उमेर डेटा छैन",
+  "creditAgingNoDataSubtitle": "छनोट गरिएका फिल्टरमा कुनै ग्राहक छैन",
+  "creditAgingCachedDataBanner": "क्यास गरिएको उधारो उमेर डेटा देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।",
+  "creditAgingSummaryTitle": "उधारो उमेर सारांश",
+  "creditAgingOutstandingLabel": "कुल बाँकी",
+  "creditAgingOverdueLabel": "समय नाघेको",
+  "creditAgingHighRiskCustomersCount": "{count} उच्च जोखिम ग्राहक",
+  "@creditAgingHighRiskCustomersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditAgingBucketsTitle": "उमेर समूह",
+  "creditAgingBucket0to7": "0–7 दिन",
+  "creditAgingBucket8to30": "8–30 दिन",
+  "creditAgingBucket31to60": "31–60 दिन",
+  "creditAgingBucket60Plus": "60+ दिन",
+  "creditAgingOldestDueLabel": "सबैभन्दा पुरानो बाँकी",
+  "creditAgingDaysCount": "{count} दिन",
+  "@creditAgingDaysCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "invoices": "इनभ्वाइसहरू",
+  "invoiceLabel": "इनभ्वाइस",
+  "invoicePdfTitle": "बिल",
+  "draftLabel": "ड्राफ्ट",
+  "invoiceDueShortLabel": "बुझाउने मिति",
+  "invoiceListNewInvoice": "नयाँ इनभ्वाइस",
+  "invoiceListNoInvoicesTitle": "अहिलेसम्म इनभ्वाइस छैन",
+  "invoiceListNoInvoicesSubtitle": "पहिलो इनभ्वाइस बनाउनुहोस् र अफलाइनमै जारी गर्नुहोस्।",
+  "invoiceListCreateInvoiceAction": "इनभ्वाइस बनाउनुहोस्",
+  "invoiceListDraftFallback": "ड्राफ्ट",
+  "invoiceListDraftNotIssued": "ड्राफ्ट (जारी गरिएको छैन)",
+  "invoiceListTotalsSummary": "कुल: NPR {total}   •   बाकी: NPR {balance}",
+  "@invoiceListTotalsSummary": {
+    "placeholders": {
+      "total": {},
+      "balance": {}
+    }
+  },
   "netAfterExpenses": "खर्चपछि बाँकी",
   "cashflowHealth": "नगद प्रवाह अवस्था",
   "creditExposure": "उधारो जोखिम",
@@ -64,4 +281,488 @@
   "switchToSignup": "साइन अपमा जानुहोस्",
   "switchToLogin": "लगइनमा जानुहोस्",
   "forgotPasswordHint": "पासवर्ड रिसेटका लागि सहयोग टोलीलाई सम्पर्क गर्नुहोस्।"
+  ,
+  "offlineMode": "अफलाइन मोड",
+  "syncingShort": "सिंक हुँदै…",
+  "syncingChanges": "{count} परिवर्तन सिंक हुँदै…",
+  "@syncingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayLabel": "आज",
+  "thisWeekLabel": "यो हप्ता",
+  "thisMonthLabel": "यो महिना",
+  "allLabel": "सबै",
+  "walkInCustomer": "वाक-इन ग्राहक",
+  "nprLabel": "NPR",
+  "itemsLabel": "वस्तुहरू",
+  "paymentsLabel": "भुक्तानीहरू",
+  "totalLabel": "कुल जम्मा",
+  "totalAmountLabel": "कुल रकम",
+  "saleDetailsTitle": "बिक्री विवरण",
+  "saleNotFoundTitle": "बिक्री फेला परेन",
+  "saleNotFoundSubtitle": "यो बिक्री हटाइएको हुन सक्छ",
+  "salesNoSalesYetTitle": "अहिलेसम्म बिक्री छैन",
+  "salesNoSalesYetTodaySubtitle": "आजको पहिलो बिक्री रेकर्ड गर्न + थिच्नुहोस्",
+  "salesNoTransactionsInPeriodSubtitle": "यो अवधिमा कुनै कारोबार छैन",
+  "salesNoProductsYetTitle": "अहिलेसम्म सामान छैन",
+  "salesNoProductsQuickCreateHint": "सामानको नाम खोजेर यहींबाट छिटो सिर्जना गर्नुहोस्।",
+  "salesNoMatchForQuery": "\"{query}\" फेला परेन",
+  "@salesNoMatchForQuery": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "salesCreateProductQuicklyCta": "सामान छिट्टै सिर्जना गर्नुहोस्",
+  "salesCreateProductQuicklyFor": "\"{query}\" छिट्टै सिर्जना गर्नुहोस्",
+  "@salesCreateProductQuicklyFor": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "salesCreateProductQuicklySubtitle": "बिक्री मूल्य मात्र हालेर बिक्री जारी राख्नुहोस्",
+  "salesQuickAddProductTitle": "छिटो सामान थप्नुहोस्",
+  "salesQuickCreditCustomerTitle": "छिटो उधारो ग्राहक",
+  "salesCreditRiskWarningTitle": "उधारो जोखिम चेतावनी",
+  "salesCreditRiskExistingCustomerMarked": "अहिलेको ग्राहक \"{name}\" लाई {label} चिन्ह लगाइएको छ।",
+  "@salesCreditRiskExistingCustomerMarked": {
+    "placeholders": {
+      "name": {},
+      "label": {}
+    }
+  },
+  "salesCreditRiskOutstandingNpr": "बाँकी: NPR {amount}",
+  "@salesCreditRiskOutstandingNpr": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "salesCreditRiskOldestDueDays": "सबैभन्दा पुरानो बक्यौता: {count} दिन",
+  "@salesCreditRiskOldestDueDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesCreditRiskScore": "जोखिम स्कोर: {score}",
+  "@salesCreditRiskScore": {
+    "placeholders": {
+      "score": {}
+    }
+  },
+  "salesCreditRiskContinueWarning": "थप उधारो दिन सहज लागेमा मात्र जारी राख्नुहोस्।",
+  "salesCartItemsCount": "{count} वस्तु",
+  "@salesCartItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchCustomersHint": "ग्राहक खोज्नुहोस्…",
+  "failedToLoadCustomers": "ग्राहक लोड गर्न सकिएन",
+  "noCustomersFoundTitle": "ग्राहक फेला परेन",
+  "customersEmptySubtitle": "सुरु गर्न \"ग्राहक थप्नुहोस्\" थिच्नुहोस्।",
+  "customersTryDifferentSearchSubtitle": "अर्को नाम वा फोन नम्बर प्रयास गर्नुहोस्।",
+  "deleteCustomerDialogTitle": "ग्राहक मेटाउने?",
+  "customerDeletePermanentBody": "\"{name}\" स्थायी रूपमा हटाइनेछ।",
+  "@customerDeletePermanentBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "owesYouLabel": "तपाईंलाई तिर्न बाँकी",
+  "creditLabel": "क्रेडिट",
+  "recordPaymentTooltip": "भुक्तानी रेकर्ड",
+  "editCustomerTitle": "ग्राहक सम्पादन",
+  "fullNameLabel": "पूरा नाम",
+  "customerNameRequired": "नाम आवश्यक छ",
+  "phoneOptionalLabel": "फोन नम्बर (वैकल्पिक)",
+  "addressOptionalLabel": "ठेगाना (वैकल्पिक)",
+  "streetCityHint": "सडक, शहर",
+  "notesOptionalLabel": "नोट (वैकल्पिक)",
+  "customerNotesHint": "थप नोटहरू",
+  "customerSaveFailedTryAgain": "ग्राहक सेभ गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
+  "searchProductsHint": "सामान खोज्नुहोस्…",
+  "failedToLoadProducts": "सामान लोड गर्न सकिएन",
+  "productsEmptySubtitle": "सुरु गर्न \"सामान थप्नुहोस्\" थिच्नुहोस्।",
+  "deleteProductDialogTitle": "सामान मेटाउने?",
+  "productDeletePermanentBody": "\"{name}\" स्थायी रूपमा हटाइनेछ।",
+  "@productDeletePermanentBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "lowStockBadgeLabel": "कम स्टक",
+  "rsLabel": "रु",
+  "adjustStockLabel": "स्टक मिलाउनुहोस्",
+  "editProductTitle": "सामान सम्पादन",
+  "productNameLabel": "सामानको नाम",
+  "productNameRequired": "नाम आवश्यक छ",
+  "categoryOptionalLabel": "श्रेणी (वैकल्पिक)",
+  "productCategoryHint": "जस्तै स्न्याक्स, पेय पदार्थ",
+  "sellPriceLabel": "बिक्री मूल्य",
+  "enterValidPrice": "मान्य मूल्य लेख्नुहोस्",
+  "costPriceLabel": "खरिद मूल्य",
+  "openingStockLabel": "सुरुआती स्टक",
+  "lowStockThresholdLabel": "कम स्टक सीमा",
+  "lowStockThresholdHint": "अलर्ट बन्द गर्न ०",
+  "enterValidThreshold": "मान्य सीमा लेख्नुहोस्",
+  "unitLabel": "एकाइ",
+  "productSaveFailedTryAgain": "सामान सेभ गर्न सकेन। फेरि प्रयास गर्नुहोस्।",
+  "productDetailsTitle": "सामान विवरण",
+  "productNotFoundTitle": "सामान फेला परेन",
+  "productNotFoundSubtitle": "यो सामान हटाइएको हुन सक्छ",
+  "marginLabel": "मार्जिन",
+  "stockHistoryTitle": "स्टक इतिहास",
+  "noStockMovementsYetTitle": "अहिलेसम्म स्टक चलन छैन",
+  "customerDetailsTitle": "ग्राहक विवरण",
+  "customerNotFoundTitle": "ग्राहक फेला परेन",
+  "customerNotFoundSubtitle": "यो ग्राहक हटाइएको हुन सक्छ",
+  "outstandingBalanceLabel": "बाकी रकम",
+  "recordPaymentLabel": "भुक्तानी रेकर्ड",
+  "transactionHistoryTitle": "कारोबार इतिहास",
+  "loadingTransactions": "कारोबार लोड हुँदैछ...",
+  "failedToLoadCustomerTransactions": "ग्राहक कारोबार लोड गर्न सकिएन",
+  "noTransactionsYetTitle": "अहिलेसम्म कारोबार छैन",
+  "paymentReceivedLabel": "भुक्तानी प्राप्त",
+  "creditSaleLabel": "उधार बिक्री",
+  "riskExplanationTitle": "जोखिम व्याख्या",
+  "oldestOverdueLabel": "सबैभन्दा पुरानो बक्यौता",
+  "averageDaysToPayLabel": "औसत भुक्तानी दिन",
+  "onTimeRateLabel": "समयमै भुक्तानी दर",
+  "outstandingSpikeLabel": "बाकी रकम वृद्धि",
+  "daysValue": "{count} दिन",
+  "@daysValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysValueDecimal": "{value} दिन",
+  "@daysValueDecimal": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "oldestDueChipDays": "सबैभन्दा पुरानो बक्यौता: {days} दिन",
+  "@oldestDueChipDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "highLabel": "उच्च",
+  "mediumLabel": "मध्यम",
+  "lowLabel": "कम",
+  "normalLabel": "सामान्य",
+  "failedToLoadExpenses": "खर्च लोड गर्न सकिएन",
+  "expensesEmptySubtitle": "पहिलो खर्च रेकर्ड गर्न \"खर्च थप्नुहोस्\" थिच्नुहोस्।",
+  "expenseCategoryRent": "भाडा",
+  "expenseCategoryTransport": "यातायात",
+  "expenseCategoryUtilities": "युटिलिटी",
+  "expenseCategorySalary": "तलब",
+  "expenseCategoryOther": "अन्य",
+  "categoryLabel": "श्रेणी",
+  "failedToSaveWithError": "सेभ गर्न सकिएन: {error}",
+  "@failedToSaveWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "enterValidAmount": "मान्य रकम लेख्नुहोस्",
+  "amountCannotExceedOutstandingBalance": "रकम बाँकी उधारो भन्दा बढी हुन सक्दैन",
+  "paymentRecordedSuccessfully": "भुक्तानी सफलतापूर्वक रेकर्ड भयो",
+  "failedToRecordPaymentTryAgain": "भुक्तानी रेकर्ड गर्न सकेन। फेरि प्रयास गर्नुहोस्।",
+  "creditCustomerLabel": "उधारो ग्राहक",
+  "paymentDetailsTitle": "भुक्तानी विवरण",
+  "amountReceivedLabel": "प्राप्त रकम",
+  "fullLabel": "पूरै",
+  "paymentMethodLabelTitle": "भुक्तानी विधि",
+  "balanceLabel": "बाकी",
+  "notesLabel": "नोट",
+  "typeLabel": "प्रकार",
+  "addStockLabel": "स्टक थप्नुहोस्",
+  "removeStockLabel": "स्टक घटाउनुहोस्",
+  "quantityLabel": "परिमाण",
+  "egTenHint": "जस्तै १०",
+  "reasonLabel": "कारण",
+  "additionalDetailsHint": "थप विवरण…",
+  "saveAdjustmentLabel": "समायोजन सेभ गर्नुहोस्",
+  "enterValidQuantity": "मान्य परिमाण लेख्नुहोस्",
+  "failedToAdjustStockTryAgain": "स्टक समायोजन गर्न सकेन। फेरि प्रयास गर्नुहोस्।",
+  "currentStockValue": "हालको स्टक: {value}",
+  "@currentStockValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "serverHasNewerDataPullRetry": "सर्भरमा नयाँ डाटा छ। नयाँ डाटा तानेर फेरि प्रयास गर्नुहोस्।",
+  "syncFailedWillRetry": "सिंक असफल भयो। फेरि प्रयास हुनेछ।",
+  "pendingChangesCount": "{count} परिवर्तन बाँकी",
+  "@pendingChangesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pullRetryShort": "तान्नुहोस्+फेरि",
+  "syncNowLabel": "अहिले सिंक"
+  ,
+  "syncDiagnosticsTitle": "सिंक डायग्नोस्टिक्स",
+  "clearFailedRowsTooltip": "असफल पंक्ति हटाउनुहोस्",
+  "clearFailedRowsConfirmTitle": "असफल सिंक पंक्तिहरू हटाउने?",
+  "clearFailedRowsConfirmBody": "यो डेमो/परीक्षण सफाइका लागि हो। असफल अफलाइन परिवर्तनहरू स्थानीय सिंक क्यूबाट हटाइनेछन्।",
+  "clearFailedAction": "असफल हटाउनुहोस्",
+  "clearedFailedRowsCount": "{count} असफल सिंक पंक्ति हटाइयो",
+  "@clearedFailedRowsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retrySyncTooltip": "फेरि सिंक",
+  "refreshLabel": "रिफ्रेस",
+  "pendingLabel": "बाँकी",
+  "ackedLabel": "स्वीकृत",
+  "failedLabel": "असफल",
+  "noSyncQueueItemsTitle": "सिंक क्यू खाली छ",
+  "noSyncQueueItemsSubtitle": "अफलाइन परिवर्तन र सिंक त्रुटिहरू यहाँ देखिनेछन्।",
+  "retryCountShort": "पुन:प्रयास {count}",
+  "@retryCountShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statusLabel": "स्थिति",
+  "entityIdLabel": "इकाइ ID",
+  "opIdLabel": "अपरेशन ID",
+  "retriesLabel": "पुन:प्रयास",
+  "createdLabel": "सिर्जना",
+  "updatedLabel": "अपडेट",
+  "lastErrorLabel": "अन्तिम त्रुटि",
+  "copiedErrorDetails": "त्रुटि विवरण कपी गरियो",
+  "copyLabel": "कपी"
+  ,
+  "retry": "फेरि प्रयास",
+  "somethingWentWrong": "केही समस्या भयो",
+  "itemLabel": "सामान",
+  "termsLabel": "शर्तहरू",
+  "pdfGenerationFailedPrefix": "PDF बनाउन असफल",
+  "syncTelemetrySummary": "स्वीकृत {acked} • असफल {failed} • तानिएको {pulled} • {durationMs}ms",
+  "@syncTelemetrySummary": {
+    "placeholders": {
+      "acked": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "pulled": {
+        "type": "int"
+      },
+      "durationMs": {
+        "type": "int"
+      }
+    }
+  },
+  "invoiceDetailTitle": "इनभ्वाइस विवरण",
+  "invoiceDetailNotFound": "इनभ्वाइस भेटिएन",
+  "invoiceDetailDraftFallback": "ड्राफ्ट इनभ्वाइस",
+  "invoiceIssueDateLabel": "जारी मिति",
+  "invoiceNotIssued": "जारी गरिएको छैन",
+  "invoiceDueDateLabel": "बुझाउने मिति",
+  "subtotalLabel": "जम्मा",
+  "discountLabel": "छुट",
+  "vatLabel": "भ्याट",
+  "paidLabel": "तिरेको",
+  "invoiceDetailNoItems": "कुनै सामान छैन",
+  "invoicePaymentsTitle": "भुक्तानीहरू",
+  "invoicePaymentsEmpty": "भुक्तानी रेकर्ड छैन",
+  "actionsLabel": "कार्यहरू",
+  "issueLabel": "जारी गर्नुहोस्",
+  "invoiceRecordPaymentLabel": "भुक्तानी रेकर्ड",
+  "invoicePdfRetry": "PDF पुन: प्रयास",
+  "invoicePdfRegenerate": "PDF पुन: बनाउनुहोस्",
+  "invoicePdfGenerate": "PDF बनाउनुहोस्",
+  "invoicePdfShare": "PDF सेयर",
+  "printLabel": "प्रिन्ट",
+  "invoiceIssuedSuccess": "इनभ्वाइस सफलतापूर्वक जारी भयो",
+  "invoicePdfGeneratedSuccess": "PDF सफलतापूर्वक बन्यो",
+  "invoiceBalanceSummary": "बाकी: {value}",
+  "@invoiceBalanceSummary": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "noteOptionalLabel": "नोट (वैकल्पिक)",
+  "invoiceEnterValidAmount": "सही रकम हाल्नुहोस्",
+  "invoicePaymentRecordedSuccess": "भुक्तानी रेकर्ड भयो",
+  "invoiceCreateTitle": "इनभ्वाइस बनाउनुहोस्",
+  "invoiceDetailsTitle": "इनभ्वाइस विवरण",
+  "invoiceCustomerIdOptional": "ग्राहक ID (वैकल्पिक)",
+  "invoiceDiscountLabel": "इनभ्वाइस छुट",
+  "invoiceAddLine": "लाइन थप्नुहोस्",
+  "invoiceSaveDraft": "ड्राफ्ट सेभ",
+  "invoiceIssuing": "जारी गर्दै...",
+  "invoiceIssueAction": "इनभ्वाइस जारी गर्नुहोस्",
+  "invoiceNoActiveStore": "सक्रिय व्यवसाय/स्टोर भेटिएन। फेरि लगइन गर्नुहोस्।",
+  "invoiceAddAtLeastOneItem": "कम्तीमा एक सामान थप्नुहोस्",
+  "invoiceLineItemName": "सामानको नाम",
+  "requiredLabel": "अनिवार्य",
+  "invoiceProductIdOptional": "उत्पादन ID (वैकल्पिक)",
+  "qtyLabel": "परिमाण",
+  "invoiceQtyPositive": "परिमाण ० भन्दा बढी",
+  "rateLabel": "दर",
+  "invalidLabel": "अमान्य",
+  "settingsSectionBusiness": "व्यवसाय",
+  "businessSettings": "व्यवसाय सेटिङ",
+  "taxSettingsTitle": "कर सेटिङ",
+  "settingsBusinessSettingsSubtitle": "नाम, ठेगाना, मुद्रा",
+  "settingsTaxSettingsSubtitle": "VAT / PAN / कर दर",
+  "settingsSectionTeam": "टोली",
+  "userManagementTitle": "प्रयोगकर्ता व्यवस्थापन",
+  "subscriptionTitle": "सदस्यता",
+  "settingsUserManagementSubtitle": "कर्मचारी बोलाउनुहोस्, भूमिका सेट गर्नुहोस्",
+  "settingsSubscriptionSubtitle": "योजना, बिलिङ विवरण",
+  "settingsSectionPreferences": "प्राथमिकताहरू",
+  "englishLabel": "अंग्रेजी",
+  "nepaliLabel": "नेपाली",
+  "settingsSectionAccount": "खाता",
+  "settingsProfileSubtitle": "आफ्नो प्रोफाइल हेर्नुहोस् र सम्पादन गर्नुहोस्",
+  "settingsSectionAbout": "बारेमा",
+  "settingsSyncDiagnosticsSubtitle": "क्यू, पुन:प्रयास, सिंक त्रुटिहरू",
+  "versionLabel": "संस्करण",
+  "signOutConfirmTitle": "साइन आउट गर्ने?",
+  "signOutConfirmBody": "तपाईं लगइन स्क्रिनमा फर्कनुहुनेछ।",
+  "signOutLabel": "साइन आउट",
+  "myStoreLabel": "मेरो स्टोर",
+  "storePhoneLabel": "स्टोर फोन",
+  "storeAddressLabel": "स्टोर ठेगाना",
+  "businessTypeLabel": "व्यवसाय प्रकार",
+  "currencyLabel": "मुद्रा",
+  "roleLabel": "भूमिका"
+  ,
+  "authLandingSubtitle": "तपाईंको पसलको डिजिटल लेजर।\nछिटो। अफलाइन। भरपर्दो।",
+  "authLandingFeatureFastSales": "१० सेकेन्डभित्र बिक्री रेकर्ड गर्नुहोस्",
+  "authLandingFeatureOfflineSync": "अफलाइन काम गर्छ, इन्टरनेट हुँदा सिंक हुन्छ",
+  "authLandingFeatureCreditTracking": "ग्राहक उधार भरपर्दो रूपमा ट्र्याक गर्नुहोस्",
+  "authLandingStartFree": "फ्रि सुरु गर्नुहोस्",
+  "authForgotResetTitle": "आफ्नो पासवर्ड रिसेट गर्नुहोस्",
+  "authForgotResetBody": "आफ्नो दर्ता गरिएको फोन नम्बर हाल्नुहोस्, हामी रिसेट निर्देशन पठाउनेछौं।",
+  "authForgotSuccessBanner": "यो नम्बरमा खाता भएमा रिसेट निर्देशन प्राप्त हुनेछ। थप सहयोग चाहियो भने सपोर्टमा सम्पर्क गर्नुहोस्।",
+  "authForgotBackToLogin": "लगइनमा फर्कनुहोस्",
+  "phoneNumberLabel": "फोन नम्बर",
+  "authForgotSendResetInstructions": "रिसेट निर्देशन पठाउनुहोस्",
+  "authBackLabel": "फर्कनुहोस्",
+  "authBrandSubtitle": "व्यवसाय व्यवस्थापक",
+  "businessSettingsAddressHint": "सडक, सहर, जिल्ला",
+  "businessSettingsAddressOptionalLabel": "ठेगाना (वैकल्पिक)",
+  "businessSettingsNameLabel": "व्यवसाय नाम",
+  "businessSettingsNameRequired": "नाम आवश्यक छ",
+  "businessSettingsPhoneOptionalLabel": "व्यवसाय फोन (वैकल्पिक)",
+  "businessSettingsSaveFailed": "सेभ गर्न सकिएन। इन्टरनेट जाँचेर फेरि प्रयास गर्नुहोस्।",
+  "businessSettingsSaved": "व्यवसाय सेटिङ सेभ भयो",
+  "businessTypeElectronics": "इलेक्ट्रोनिक्स",
+  "businessTypeGrocery": "किराना",
+  "businessTypePharmacy": "फार्मेसी",
+  "businessTypeRestaurant": "रेस्टुरेन्ट",
+  "businessTypeRetail": "खुद्रा",
+  "nextLabel": "अर्को",
+  "skipLabel": "छोड्नुहोस्",
+  "otherLabel": "अन्य",
+  "ownerLabel": "मालिक",
+  "onboardingBusinessTypeGeneralStore": "जनरल स्टोर",
+  "onboardingDefaultMeasurementUnit": "पूर्वनिर्धारित नाप एकाइ",
+  "onboardingDoneOpenStore": "सकियो - मेरो पसल खोल्नुहोस्",
+  "onboardingEnableTaxVat": "कर (VAT) सक्षम गर्नुहोस्",
+  "onboardingNoTaxApplied": "कर लागू छैन",
+  "onboardingSetupStoreTitle": "आफ्नो पसल सेटअप गर्नुहोस्",
+  "onboardingStepOfTotal": "चरण {step} / {total}",
+  "@onboardingStepOfTotal": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingTaxWillApply": "बिक्रीमा कर लागू हुनेछ",
+  "onboardingUnitKg": "केजी",
+  "onboardingUnitLitre": "लिटर",
+  "onboardingUnitOverrideHint": "तपाईंले प्रत्येक सामानमा फरक राख्न सक्नुहुन्छ।",
+  "onboardingUnitPacket": "प्याकेट",
+  "onboardingUnitPiece": "थान",
+  "subscriptionFeatureBasicReports": "आधारभूत रिपोर्ट",
+  "subscriptionFeatureBasicReportsSubtitle": "बिक्री र उधारो रिपोर्ट",
+  "subscriptionFeatureCloudSync": "क्लाउड सिंक",
+  "subscriptionFeatureCloudSyncSubtitle": "धेरै डिभाइस सिंक",
+  "subscriptionFeatureCustomerLedger": "ग्राहक लेजर",
+  "subscriptionFeatureCustomerLedgerSubtitle": "उधारो ग्राहक ट्रयाक गर्नुहोस्",
+  "subscriptionFeatureInvoiceGeneration": "इनभ्वाइस बनाउने",
+  "subscriptionFeatureInvoiceGenerationSubtitle": "PDF इनभ्वाइस र बिलिङ",
+  "subscriptionFeatureProductManagement": "सामान व्यवस्थापन",
+  "subscriptionFeatureProductManagementSubtitle": "१०० वस्तुसम्म",
+  "subscriptionFeatureSalesRecording": "बिक्री रेकर्डिङ",
+  "subscriptionFeatureSalesRecordingSubtitle": "असीमित नगद र उधारो बिक्री",
+  "subscriptionFreePlanBadge": "फ्री योजना",
+  "subscriptionFreePlanIncludes": "फ्री योजनामा समावेश",
+  "subscriptionFreePlanSubtitle": "मुख्य सुविधाहरू निःशुल्क प्रयोग गर्नुहोस्",
+  "subscriptionFreePlanTitle": "SME Digital Free",
+  "subscriptionProComingSoon": "Pro योजना चाँडै आउँदैछ। प्रतीक्षा गर्नुहोस्!",
+  "subscriptionUpgradeToPro": "Pro मा अपग्रेड",
+  "taxSettingsEnableVat": "VAT सक्षम गर्नुहोस्",
+  "taxSettingsEnableVatSubtitle": "बिक्रीमा VAT स्वतः लागू गर्नुहोस्",
+  "taxSettingsPanHint": "९ अङ्कको PAN",
+  "taxSettingsPanOptionalLabel": "PAN नम्बर (वैकल्पिक)",
+  "taxSettingsSaveAction": "कर सेटिङ सेभ गर्नुहोस्",
+  "taxSettingsSaveFailed": "सेभ गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
+  "taxSettingsSaved": "कर सेटिङ सेभ भयो",
+  "taxSettingsVatRateLabel": "VAT दर (%)",
+  "userManagementInviteComingSoon": "निमन्त्रणा सुविधा चाँडै आउँदैछ",
+  "userManagementInviteStaffDialogBody": "निमन्त्रणा गर्नुपर्ने कर्मचारीको फोन नम्बर लेख्नुहोस्।",
+  "userManagementInviteStaffMember": "कर्मचारी निमन्त्रणा गर्नुहोस्",
+  "userManagementInviteStaffSubtitle": "पसल व्यवस्थापनका लागि कर्मचारी बोलाउनुहोस्",
+  "userManagementInviteStaffTitle": "कर्मचारी निमन्त्रणा",
+  "userManagementNoStaffMembers": "अहिलेसम्म कर्मचारी सदस्य छैनन्",
+  "userManagementOwnerFullAccess": "मालिक · पूर्ण पहुँच",
+  "userManagementSendInvite": "निमन्त्रणा पठाउनुहोस्",
+  "userManagementStaffMembers": "कर्मचारी सदस्यहरू",
+  "highRiskLabel": "उच्च जोखिम",
+  "mediumRiskLabel": "मध्यम जोखिम",
+  "lowRiskLabel": "कम जोखिम",
+  "infoLabel": "जानकारी",
+  "paymentMethodCashLabel": "नगद",
+  "paymentMethodBankLabel": "बैंक",
+  "paymentMethodQrLabel": "QR",
+  "paymentMethodCreditLabel": "उधारो",
+  "invoiceStatusDraftLabel": "ड्राफ्ट",
+  "invoiceStatusIssuedLabel": "जारी",
+  "invoiceStatusPaidLabel": "तिरेको",
+  "invoiceStatusOverdueLabel": "म्याद नाघेको",
+  "invoiceStatusCancelledLabel": "रद्द"
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../sales/presentation/credit_payment_screen.dart';
@@ -18,11 +20,12 @@ class CustomerDetailScreen extends ConsumerWidget {
     final riskMetrics = ref.watch(customerRiskMetricsProvider);
     final currFmt = NumberFormat('#,##0.00');
     final dateFmt = DateFormat('MMM d, y · h:mm a');
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Customer Details'),
+        title: Text(l10n.customerDetailsTitle),
         backgroundColor: AppColors.surface,
         actions: [
           IconButton(
@@ -61,10 +64,10 @@ class CustomerDetailScreen extends ConsumerWidget {
               ),
           data: (customer) {
             if (customer == null) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.person_outline_rounded,
-                title: 'Customer not found',
-                subtitle: 'This customer may have been removed',
+                title: l10n.customerNotFoundTitle,
+                subtitle: l10n.customerNotFoundSubtitle,
               );
             }
             final hasDebt = customer.balance > 0;
@@ -134,12 +137,12 @@ class CustomerDetailScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Outstanding Balance',
+                                  l10n.outstandingBalanceLabel,
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'NPR ${currFmt.format(customer.balance)}',
+                                  '${l10n.nprLabel} ${currFmt.format(customer.balance)}',
                                   style: Theme.of(
                                     context,
                                   ).textTheme.headlineSmall?.copyWith(
@@ -161,7 +164,9 @@ class CustomerDetailScreen extends ConsumerWidget {
                           width: double.infinity,
                           child: FilledButton.icon(
                             icon: const Icon(Icons.payments_outlined, size: 16),
-                            label: const Text('Record Payment'),
+                            label: Text(
+                              l10n.recordPaymentLabel,
+                            ),
                             onPressed:
                                 () => Navigator.of(context)
                                     .push(
@@ -196,7 +201,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                 ],
 
                 const SizedBox(height: AppSpacing.lg),
-                SectionHeader('Transaction History'),
+                SectionHeader(l10n.transactionHistoryTitle),
                 const SizedBox(height: AppSpacing.sm),
 
                 ledgerAsync.when(
@@ -207,10 +212,12 @@ class CustomerDetailScreen extends ConsumerWidget {
                             vertical: AppSpacing.lg,
                           ),
                           child: Column(
-                            children: const [
+                            children: [
                               CircularProgressIndicator(),
                               SizedBox(height: AppSpacing.md),
-                              Text('Loading transactions...'),
+                              Text(
+                                l10n.loadingTransactions,
+                              ),
                             ],
                           ),
                         ),
@@ -221,7 +228,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                             () => ref.invalidate(
                               customerLedgerProvider(customerId),
                             ),
-                        message: 'Failed to load customer transactions',
+                        message: l10n.failedToLoadCustomerTransactions,
                       ),
                   data: (entries) {
                     if (entries.isEmpty) {
@@ -230,7 +237,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Text(
-                              'No transactions yet',
+                              l10n.noTransactionsYetTitle,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: AppColors.muted),
                             ),
@@ -302,8 +309,8 @@ class CustomerDetailScreen extends ConsumerWidget {
                                             children: [
                                               Text(
                                                 isPayment
-                                                    ? 'Payment Received'
-                                                    : 'Credit Sale',
+                                                    ? l10n.paymentReceivedLabel
+                                                    : l10n.creditSaleLabel,
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .bodyMedium
@@ -323,7 +330,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                                           ),
                                         ),
                                         Text(
-                                          '${isPayment ? '-' : '+'}NPR ${currFmt.format(amount)}',
+                                          '${isPayment ? '-' : '+'}${l10n.nprLabel} ${currFmt.format(amount)}',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
@@ -366,10 +373,11 @@ class _RiskSummaryBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = risk.riskLevel.toLowerCase();
-    final (label, color) = switch (level) {
-      'red' => ('High Risk', AppColors.error),
-      'yellow' => ('Medium Risk', AppColors.warning),
-      _ => ('Low Risk', AppColors.success),
+    final label = riskLevelLabel(context, level);
+    final color = switch (level) {
+      'red' => AppColors.error,
+      'yellow' => AppColors.warning,
+      _ => AppColors.success,
     };
     return Wrap(
       spacing: 8,
@@ -400,7 +408,7 @@ class _RiskSummaryBadge extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
             child: Text(
-              'Oldest due: ${risk.oldestDueDays}d',
+              AppLocalizations.of(context)!.oldestDueChipDays(risk.oldestDueDays),
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -437,7 +445,7 @@ class _RiskExplanationPanel extends StatelessWidget {
               Icon(Icons.insights_outlined, size: 18, color: accent),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Risk Explanation',
+                AppLocalizations.of(context)!.riskExplanationTitle,
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -446,23 +454,25 @@ class _RiskExplanationPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           _RiskReasonRow(
-            label: 'Oldest overdue',
-            value: '${risk.oldestDueDays} days',
+            label: AppLocalizations.of(context)!.oldestOverdueLabel,
+            value: AppLocalizations.of(context)!.daysValue(risk.oldestDueDays),
             severity: _factorSeverity(risk.factors.oldestDueFactor),
           ),
           _RiskReasonRow(
-            label: 'Average days to pay',
-            value: '${risk.avgDaysToPay.toStringAsFixed(1)} days',
+            label: AppLocalizations.of(context)!.averageDaysToPayLabel,
+            value: AppLocalizations.of(context)!.daysValueDecimal(
+              risk.avgDaysToPay.toStringAsFixed(1),
+            ),
             severity: _factorSeverity(risk.factors.avgDaysToPayFactor),
           ),
           _RiskReasonRow(
-            label: 'On-time rate',
+            label: AppLocalizations.of(context)!.onTimeRateLabel,
             value: '$onTimePct%',
             severity: _inverseFactorSeverity(risk.factors.lateBehaviorFactor),
           ),
           _RiskReasonRow(
-            label: 'Outstanding spike',
-            value: _spikeText(risk.factors.outstandingSpikeFactor),
+            label: AppLocalizations.of(context)!.outstandingSpikeLabel,
+            value: _spikeText(context, risk.factors.outstandingSpikeFactor),
             severity: _factorSeverity(risk.factors.outstandingSpikeFactor),
           ),
         ],
@@ -540,9 +550,10 @@ _RiskSeverity _inverseFactorSeverity(double lateBehaviorFactor) {
   return _RiskSeverity.low;
 }
 
-String _spikeText(double factor) {
-  if (factor >= 0.66) return 'High';
-  if (factor >= 0.33) return 'Medium';
-  if (factor > 0) return 'Low';
-  return 'Normal';
+String _spikeText(BuildContext context, double factor) {
+  final l10n = AppLocalizations.of(context)!;
+  if (factor >= 0.66) return l10n.highLabel;
+  if (factor >= 0.33) return l10n.mediumLabel;
+  if (factor > 0) return l10n.lowLabel;
+  return l10n.normalLabel;
 }

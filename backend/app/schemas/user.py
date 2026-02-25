@@ -74,5 +74,8 @@ class AuthProfileOut(BaseModel):
     role: str = "owner"
     store_id: str | None = None
     store_name: str | None = None
+    store_address: str | None = None
+    store_phone: str | None = None
+    business_type: str | None = None
     locale_default: str | None = None
     currency: str | None = None

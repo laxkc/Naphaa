@@ -12,6 +12,11 @@ import '../../products/domain/product.dart';
 import '../../products/presentation/product_form_screen.dart';
 import '../../products/presentation/products_screen.dart';
 import '../../reports/presentation/credit_report_screen.dart';
+import '../../reports/presentation/credit_aging_report_screen.dart';
+import '../../reports/presentation/business_health_screen.dart';
+import '../../reports/presentation/alerts_feed_screen.dart';
+import '../../reports/domain/alert_item.dart';
+import '../../billing/presentation/invoice_list_screen.dart';
 import '../../sales/presentation/create_sale_screen.dart';
 import '../../sales/presentation/sales_list_screen.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -23,6 +28,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(dashboardSummaryProvider);
     final lowStock = ref.watch(lowStockProductsProvider);
+    final alerts = ref.watch(alertsUnreadFeedProvider);
     final localeCode = ref.watch(localeControllerProvider).languageCode;
     final l10n = AppLocalizations.of(context)!;
 
@@ -35,7 +41,7 @@ class DashboardScreen extends ConsumerWidget {
               ref.invalidate(lowStockProductsProvider);
               ref.invalidate(productsListProvider);
             },
-            message: 'Failed to load dashboard',
+            message: l10n.failedToLoadDashboard,
           ),
       data: (data) {
         final sales = data.todaySales;
@@ -69,6 +75,9 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _DashboardTopRow(alerts: alerts, l10n: l10n),
+                const SizedBox(height: AppSpacing.sm),
+
                 // ── hero card ──────────────────────────────────────────────
                 _HeroCard(
                   sales: sales,
@@ -114,6 +123,142 @@ class DashboardScreen extends ConsumerWidget {
       return _HealthStatus(l10n.watchlist, AppColors.warning);
     }
     return _HealthStatus(l10n.risky, AppColors.error);
+  }
+}
+
+class _DashboardTopRow extends StatelessWidget {
+  const _DashboardTopRow({required this.alerts, required this.l10n});
+
+  final AsyncValue<List<AlertItem>> alerts;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final (count, bellColor, badgeColor, icon, statusLabel) = alerts.when(
+      loading:
+          () => (
+            0,
+            AppColors.muted,
+            AppColors.muted,
+            Icons.notifications_outlined,
+            l10n.loadingLabel,
+          ),
+      error:
+          (_, __) => (
+            0,
+            AppColors.warning,
+            AppColors.warning,
+            Icons.notifications_active_outlined,
+            l10n.errorLabel,
+          ),
+      data: (items) {
+        final critical =
+            items.where((a) => a.severity.toLowerCase() == 'critical').length;
+        final warn =
+            items.where((a) => a.severity.toLowerCase() == 'warn').length;
+        final count = items.length;
+        if (critical > 0) {
+          return (
+            count,
+            AppColors.error,
+            AppColors.error,
+            Icons.notifications_active_rounded,
+            l10n.criticalLabel,
+          );
+        }
+        if (warn > 0) {
+          return (
+            count,
+            AppColors.warning,
+            AppColors.warning,
+            Icons.notifications_active_outlined,
+            l10n.warningLabel,
+          );
+        }
+        return (
+          count,
+          AppColors.label,
+          AppColors.success,
+          Icons.notifications_none_rounded,
+          l10n.clearLabel,
+        );
+      },
+    );
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.dashboard,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (count > 0)
+                Text(
+                  l10n.alertCount(count),
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+            ],
+          ),
+        ),
+        Material(
+          color: AppColors.surface,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AlertsFeedScreen()),
+              );
+            },
+            child: Tooltip(
+              message:
+                  count > 0
+                      ? l10n.alertsCountWithStatus(count, statusLabel)
+                      : l10n.alertsLabel,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(icon, color: bellColor, size: 22),
+                    if (count > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          height: 16,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: badgeColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white, width: 1.2),
+                          ),
+                          child: Text(
+                            count > 9 ? '9+' : '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -372,6 +517,7 @@ class _HealthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,11 +530,15 @@ class _HealthCard extends StatelessWidget {
                 color: AppColors.muted,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                l10n.cashflowHealth,
-                style: Theme.of(context).textTheme.titleSmall,
+              Expanded(
+                child: Text(
+                  l10n.cashflowHealth,
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: AppSpacing.sm),
               StatusChip(label: status.label, color: status.color),
             ],
           ),
@@ -489,20 +639,21 @@ class _LowStockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(
+            children: [
+              const Icon(
                 Icons.inventory_2_outlined,
                 size: 16,
                 color: AppColors.muted,
               ),
-              SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.sm),
               Text(
-                'Low stock items',
+                l10n.lowStockItemsTitle,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ],
@@ -510,19 +661,19 @@ class _LowStockCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           lowStock.when(
             loading:
-                () => const Text(
-                  'Checking stock...',
+                () => Text(
+                  l10n.checkingStock,
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
             error:
-                (_, __) => const Text(
-                  'Unable to load low stock data',
+                (_, __) => Text(
+                  l10n.unableLoadLowStockData,
                   style: TextStyle(fontSize: 12, color: AppColors.error),
                 ),
             data: (items) {
               if (items.isEmpty) {
-                return const Text(
-                  'All products are above threshold.',
+                return Text(
+                  l10n.allProductsAboveThreshold,
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 );
               }
@@ -564,7 +715,7 @@ class _LowStockCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              '${p.stockQty.toStringAsFixed(0)} left',
+                              l10n.stockLeftCount(p.stockQty.toStringAsFixed(0)),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -617,7 +768,7 @@ class _QuickActions extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'QUICK ACTIONS',
+          l10n.quickActionsTitle,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: AppColors.muted,
             letterSpacing: 1.0,
@@ -629,20 +780,20 @@ class _QuickActions extends ConsumerWidget {
             final actions = <_QuickActionItem>[
               _QuickActionItem(
                 icon: Icons.receipt_outlined,
-                label: 'New Sale',
+                label: l10n.newSale,
                 color: AppColors.primary,
                 onTap: () => _pushAfterFrame(context, const CreateSaleScreen()),
               ),
               _QuickActionItem(
                 icon: Icons.payments_outlined,
-                label: 'Record Pay',
+                label: l10n.recordPay,
                 color: AppColors.warning,
                 onTap:
                     () => _pushAfterFrame(context, const CreditReportScreen()),
               ),
               _QuickActionItem(
                 icon: Icons.request_page_outlined,
-                label: 'Expense',
+                label: l10n.expenses,
                 color: AppColors.error,
                 onTap:
                     () => _showSheetAfterFrame(
@@ -652,7 +803,7 @@ class _QuickActions extends ConsumerWidget {
               ),
               _QuickActionItem(
                 icon: Icons.history_rounded,
-                label: 'Sales',
+                label: l10n.sales,
                 color: AppColors.primaryLight,
                 onTap:
                     () => _pushAfterFrame(
@@ -662,7 +813,7 @@ class _QuickActions extends ConsumerWidget {
               ),
               _QuickActionItem(
                 icon: Icons.group_outlined,
-                label: 'Customers',
+                label: l10n.customers,
                 color: AppColors.primary,
                 onTap:
                     () => _pushAfterFrame(
@@ -672,7 +823,7 @@ class _QuickActions extends ConsumerWidget {
               ),
               _QuickActionItem(
                 icon: Icons.inventory_2_outlined,
-                label: 'Products',
+                label: l10n.products,
                 color: AppColors.success,
                 onTap:
                     () => _pushAfterFrame(
@@ -682,14 +833,45 @@ class _QuickActions extends ConsumerWidget {
               ),
               _QuickActionItem(
                 icon: Icons.person_add_outlined,
-                label: 'Add Customer',
+                label: l10n.addCustomer,
                 color: AppColors.primaryLight,
                 onTap:
                     () => _pushAfterFrame(context, const CustomerFormScreen()),
               ),
               _QuickActionItem(
+                icon: Icons.receipt_long_outlined,
+                label: l10n.invoices,
+                color: AppColors.primary,
+                onTap:
+                    () => _pushAfterFrame(context, const InvoiceListScreen()),
+              ),
+              _QuickActionItem(
+                icon: Icons.health_and_safety_outlined,
+                label: l10n.businessHealth,
+                color: AppColors.success,
+                onTap:
+                    () =>
+                        _pushAfterFrame(context, const BusinessHealthScreen()),
+              ),
+              _QuickActionItem(
+                icon: Icons.schedule_outlined,
+                label: l10n.creditAging,
+                color: AppColors.warning,
+                onTap:
+                    () => _pushAfterFrame(
+                      context,
+                      const CreditAgingReportScreen(),
+                    ),
+              ),
+              _QuickActionItem(
+                icon: Icons.notification_important_outlined,
+                label: l10n.alertsLabel,
+                color: AppColors.error,
+                onTap: () => _pushAfterFrame(context, const AlertsFeedScreen()),
+              ),
+              _QuickActionItem(
                 icon: Icons.add_box_outlined,
-                label: 'Add Product',
+                label: l10n.addProduct,
                 color: AppColors.success,
                 onTap:
                     () => _pushAfterFrame(context, const ProductFormScreen()),
@@ -698,17 +880,19 @@ class _QuickActions extends ConsumerWidget {
 
             const spacing = AppSpacing.sm;
             const columns = 4;
+            const itemHeight = 90.0;
             final itemWidth =
                 (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
             return Wrap(
               spacing: spacing,
-              runSpacing: spacing,
+              runSpacing: AppSpacing.sm,
               children:
                   actions
                       .map(
                         (item) => SizedBox(
                           width: itemWidth,
+                          height: itemHeight,
                           child: _QuickActionButton(
                             icon: item.icon,
                             label: item.label,
@@ -764,27 +948,29 @@ class _QuickActionButton extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.sm,
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: color.withAlpha(45),
                 ),
-                child: Icon(icon, size: 20, color: color),
+                child: Icon(icon, size: 19, color: color),
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: 5),
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: AppColors.labelSub,
                   fontWeight: FontWeight.w600,
+                  height: 1.2,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,

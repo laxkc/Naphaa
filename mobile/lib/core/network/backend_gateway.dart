@@ -52,6 +52,30 @@ class BackendGateway {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String, dynamic>> updateStore({
+    required String storeId,
+    String? name,
+    String? address,
+    String? phone,
+    String? businessType,
+    String? localeDefault,
+    String? currency,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (name != null && name.trim().isNotEmpty) payload['name'] = name.trim();
+    if (address != null) payload['address'] = address.trim();
+    if (phone != null) payload['phone'] = phone.trim();
+    if (businessType != null) payload['business_type'] = businessType.trim();
+    if (localeDefault != null && localeDefault.trim().isNotEmpty) {
+      payload['locale_default'] = localeDefault.trim();
+    }
+    if (currency != null && currency.trim().isNotEmpty) {
+      payload['currency'] = currency.trim();
+    }
+    final res = await _dio.patch('/stores/$storeId', data: payload);
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   Future<Map<String, dynamic>> getAuthMe() async {
     final res = await _dio.get('/auth/me');
     return Map<String, dynamic>.from(res.data as Map);

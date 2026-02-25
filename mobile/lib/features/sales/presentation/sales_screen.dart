@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -25,19 +26,24 @@ class SalesScreen extends ConsumerWidget {
     SalesController controller,
     String initialName,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: initialName.trim());
     final priceCtrl = TextEditingController();
     await showDialog<void>(
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: const Text('Quick Add Product'),
+            title: Text(
+              l10n.salesQuickAddProductTitle,
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Product name'),
+                  decoration: InputDecoration(
+                    labelText: l10n.productName,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -45,14 +51,16 @@ class SalesScreen extends ConsumerWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(labelText: 'Selling price'),
+                  decoration: InputDecoration(
+                    labelText: l10n.sellPriceLabel,
+                  ),
                 ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () async {
@@ -64,7 +72,7 @@ class SalesScreen extends ConsumerWidget {
                   );
                   if (ctx.mounted) Navigator.of(ctx).pop();
                 },
-                child: const Text('Create'),
+                child: Text(l10n.createLabel),
               ),
             ],
           ),
@@ -76,26 +84,31 @@ class SalesScreen extends ConsumerWidget {
     WidgetRef ref,
     SalesController controller,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     await showDialog<void>(
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: const Text('Quick Credit Customer'),
+            title: Text(
+              l10n.salesQuickCreditCustomerTitle,
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Customer name'),
+                  decoration: InputDecoration(
+                    labelText: l10n.customerName,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone (optional)',
+                  decoration: InputDecoration(
+                    labelText: l10n.phoneOptionalLabel,
                   ),
                 ),
               ],
@@ -103,7 +116,7 @@ class SalesScreen extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () async {
@@ -120,7 +133,9 @@ class SalesScreen extends ConsumerWidget {
                   );
                   if (ctx.mounted) Navigator.of(ctx).pop();
                 },
-                child: const Text('Save Credit Sale'),
+                child: Text(
+                  l10n.saveCreditSale,
+                ),
               ),
             ],
           ),
@@ -156,20 +171,36 @@ class SalesScreen extends ConsumerWidget {
         context: context,
         builder: (ctx) {
           final color = level == 'red' ? AppColors.error : AppColors.warning;
-          final label = level == 'red' ? 'High Risk' : 'Medium Risk';
+          final label = riskLevelLabel(context, level);
+          final l10n = AppLocalizations.of(ctx)!;
           return AlertDialog(
-            title: const Text('Credit Risk Warning'),
+            title: Text(
+              l10n.salesCreditRiskWarningTitle,
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Existing customer "${existing.name}" is marked $label.'),
+                Text(
+                  l10n.salesCreditRiskExistingCustomerMarked(
+                    existing.name,
+                    label,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Text(
-                  'Outstanding: NPR ${risk.outstandingAmount.toStringAsFixed(2)}',
+                  l10n.salesCreditRiskOutstandingNpr(
+                    risk.outstandingAmount.toStringAsFixed(2),
+                  ),
                 ),
-                Text('Oldest due: ${risk.oldestDueDays} days'),
-                Text('Risk score: ${risk.riskScore}'),
+                Text(
+                  l10n.salesCreditRiskOldestDueDays(
+                    risk.oldestDueDays,
+                  ),
+                ),
+                Text(
+                  l10n.salesCreditRiskScore(risk.riskScore.toString()),
+                ),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -178,8 +209,8 @@ class SalesScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: color.withValues(alpha: 0.20)),
                   ),
-                  child: const Text(
-                    'Continue only if you are comfortable extending more credit.',
+                  child: Text(
+                    l10n.salesCreditRiskContinueWarning,
                   ),
                 ),
               ],
@@ -187,11 +218,11 @@ class SalesScreen extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Continue'),
+                child: Text(l10n.continueLabel),
               ),
             ],
           );
@@ -319,9 +350,11 @@ class SalesScreen extends ConsumerWidget {
                             Icons.add_box_outlined,
                             color: AppColors.primary,
                           ),
-                          title: Text('Create "$query" quickly'),
-                          subtitle: const Text(
-                            'Enter only selling price and continue sale',
+                          title: Text(
+                            l10n.salesCreateProductQuicklyFor(query),
+                          ),
+                          subtitle: Text(
+                            l10n.salesCreateProductQuicklySubtitle,
                           ),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap:
@@ -395,10 +428,10 @@ class _QuickCreateProductEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (query.trim().isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.inventory_2_outlined,
-        title: 'No products yet',
-        subtitle: 'Search a product name and quick create it from here.',
+        title: AppLocalizations.of(context)!.salesNoProductsYetTitle,
+        subtitle: AppLocalizations.of(context)!.salesNoProductsQuickCreateHint,
       );
     }
     return Center(
@@ -414,14 +447,16 @@ class _QuickCreateProductEmpty extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'No match for "$query"',
+              AppLocalizations.of(context)!.salesNoMatchForQuery(query),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               onPressed: onCreateQuick,
               icon: const Icon(Icons.add_box_outlined),
-              label: const Text('Create Product Quickly'),
+              label: Text(
+                AppLocalizations.of(context)!.salesCreateProductQuicklyCta,
+              ),
             ),
           ],
         ),
@@ -483,7 +518,7 @@ class _ProductRow extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        '${formatCurrency(price, localeCode)}  ·  Stock $stock',
+        '${formatCurrency(price, localeCode)}  ·  ${AppLocalizations.of(context)!.stock} $stock',
         style: const TextStyle(fontSize: 12, color: AppColors.muted),
       ),
       trailing: _QuantityStepper(
@@ -618,7 +653,7 @@ class _CartFooter extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  '$totalQty item${totalQty != 1 ? 's' : ''}',
+                  l10n.salesCartItemsCount(totalQty),
                   style: const TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 const Spacer(),

@@ -145,6 +145,9 @@ def auth_me(
         role=user.role,
         store_id=store.id if store else None,
         store_name=store.name if store else None,
+        store_address=store.address if store else None,
+        store_phone=store.phone if store else None,
+        business_type=store.business_type if store else None,
         locale_default=store.locale_default if store else None,
         currency=store.currency if store else None,
     )

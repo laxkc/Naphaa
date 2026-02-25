@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/l10n/context_i18n.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../customers/presentation/customer_detail_screen.dart';
 import '../../products/presentation/product_detail_screen.dart';
 import '../domain/alert_item.dart';
@@ -101,10 +101,7 @@ class AlertActionRouter {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          context.tr(
-            'Action not available yet for this alert',
-            'यो अलर्टको कार्य अहिले उपलब्ध छैन',
-          ),
+          AppLocalizations.of(context)!.alertsActionUnavailable,
         ),
       ),
     );

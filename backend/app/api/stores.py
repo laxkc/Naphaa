@@ -29,6 +29,9 @@ def create_store(
     store = Store(
         owner_user_id=user.id,
         name=payload.name,
+        address=(payload.address or "").strip() or None,
+        phone=(payload.phone or "").strip() or None,
+        business_type=(payload.business_type or "").strip() or None,
         locale_default=locale_default,
         currency=payload.currency,
         created_by=user.id,
@@ -67,7 +70,12 @@ def update_store(
         raise_api_error(status.HTTP_404_NOT_FOUND, "STORE_NOT_FOUND", "Store not found")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(store, field, value)
+        if field in {"name", "address", "phone", "business_type", "locale_default", "currency"}:
+            if isinstance(value, str):
+                value = value.strip() or None
+                if field in {"name", "locale_default", "currency"} and value is None:
+                    continue
+            setattr(store, field, value)
     store.updated_by = user.id
     store.device_id = device_id
 

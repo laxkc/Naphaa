@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/core/l10n/display_labels.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -35,16 +36,14 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
   }
 
   Future<void> _recordPayment() async {
+    final l10n = AppLocalizations.of(context)!;
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
-      setState(() => _error = context.tr('Enter a valid amount', 'मान्य रकम लेख्नुहोस्'));
+      setState(() => _error = l10n.enterValidAmount);
       return;
     }
     if (amount > widget.outstandingBalance) {
-      setState(() => _error = context.tr(
-            'Amount cannot exceed outstanding balance',
-            'रकम बाँकी उधारो भन्दा बढी हुन सक्दैन',
-          ));
+      setState(() => _error = l10n.amountCannotExceedOutstandingBalance);
       return;
     }
     setState(() {
@@ -65,7 +64,7 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.tr('Payment recorded successfully', 'भुक्तानी सफलतापूर्वक रेकर्ड भयो'),
+              l10n.paymentRecordedSuccessfully,
             ),
           ),
         );
@@ -74,20 +73,18 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = context.tr(
-          'Failed to record payment. Try again.',
-          'भुक्तानी रेकर्ड गर्न सकेन। फेरि प्रयास गर्नुहोस्।',
-        );
+        _error = l10n.failedToRecordPaymentTryAgain;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Record Payment', 'भुक्तानी रेकर्ड गर्नुहोस्')),
+        title: Text(l10n.recordPaymentLabel),
         backgroundColor: AppColors.surface,
       ),
       body: SingleChildScrollView(
@@ -123,7 +120,7 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium),
-                            Text(context.tr('Credit Customer', 'उधारो ग्राहक'),
+                            Text(l10n.creditCustomerLabel,
                                 style: TextStyle(
                                     fontSize: 12, color: AppColors.muted)),
                           ],
@@ -132,11 +129,11 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
                     ],
                   ),
                   const Divider(height: AppSpacing.h),
-                  Text(context.tr('Outstanding Balance', 'बाँकी उधारो'),
+                  Text(l10n.outstandingBalanceLabel,
                       style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 4),
                   Text(
-                    'NPR ${_currFmt.format(widget.outstandingBalance)}',
+                    '${l10n.nprLabel} ${_currFmt.format(widget.outstandingBalance)}',
                     style: Theme.of(context)
                         .textTheme
                         .headlineSmall
@@ -151,7 +148,7 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.h),
-            Text(context.tr('Payment Details', 'भुक्तानी विवरण'),
+            Text(l10n.paymentDetailsTitle,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.md),
             TextFormField(
@@ -159,26 +156,26 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: context.tr('Amount Received', 'प्राप्त रकम'),
+                labelText: l10n.amountReceivedLabel,
                 hintText: '0.00',
-                prefixText: 'NPR ',
+                prefixText: '${l10n.nprLabel} ',
                 suffixIcon: TextButton(
                   onPressed: () => _amountController.text =
                       widget.outstandingBalance.toStringAsFixed(2),
-                  child: Text(context.tr('Full', 'पूरै')),
+                  child: Text(l10n.fullLabel),
                 ),
               ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text(context.tr('Payment Method', 'भुक्तानी विधि'),
+            Text(l10n.paymentMethodLabelTitle,
                 style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.sm,
               children: ['CASH', 'QR', 'BANK'].map((m) {
                 return ChoiceChip(
-                  label: Text(m),
+                  label: Text(paymentMethodLabel(context, m)),
                   selected: _method == m,
                   onSelected: (_) => setState(() => _method = m),
                   showCheckmark: false,
@@ -211,7 +208,7 @@ class _CreditPaymentScreenState extends ConsumerState<CreditPaymentScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : Text(context.tr('Record Payment', 'भुक्तानी रेकर्ड गर्नुहोस्')),
+                    : Text(l10n.recordPaymentLabel),
               ),
             ),
           ],

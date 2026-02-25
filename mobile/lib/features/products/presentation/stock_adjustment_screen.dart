@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/l10n/context_i18n.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -49,10 +49,11 @@ class _StockAdjustmentScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Adjust Stock', 'स्टक मिलाउनुहोस्')),
+        title: Text(l10n.adjustStockLabel),
         backgroundColor: AppColors.surface,
       ),
       body: SingleChildScrollView(
@@ -82,9 +83,8 @@ class _StockAdjustmentScreenState
                         Text(widget.productName,
                             style: Theme.of(context).textTheme.titleMedium),
                         Text(
-                          context.tr(
-                            'Current stock: ${widget.currentStock.toStringAsFixed(0)}',
-                            'हालको स्टक: ${widget.currentStock.toStringAsFixed(0)}',
+                          l10n.currentStockValue(
+                            widget.currentStock.toStringAsFixed(0),
                           ),
                           style: Theme.of(context)
                               .textTheme
@@ -100,14 +100,16 @@ class _StockAdjustmentScreenState
             const SizedBox(height: AppSpacing.h),
 
             // Add / Remove toggle
-            Text(context.tr('Type', 'प्रकार'),
-                style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              l10n.typeLabel,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(
                   child: _TypeBtn(
-                    label: context.tr('Add Stock', 'स्टक थप्नुहोस्'),
+                    label: l10n.addStockLabel,
                     icon: Icons.add_rounded,
                     selected: _isAdd,
                     color: AppColors.success,
@@ -122,7 +124,7 @@ class _StockAdjustmentScreenState
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: _TypeBtn(
-                    label: context.tr('Remove Stock', 'स्टक घटाउनुहोस्'),
+                    label: l10n.removeStockLabel,
                     icon: Icons.remove_rounded,
                     selected: !_isAdd,
                     color: AppColors.error,
@@ -144,8 +146,8 @@ class _StockAdjustmentScreenState
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: context.tr('Quantity', 'परिमाण'),
-                hintText: context.tr('e.g. 10', 'जस्तै १०'),
+                labelText: l10n.quantityLabel,
+                hintText: l10n.egTenHint,
                 prefixIcon: Icon(
                   _isAdd ? Icons.add_circle_outline : Icons.remove_circle_outline,
                   color: _isAdd ? AppColors.success : AppColors.error,
@@ -156,8 +158,10 @@ class _StockAdjustmentScreenState
             const SizedBox(height: AppSpacing.lg),
 
             // Reason chips
-            Text(context.tr('Reason', 'कारण'),
-                style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              l10n.reasonLabel,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.sm,
@@ -187,8 +191,8 @@ class _StockAdjustmentScreenState
             TextField(
               controller: _noteCtl,
               decoration: InputDecoration(
-                labelText: context.tr('Note (optional)', 'टिप्पणी (वैकल्पिक)'),
-                hintText: context.tr('Additional details…', 'थप विवरण…'),
+                labelText: l10n.notesOptionalLabel,
+                hintText: l10n.additionalDetailsHint,
               ),
               maxLines: 2,
             ),
@@ -210,7 +214,7 @@ class _StockAdjustmentScreenState
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : Text(context.tr('Save Adjustment', 'समायोजन सेभ गर्नुहोस्')),
+                    : Text(l10n.saveAdjustmentLabel),
               ),
             ),
           ],
@@ -223,7 +227,7 @@ class _StockAdjustmentScreenState
     final qty = double.tryParse(_qtyCtl.text.trim());
     if (qty == null || qty <= 0) {
       setState(
-        () => _error = context.tr('Enter a valid quantity', 'मान्य परिमाण लेख्नुहोस्'),
+        () => _error = AppLocalizations.of(context)!.enterValidQuantity,
       );
       return;
     }
@@ -247,10 +251,7 @@ class _StockAdjustmentScreenState
     } catch (e) {
       setState(() {
         _saving = false;
-        _error = context.tr(
-          'Failed to adjust stock. Try again.',
-          'स्टक समायोजन गर्न सकेन। फेरि प्रयास गर्नुहोस्।',
-        );
+        _error = AppLocalizations.of(context)!.failedToAdjustStockTryAgain;
       });
     }
   }

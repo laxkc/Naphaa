@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../customers/presentation/customer_detail_screen.dart';
@@ -30,6 +30,7 @@ class BusinessHealthScreen extends ConsumerWidget {
       productMetricsReportProvider(_productParams),
     );
     final currFmt = NumberFormat('#,##0.00');
+    final l10n = AppLocalizations.of(context)!;
     String? sourceOf(AsyncValue<Map<String, dynamic>> async) =>
         async.whenOrNull(data: (data) => data['source']?.toString());
     final usingCachedData =
@@ -40,7 +41,7 @@ class BusinessHealthScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Business Health', 'व्यवसाय स्वास्थ्य')),
+        title: Text(l10n.businessHealth),
         backgroundColor: AppColors.surface,
       ),
       body: RefreshIndicator(
@@ -56,14 +57,11 @@ class BusinessHealthScreen extends ConsumerWidget {
           children: [
             if (usingCachedData) ...[
               _CachedMetricsHintCard(
-                message: context.tr(
-                  'Showing cached intelligence data (offline). Pull to refresh when internet is available.',
-                  'क्यास गरिएको विश्लेषण डेटा देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।',
-                ),
+                message: l10n.businessHealthCachedDataBanner,
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
-            SectionHeader(context.tr('Profit Snapshot', 'नाफा झलक')),
+            SectionHeader(l10n.businessHealthProfitSnapshotTitle),
             const SizedBox(height: AppSpacing.sm),
             businessAsync.when(
               loading: () => const SkeletonListTile(),
@@ -85,7 +83,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr('Sales', 'बिक्री'),
+                              label: l10n.sales,
                               value:
                                   'NPR ${currFmt.format(_toDouble(summary['sales_total']))}',
                               color: AppColors.success,
@@ -95,7 +93,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr('Expenses', 'खर्च'),
+                              label: l10n.expenses,
                               value:
                                   'NPR ${currFmt.format(_toDouble(summary['expenses_total']))}',
                               color: AppColors.error,
@@ -109,7 +107,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr('Est. Profit', 'अनुमानित नाफा'),
+                              label: l10n.businessHealthEstimatedProfitLabel,
                               value:
                                   'NPR ${currFmt.format(_toDouble(summary['profit_est']))}',
                               color:
@@ -122,10 +120,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr(
-                                'Outstanding Credit',
-                                'बाँकी उधारो',
-                              ),
+                              label: l10n.businessHealthOutstandingCreditLabel,
                               value:
                                   'NPR ${currFmt.format(_toDouble(summary['outstanding_total']))}',
                               color: AppColors.warning,
@@ -139,10 +134,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr(
-                                'Profit Margin',
-                                'नाफा मार्जिन',
-                              ),
+                              label: l10n.businessHealthProfitMarginLabel,
                               value:
                                   '${_toDouble(summary['profit_margin']).toStringAsFixed(1)}%',
                               color: AppColors.primary,
@@ -152,7 +144,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr('Cash Risk', 'नगद जोखिम'),
+                              label: l10n.businessHealthCashRiskLabel,
                               value:
                                   (summary['cash_risk_level']?.toString() ??
                                           'low')
@@ -204,7 +196,7 @@ class BusinessHealthScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-            SectionHeader(context.tr('Cash Outlook', 'नगद पूर्वानुमान')),
+            SectionHeader(l10n.businessHealthCashOutlookTitle),
             const SizedBox(height: AppSpacing.sm),
             businessAsync.when(
               loading: () => const SkeletonListTile(),
@@ -225,10 +217,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr(
-                                'Expected Incoming',
-                                'अपेक्षित आम्दानी',
-                              ),
+                              label: l10n.businessHealthExpectedIncomingLabel,
                               value: 'NPR ${currFmt.format(incoming)}',
                               color: AppColors.success,
                               icon: Icons.south_west_rounded,
@@ -237,10 +226,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _HealthStatTile(
-                              label: context.tr(
-                                'Expected Outgoing',
-                                'अपेक्षित खर्च',
-                              ),
+                              label: l10n.businessHealthExpectedOutgoingLabel,
                               value: 'NPR ${currFmt.format(outgoing)}',
                               color: AppColors.error,
                               icon: Icons.north_east_rounded,
@@ -282,9 +268,9 @@ class BusinessHealthScreen extends ConsumerWidget {
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                context.tr(
-                                  'Next ${horizonDays > 0 ? horizonDays : 7} days net outlook: NPR ${currFmt.format(net)}',
-                                  'अर्को ${horizonDays > 0 ? horizonDays : 7} दिनको खुद पूर्वानुमान: NPR ${currFmt.format(net)}',
+                                l10n.businessHealthNetOutlookNextDays(
+                                  horizonDays > 0 ? horizonDays : 7,
+                                  currFmt.format(net),
                                 ),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
@@ -311,10 +297,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      context.tr(
-                        'Estimated Profit here is a simple operational snapshot (today sales - today expenses). Product-level profit reports use cost price and may not match this total exactly.',
-                        'यहाँको अनुमानित नाफा सरल सञ्चालन झलक हो (आजको बिक्री - आजको खर्च)। वस्तु-स्तर नाफा रिपोर्टले लागत मूल्य प्रयोग गर्छ र यो कुलसँग ठ्याक्कै मिल्न नपर्न सक्छ।',
-                      ),
+                      l10n.businessHealthProfitSnapshotNote,
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -325,7 +308,7 @@ class BusinessHealthScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             SectionHeader(
-              context.tr('Credit Risk Summary', 'उधारो जोखिम सारांश'),
+              l10n.businessHealthCreditRiskSummaryTitle,
             ),
             const SizedBox(height: AppSpacing.sm),
             riskAsync.when(
@@ -342,7 +325,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                       _CreditRiskSummaryCard(body: body, currFmt: currFmt),
             ),
             const SizedBox(height: AppSpacing.lg),
-            SectionHeader(context.tr('Stock Health', 'स्टक स्वास्थ्य')),
+            SectionHeader(l10n.businessHealthStockHealthTitle),
             const SizedBox(height: AppSpacing.sm),
             lowStockAsync.when(
               loading: () => const SkeletonListTile(),
@@ -353,7 +336,7 @@ class BusinessHealthScreen extends ConsumerWidget {
               data: (products) => _StockHealthCard(products: products),
             ),
             const SizedBox(height: AppSpacing.lg),
-            SectionHeader(context.tr('Fast Movers', 'छिटो बिक्ने वस्तु')),
+            SectionHeader(l10n.businessHealthFastMoversTitle),
             const SizedBox(height: AppSpacing.sm),
             productMetricsAsync.when(
               loading: () => const SkeletonListTile(),
@@ -367,7 +350,7 @@ class BusinessHealthScreen extends ConsumerWidget {
               data: (body) => _FastMoversCard(body: body),
             ),
             const SizedBox(height: AppSpacing.lg),
-            SectionHeader(context.tr('Alerts Preview', 'अलर्ट झलक')),
+            SectionHeader(l10n.businessHealthAlertsPreviewTitle),
             const SizedBox(height: AppSpacing.sm),
             alertsAsync.when(
               loading: () => const SkeletonListTile(),
@@ -507,7 +490,7 @@ class _CreditRiskSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _RiskSummaryPill(
-                  label: context.tr('Outstanding', 'कुल बाँकी'),
+                  label: AppLocalizations.of(context)!.creditAgingOutstandingLabel,
                   value: 'NPR ${currFmt.format(totalOutstanding)}',
                   color: AppColors.warning,
                 ),
@@ -515,7 +498,7 @@ class _CreditRiskSummaryCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _RiskSummaryPill(
-                  label: context.tr('Overdue', 'समय नाघेको'),
+                  label: AppLocalizations.of(context)!.creditAgingOverdueLabel,
                   value: 'NPR ${currFmt.format(totalOverdue)}',
                   color: AppColors.error,
                 ),
@@ -524,9 +507,8 @@ class _CreditRiskSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            context.tr(
-              '$highRiskCount high-risk customer${highRiskCount == 1 ? '' : 's'}',
-              '$highRiskCount उच्च जोखिम ग्राहक',
+            AppLocalizations.of(context)!.creditAgingHighRiskCustomersCount(
+              highRiskCount,
             ),
             style: Theme.of(
               context,
@@ -537,9 +519,9 @@ class _CreditRiskSummaryCard extends StatelessWidget {
             ...topHighRisk.map(
               (row) => _TapLine(
                 title:
-                    '${row['customer_name'] ?? 'Customer'} • NPR ${currFmt.format(_toDouble(row['outstanding_amount']))}',
+                    '${row['customer_name'] ?? AppLocalizations.of(context)!.customerLabel} • NPR ${currFmt.format(_toDouble(row['outstanding_amount']))}',
                 subtitle:
-                    '${context.tr('Oldest due', 'सबैभन्दा पुरानो बाँकी')}: ${_toInt(row['oldest_due_days'])}${context.tr('d', 'दिन')}',
+                    '${AppLocalizations.of(context)!.creditAgingOldestDueLabel}: ${AppLocalizations.of(context)!.businessHealthDaysShort(_toInt(row['oldest_due_days']))}',
                 color: AppColors.error,
                 onTap:
                     row['customer_id'] == null
@@ -571,10 +553,7 @@ class _StockHealthCard extends StatelessWidget {
     if (products.isEmpty) {
       return AppCard(
         child: Text(
-          context.tr(
-            'No low stock alerts right now',
-            'अहिले कम स्टक अलर्ट छैन',
-          ),
+          AppLocalizations.of(context)!.businessHealthNoLowStockAlerts,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -588,9 +567,8 @@ class _StockHealthCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.tr(
-              '${products.length} low-stock item${products.length == 1 ? '' : 's'}',
-              '${products.length} कम-स्टक वस्तु',
+            AppLocalizations.of(context)!.businessHealthLowStockItemsCount(
+              products.length,
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.warning,
@@ -602,7 +580,7 @@ class _StockHealthCard extends StatelessWidget {
             (p) => _TapLine(
               title: '${p.name} • ${p.stockQty.toStringAsFixed(0)} ${p.unit}',
               subtitle:
-                  '${context.tr('Threshold', 'सीमा')}: ${p.lowStockThreshold.toStringAsFixed(0)}',
+                  '${AppLocalizations.of(context)!.thresholdLabel}: ${p.lowStockThreshold.toStringAsFixed(0)}',
               color: AppColors.warning,
               onTap:
                   () => Navigator.of(context).push(
@@ -628,7 +606,7 @@ class _AlertsPreviewCard extends StatelessWidget {
     if (alerts.isEmpty) {
       return AppCard(
         child: Text(
-          context.tr('No active alerts', 'कुनै सक्रिय अलर्ट छैन'),
+          AppLocalizations.of(context)!.businessHealthNoActiveAlerts,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -677,10 +655,7 @@ class _FastMoversCard extends StatelessWidget {
     if (fast.isEmpty) {
       return AppCard(
         child: Text(
-          context.tr(
-            'No fast movers in the last 7 days',
-            'पछिल्लो ७ दिनमा छिटो बिक्ने वस्तु छैन',
-          ),
+          AppLocalizations.of(context)!.businessHealthNoFastMovers7d,
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
@@ -695,7 +670,7 @@ class _FastMoversCard extends StatelessWidget {
               return _TapLine(
                 title: '${p.productName} • ${p.qtySold7d.toStringAsFixed(0)}',
                 subtitle:
-                    '${context.tr('7-day quantity sold', '७ दिनमा बिक्री मात्रा')} • ${context.tr('Revenue', 'आम्दानी')}: NPR ${p.revenue30d.toStringAsFixed(2)}',
+                    '${AppLocalizations.of(context)!.businessHealthSevenDayQtySoldLabel} • ${AppLocalizations.of(context)!.revenueLabel}: NPR ${p.revenue30d.toStringAsFixed(2)}',
                 color: AppColors.primary,
                 onTap:
                     () => Navigator.of(context).push(

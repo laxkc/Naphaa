@@ -47,6 +47,27 @@ def run_sqlite_compat_migrations() -> None:
         _sqlite_add_column_if_missing(
             conn,
             tables,
+            "stores",
+            "address",
+            "ALTER TABLE stores ADD COLUMN address VARCHAR(500)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "stores",
+            "phone",
+            "ALTER TABLE stores ADD COLUMN phone VARCHAR(32)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "stores",
+            "business_type",
+            "ALTER TABLE stores ADD COLUMN business_type VARCHAR(64)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
             "sync_events",
             "fingerprint",
             "ALTER TABLE sync_events ADD COLUMN fingerprint VARCHAR(64) DEFAULT ''",

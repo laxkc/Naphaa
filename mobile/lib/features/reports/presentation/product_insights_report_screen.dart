@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sme_digital/l10n/app_localizations.dart';
 
-import '../../../core/l10n/context_i18n.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../products/presentation/product_detail_screen.dart';
@@ -33,11 +33,12 @@ class _ProductInsightsReportScreenState
     final reportAsync = ref.watch(productMetricsReportProvider(params));
     final currFmt = NumberFormat('#,##0.00');
     final dateFmt = DateFormat('MMM d');
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text(context.tr('Product Insights', 'वस्तु अन्तर्दृष्टि')),
+        title: Text(l10n.reportsProductInsightsTitle),
         backgroundColor: AppColors.surface,
       ),
       body: Column(
@@ -52,7 +53,7 @@ class _ProductInsightsReportScreenState
               children: [
                 FilterChip(
                   label: Text(
-                    context.tr('Dead Stock Only', 'नचल्ने स्टक मात्र'),
+                    l10n.productInsightsDeadStockOnly,
                   ),
                   selected: _deadStockOnly,
                   onSelected: (v) => setState(() => _deadStockOnly = v),
@@ -111,14 +112,8 @@ class _ProductInsightsReportScreenState
                 if (items.isEmpty) {
                   return EmptyState(
                     icon: Icons.inventory_2_outlined,
-                    title: context.tr(
-                      'No product metrics yet',
-                      'अहिलेसम्म वस्तु मेट्रिक्स छैन',
-                    ),
-                    subtitle: context.tr(
-                      'Create sales and sync to see product insights',
-                      'वस्तु अन्तर्दृष्टि हेर्न बिक्री र सिङ्क गर्नुहोस्',
-                    ),
+                    title: l10n.productInsightsNoDataTitle,
+                    subtitle: l10n.productInsightsNoDataSubtitle,
                   );
                 }
 
@@ -138,10 +133,7 @@ class _ProductInsightsReportScreenState
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                context.tr(
-                                  'Showing cached product insights (offline). Refresh when internet is available.',
-                                  'क्यास गरिएको वस्तु अन्तर्दृष्टि देखाइँदैछ (अफलाइन)। इन्टरनेट आएपछि रिफ्रेस गर्नुहोस्।',
-                                ),
+                                l10n.productInsightsCachedDataBanner,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: AppColors.muted),
                               ),
@@ -156,10 +148,7 @@ class _ProductInsightsReportScreenState
                         children: [
                           Expanded(
                             child: _SummaryMini(
-                              label: context.tr(
-                                'Dead Stock Items',
-                                'नचल्ने स्टक',
-                              ),
+                              label: l10n.productInsightsDeadStockItemsLabel,
                               value: '$deadStockCount',
                               color: AppColors.warning,
                             ),
@@ -167,10 +156,7 @@ class _ProductInsightsReportScreenState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _SummaryMini(
-                              label: context.tr(
-                                'Locked Value',
-                                'अड्किएको मूल्य',
-                              ),
+                              label: l10n.productInsightsLockedValueLabel,
                               value:
                                   'NPR ${currFmt.format(deadStockValueTotal)}',
                               color: AppColors.error,
@@ -192,10 +178,7 @@ class _ProductInsightsReportScreenState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              context.tr(
-                                'Profit is estimated using product cost price (sell price - cost price) x quantity sold. It does not subtract allocated business expenses. Products without cost price are excluded from profit ranking.',
-                                'नाफा अनुमानित हो (बिक्री मूल्य - लागत मूल्य) x बिक्री मात्रा। यसमा व्यवसायिक खर्च बाँडेर घटाइएको छैन। लागत मूल्य नभएका वस्तु नाफा सूचीमा समावेश हुँदैनन्।',
-                              ),
+                              l10n.productInsightsProfitNote,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: AppColors.muted),
                             ),
@@ -205,7 +188,7 @@ class _ProductInsightsReportScreenState
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     SectionHeader(
-                      context.tr('Top Profit Products', 'उच्च नाफा वस्तु'),
+                      l10n.productInsightsTopProfitProductsTitle,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     AppCard(
@@ -215,7 +198,7 @@ class _ProductInsightsReportScreenState
                               return _MetricLine(
                                 title: p.productName,
                                 subtitle:
-                                    '${context.tr('Profit', 'नाफा')}: NPR ${currFmt.format(p.profit30d ?? 0)} • ${context.tr('Revenue', 'आम्दानी')}: NPR ${currFmt.format(p.revenue30d)}',
+                                    '${l10n.productInsightsProfitLabel}: NPR ${currFmt.format(p.profit30d ?? 0)} • ${l10n.revenueLabel}: NPR ${currFmt.format(p.revenue30d)}',
                                 color: AppColors.success,
                                 onTap:
                                     () => Navigator.of(context).push(
@@ -232,10 +215,7 @@ class _ProductInsightsReportScreenState
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     SectionHeader(
-                      context.tr(
-                        'Fast Movers (7d)',
-                        'छिटो बिक्ने वस्तु (७ दिन)',
-                      ),
+                      l10n.productInsightsFastMovers7dTitle,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     AppCard(
@@ -245,7 +225,7 @@ class _ProductInsightsReportScreenState
                               return _MetricLine(
                                 title: p.productName,
                                 subtitle:
-                                    '${context.tr('Qty sold (7d)', '७ दिनको बिक्री मात्रा')}: ${p.qtySold7d.toStringAsFixed(0)} • ${context.tr('Revenue', 'आम्दानी')}: NPR ${currFmt.format(p.revenue30d)}',
+                                    '${l10n.productInsightsQtySold7dLabel}: ${p.qtySold7d.toStringAsFixed(0)} • ${l10n.revenueLabel}: NPR ${currFmt.format(p.revenue30d)}',
                                 color: AppColors.primary,
                                 onTap:
                                     () => Navigator.of(context).push(
@@ -261,7 +241,7 @@ class _ProductInsightsReportScreenState
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    SectionHeader(context.tr('Dead Stock', 'नचल्ने स्टक')),
+                    SectionHeader(l10n.productInsightsDeadStockTitle),
                     const SizedBox(height: AppSpacing.sm),
                     AppCard(
                       child: Column(
@@ -269,23 +249,17 @@ class _ProductInsightsReportScreenState
                             items.where((i) => i.deadStock).take(20).map((p) {
                               final lastSale =
                                   p.lastSaleAt == null
-                                      ? context.tr(
-                                        'No sales yet',
-                                        'अहिलेसम्म बिक्री छैन',
-                                      )
-                                      : '${context.tr('Last sale', 'अन्तिम बिक्री')}: ${dateFmt.format(p.lastSaleAt!.toLocal())}';
+                                      ? l10n.productInsightsNoSalesYet
+                                      : '${l10n.productInsightsLastSaleLabel}: ${dateFmt.format(p.lastSaleAt!.toLocal())}';
                               final deadValue =
                                   p.deadStockValue == null
-                                      ? context.tr(
-                                        'Cost not set',
-                                        'लागत सेट छैन',
-                                      )
+                                      ? l10n.productInsightsCostNotSet
                                       : 'NPR ${currFmt.format(p.deadStockValue)}';
                               return _MetricLine(
                                 title:
                                     '${p.productName} • ${p.stockQty.toStringAsFixed(0)}',
                                 subtitle:
-                                    '$lastSale • ${context.tr('Value', 'मूल्य')}: $deadValue',
+                                    '$lastSale • ${l10n.productInsightsValueLabel}: $deadValue',
                                 color: AppColors.warning,
                                 onTap:
                                     () => Navigator.of(context).push(

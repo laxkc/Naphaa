@@ -29,13 +29,13 @@ class ProductsScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(
                       Icons.search_rounded,
                       size: 19,
                       color: AppColors.muted,
                     ),
-                    hintText: 'Search products…',
+                    hintText: l10n.searchProductsHint,
                   ),
                 ),
               ),
@@ -68,7 +68,7 @@ class ProductsScreen extends ConsumerWidget {
             error:
                 (_, __) => ErrorRetry(
                   onRetry: () => ref.invalidate(productsListProvider),
-                  message: 'Failed to load products',
+                  message: l10n.failedToLoadProducts,
                 ),
             data:
                 (items) =>
@@ -76,7 +76,7 @@ class ProductsScreen extends ConsumerWidget {
                         ? EmptyState(
                           icon: Icons.inventory_2_outlined,
                           title: l10n.manageProducts,
-                          subtitle: 'Tap "Add Product" to get started.',
+                          subtitle: l10n.productsEmptySubtitle,
                           action: l10n.addProduct,
                           onAction:
                               () => Navigator.of(context)
@@ -109,9 +109,10 @@ class ProductsScreen extends ConsumerWidget {
                               confirmDismiss:
                                   (_) => showConfirmDialog(
                                     context,
-                                    title: 'Delete product?',
-                                    body:
-                                        '"${p.name}" will be permanently removed.',
+                                    title: l10n.deleteProductDialogTitle,
+                                    body: l10n.productDeletePermanentBody(
+                                      p.name,
+                                    ),
                                   ),
                               onDismissed: (_) async {
                                 // deletion handled by provider
@@ -137,13 +138,13 @@ class ProductsScreen extends ConsumerWidget {
                                     ),
                                     if (lowStock)
                                       StatusChip(
-                                        label: 'Low stock',
+                                        label: l10n.lowStockBadgeLabel,
                                         color: AppColors.warning,
                                       ),
                                   ],
                                 ),
                                 subtitle: Text(
-                                  'Stock  ${p.stockQty.toStringAsFixed(0)}',
+                                  '${l10n.stock}  ${p.stockQty.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.muted,
@@ -153,7 +154,7 @@ class ProductsScreen extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Rs ${p.sellPrice.toStringAsFixed(2)}',
+                                      '${l10n.rsLabel} ${p.sellPrice.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -162,7 +163,7 @@ class ProductsScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: AppSpacing.xs),
                                     IconButton(
-                                      tooltip: 'Adjust stock',
+                                      tooltip: l10n.adjustStockLabel,
                                       onPressed:
                                           canAdjustStock
                                               ? () => Navigator.of(context)
