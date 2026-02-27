@@ -176,7 +176,6 @@ class _AppShellState extends ConsumerState<AppShell> {
       preferredSize: Size.fromHeight(syncStatus.lastDurationMs != null ? 48 : 34),
       child: Container(
         width: double.infinity,
-        color: bg,
         decoration: BoxDecoration(
           color: bg,
           border: Border(
