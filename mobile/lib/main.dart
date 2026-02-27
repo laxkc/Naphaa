@@ -3,15 +3,19 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sme_digital/core/config/environment_loader.dart';
+import 'package:sme_digital/core/providers/app_providers.dart';
 
 import 'app.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final environment = await EnvironmentLoader.load();
   await SentryFlutter.init(
     (options) {
-      options.dsn = 'https://b0d19d349a705089d8ac1aaf992cc3f6@o4509746385256448.ingest.us.sentry.io/4510942116642816';
+      options.dsn =
+          'https://b0d19d349a705089d8ac1aaf992cc3f6@o4509746385256448.ingest.us.sentry.io/4510942116642816';
       // Adds request headers and IP for users, for more info visit:
       // https://docs.sentry.io/platforms/dart/guides/flutter/data-management/data-collected/
       options.sendDefaultPii = true;
@@ -60,7 +64,12 @@ Future<void> main() async {
 
       runApp(
         SentryWidget(
-          child: const ProviderScope(child: SmeDigitalApp()),
+          child: ProviderScope(
+            overrides: [
+              environmentConfigProvider.overrideWithValue(environment),
+            ],
+            child: const SmeDigitalApp(),
+          ),
         ),
       );
     },

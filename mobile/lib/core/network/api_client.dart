@@ -1,18 +1,20 @@
 import 'package:dio/dio.dart';
 
-import '../config/app_config.dart';
-
 class ApiClient {
-  ApiClient({Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: AppConfig.apiBaseUrl,
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 15),
-            ),
-          );
+  ApiClient({
+    required String baseUrl,
+    int connectTimeoutSeconds = 10,
+    int receiveTimeoutSeconds = 15,
+    Dio? dio,
+  }) : _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: baseUrl,
+               connectTimeout: Duration(seconds: connectTimeoutSeconds),
+               receiveTimeout: Duration(seconds: receiveTimeoutSeconds),
+             ),
+           );
 
   final Dio _dio;
 

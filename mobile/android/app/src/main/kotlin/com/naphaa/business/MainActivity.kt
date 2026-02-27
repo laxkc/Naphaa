@@ -1,4 +1,4 @@
-package com.sme.digital.sme_digital
+package com.naphaa.business
 
 import io.flutter.embedding.android.FlutterActivity
 

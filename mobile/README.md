@@ -17,18 +17,22 @@ flutter pub get
 
 ```bash
 cd mobile
-flutter run
+flutter run --dart-define=APP_ENV=dev
 ```
 
 ## Backend API
 
-The app currently uses this local API base URL:
+API base URL is loaded from environment JSON assets:
 
-- `http://127.0.0.1:8000/api/v1`
+- `assets/env/dev.json`
+- `assets/env/prod.json`
 
-If you run on a physical device/emulator, update the API URL in:
+Select environment with:
 
-- `lib/core/config/app_config.dart`
+```bash
+flutter run --dart-define=APP_ENV=dev
+flutter run --dart-define=APP_ENV=prod
+```
 
 ## Useful commands
 

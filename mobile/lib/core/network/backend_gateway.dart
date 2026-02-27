@@ -32,10 +32,14 @@ class BackendGateway {
     required String phone,
     required String password,
   }) async {
+    // ignore: avoid_print
+    print('[BackendGateway] login → ${_dio.options.baseUrl}/auth/login');
     final res = await _dio.post(
       '/auth/login',
       data: {'phone': phone, 'password': password},
     );
+    // ignore: avoid_print
+    print('[BackendGateway] login response status → ${res.statusCode}');
     return Map<String, dynamic>.from(res.data as Map);
   }
 

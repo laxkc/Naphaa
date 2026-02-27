@@ -71,14 +71,14 @@ Backend URLs:
 ```bash
 cd /Users/laxmankc/Startup/SME/sme-digital/mobile
 flutter pub get
-flutter run --dart-define=API_HOST=127.0.0.1
+flutter run --dart-define=APP_ENV=dev
 ```
 
 Notes:
 
-- iPhone Simulator should use `127.0.0.1`
-- Android emulator usually uses `10.0.2.2`
-- API config lives in `/Users/laxmankc/Startup/SME/sme-digital/mobile/lib/core/config/app_config.dart`
+- API base URL comes from `/Users/laxmankc/Startup/SME/sme-digital/mobile/assets/env/dev.json` or `prod.json`
+- environment selector is `--dart-define=APP_ENV=dev|prod`
+- for custom files, use `--dart-define=APP_ENV_ASSET=assets/env/<name>.json`
 
 ### 3) Tests (optional)
 

@@ -1,6 +1,6 @@
 name: sme_digital
 description: SME Digital Platform - Mobile App for small and medium enterprises.
-version: 1.0.0+1
+version: 1.0.0+2
 publish_to: none
 
 environment:
@@ -83,6 +83,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/env/
 
 sentry:
   upload_debug_symbols: true

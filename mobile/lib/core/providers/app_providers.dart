@@ -30,6 +30,7 @@ import '../../features/reports/domain/ledger_entry.dart';
 import '../../features/reports/domain/product_metric_item.dart';
 import '../../features/sales/sales_controller.dart';
 import '../../features/sales/sales_state.dart';
+import '../config/environment_config.dart';
 import '../network/api_client.dart';
 import '../network/api_error.dart';
 import '../network/backend_gateway.dart';
@@ -46,6 +47,12 @@ final localDatabaseProvider = Provider<LocalDatabase>(
   (ref) => LocalDatabase.instance,
 );
 
+final environmentConfigProvider = Provider<EnvironmentConfig>((ref) {
+  throw UnimplementedError(
+    'environmentConfigProvider must be overridden at app startup.',
+  );
+});
+
 final preferencesProvider = Provider<AppPreferences>((ref) => AppPreferences());
 
 final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
@@ -55,7 +62,20 @@ final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
   return ref.watch(localeControllerProvider).languageCode;
 });
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final env = ref.watch(environmentConfigProvider);
+  const baseUrl =
+      'https://ad8e-2605-b100-32a-f95e-b8d8-22d0-7be3-99d.ngrok-free.app/api/v1';
+  // ignore: avoid_print
+  print('[ApiClient] baseUrl → $baseUrl');
+  return ApiClient(
+    // TEMP (internal testing): hardcoded ngrok backend URL.
+    baseUrl: baseUrl,
+    // baseUrl: env.baseUrl,
+    connectTimeoutSeconds: env.connectTimeoutSeconds,
+    receiveTimeoutSeconds: env.receiveTimeoutSeconds,
+  );
+});
 
 final dioProvider = Provider<Dio>((ref) => ref.watch(apiClientProvider).dio);
 

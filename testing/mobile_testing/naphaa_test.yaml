@@ -1,0 +1,4 @@
+appId: com.naphaa.business
+---
+- launchApp:
+    clearState: true
