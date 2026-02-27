@@ -29,12 +29,8 @@ class SyncQueueScreen extends ConsumerWidget {
                 context: context,
                 builder:
                     (dialogContext) => AlertDialog(
-                      title: Text(
-                        l10n.clearFailedRowsConfirmTitle,
-                      ),
-                      content: Text(
-                        l10n.clearFailedRowsConfirmBody,
-                      ),
+                      title: Text(l10n.clearFailedRowsConfirmTitle),
+                      content: Text(l10n.clearFailedRowsConfirmBody),
                       actions: [
                         TextButton(
                           onPressed:
@@ -54,17 +50,12 @@ class SyncQueueScreen extends ConsumerWidget {
               final db = await ref.read(localDatabaseProvider).database;
               final deleted = await db.delete(
                 'sync_queue',
-                where: 'status = ?',
-                whereArgs: const ['failed'],
+                where: "status IN ('failed', 'blocked')",
               );
               ref.invalidate(syncQueueRowsProvider);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      l10n.clearedFailedRowsCount(deleted),
-                    ),
-                  ),
+                  SnackBar(content: Text(l10n.clearedFailedRowsCount(deleted))),
                 );
               }
             },
@@ -161,21 +152,57 @@ class SyncQueueScreen extends ConsumerWidget {
                     subtitle: l10n.noSyncQueueItemsSubtitle,
                   );
                 }
+                final problemRows =
+                    rows
+                        .where(
+                          (r) => r.status == 'failed' || r.status == 'blocked',
+                        )
+                        .toList();
+                final invalidRows =
+                    problemRows
+                        .where(
+                          (r) => (r.lastError ?? '').toLowerCase().contains(
+                            'invalid',
+                          ),
+                        )
+                        .length;
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                   ),
-                  itemCount: rows.length,
+                  itemCount: rows.length + (problemRows.isEmpty ? 0 : 1),
                   separatorBuilder:
                       (_, __) => const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, i) {
-                    final row = rows[i];
+                    if (problemRows.isNotEmpty && i == 0) {
+                      return InlineBanner(
+                        type:
+                            invalidRows > 0
+                                ? BannerType.warning
+                                : BannerType.error,
+                        message:
+                            invalidRows > 0
+                                ? l10n.syncDiagnosticsInvalidRowsBanner(
+                                  invalidRows,
+                                )
+                                : l10n.syncDiagnosticsFailedRowsBanner(
+                                  problemRows.length,
+                                ),
+                      );
+                    }
+                    final row = rows[problemRows.isEmpty ? i : i - 1];
                     final isConflict = (row.lastError ?? '').contains(
                       'Server has newer data',
                     );
+                    final isInvalid = (row.lastError ?? '')
+                        .toLowerCase()
+                        .contains('invalid');
                     final color = switch (row.status) {
                       'failed' =>
-                        isConflict ? AppColors.warning : AppColors.error,
+                        isConflict || isInvalid
+                            ? AppColors.warning
+                            : AppColors.error,
+                      'blocked' => AppColors.error,
                       'pending' => AppColors.warning,
                       'syncing' => AppColors.primary,
                       _ => AppColors.success,
@@ -188,9 +215,16 @@ class SyncQueueScreen extends ConsumerWidget {
                           Row(
                             children: [
                               StatusChip(
-                                label: row.status.toUpperCase(),
+                                label: _statusLabel(l10n, row.status),
                                 color: color,
                               ),
+                              if (isInvalid) ...[
+                                const SizedBox(width: AppSpacing.xs),
+                                StatusChip(
+                                  label: l10n.invalidLabel,
+                                  color: AppColors.warning,
+                                ),
+                              ],
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Text(
@@ -257,7 +291,11 @@ class SyncQueueScreen extends ConsumerWidget {
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: Text(
-                                  row.updatedAt ?? row.createdAt,
+                                  row.nextRetryAt != null
+                                      ? '${l10n.nextLabel}: ${_displayTs(row.nextRetryAt!)}'
+                                      : _displayTs(
+                                        row.updatedAt ?? row.createdAt,
+                                      ),
                                   textAlign: TextAlign.right,
                                   style: const TextStyle(
                                     fontSize: 11,
@@ -308,8 +346,8 @@ class SyncQueueScreen extends ConsumerWidget {
                 _kv(l10n.entityIdLabel, row.entityId ?? '—'),
                 _kv(l10n.opIdLabel, row.opId ?? '—'),
                 _kv(l10n.retriesLabel, '${row.retryCount}'),
-                _kv(l10n.createdLabel, row.createdAt),
-                _kv(l10n.updatedLabel, row.updatedAt ?? '—'),
+                _kv(l10n.createdLabel, _displayTs(row.createdAt)),
+                _kv(l10n.updatedLabel, _displayTs(row.updatedAt ?? '—')),
                 if ((row.lastError?.isNotEmpty ?? false)) ...[
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -327,11 +365,7 @@ class SyncQueueScreen extends ConsumerWidget {
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                l10n.copiedErrorDetails,
-                              ),
-                            ),
+                            SnackBar(content: Text(l10n.copiedErrorDetails)),
                           );
                         }
                       },
@@ -358,6 +392,33 @@ class SyncQueueScreen extends ConsumerWidget {
       ],
     ),
   );
+
+  String _statusLabel(AppLocalizations l10n, String status) {
+    switch (status.toLowerCase()) {
+      case 'failed':
+        return l10n.failedLabel.toUpperCase();
+      case 'pending':
+        return l10n.pendingLabel.toUpperCase();
+      case 'syncing':
+        return l10n.syncingShort.toUpperCase();
+      case 'blocked':
+        return 'BLOCKED';
+      default:
+        return l10n.ackedLabel.toUpperCase();
+    }
+  }
+
+  String _displayTs(String raw) {
+    if (raw == '—') return raw;
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    final dt = parsed.toLocal();
+    final mm = dt.month.toString().padLeft(2, '0');
+    final dd = dt.day.toString().padLeft(2, '0');
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mi = dt.minute.toString().padLeft(2, '0');
+    return '${dt.year}-$mm-$dd $hh:$mi';
+  }
 }
 
 class _MiniStat extends StatelessWidget {

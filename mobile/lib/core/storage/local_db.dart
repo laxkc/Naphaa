@@ -29,7 +29,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     return _openStrategy.open(
       path: join(dbPath, dbName),
-      version: 11,
+      version: 12,
       onCreate: (db, version) async {
         await _createSchema(db);
       },
@@ -352,6 +352,13 @@ class LocalDatabase {
             )
           ''');
         }
+        if (oldVersion < 12) {
+          try {
+            await db.execute(
+              "ALTER TABLE sync_queue ADD COLUMN next_retry_at TEXT",
+            );
+          } catch (_) {}
+        }
       },
     );
   }
@@ -485,6 +492,7 @@ class LocalDatabase {
         synced INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'pending',
         retry_count INTEGER NOT NULL DEFAULT 0,
+        next_retry_at TEXT,
         last_error TEXT
       )
     ''');

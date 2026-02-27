@@ -61,6 +61,8 @@ class SyncService {
   final AppPreferences _prefs;
   final SessionService _session;
   final Future<List<ConnectivityResult>> Function() _connectivityCheck;
+  static const int _maxRetryCount = 5;
+  static const int _baseRetrySeconds = 5;
 
   Future<int> processPendingSync({required String localeCode}) async {
     final result = await processPendingSyncDetailed(localeCode: localeCode);
@@ -127,12 +129,16 @@ class SyncService {
         localCustomersCount > 0 ||
         localExpensesCount > 0;
 
+    final nowIso = DateTime.now().toIso8601String();
+    final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
     final pending = await db.query(
       'sync_queue',
       where:
-          "synced = 0 AND COALESCE(status, 'pending') IN ('pending', 'failed') "
-          "AND (? IS NULL OR store_id IS NULL OR store_id = ?)",
-      whereArgs: [activeStoreId, activeStoreId],
+          "synced = 0 AND (COALESCE(status, 'pending') = 'pending' OR "
+          "(COALESCE(status, 'pending') = 'failed' AND "
+          "(next_retry_at IS NULL OR next_retry_at <= ?))) "
+          "${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}",
+      whereArgs: hasStoreScope ? [nowIso, activeStoreId] : [nowIso],
       // Prioritize new pending dependencies (e.g. product UPSERT recovery) before
       // retrying older failed rows such as dependent sale events.
       orderBy:
@@ -238,24 +244,32 @@ class SyncService {
               {
                 'synced': acked ? 1 : 0,
                 'status': acked ? 'synced' : 'failed',
+                'next_retry_at':
+                    acked ? null : _nextRetryAtIso(_nextRetryCount(row)),
                 'last_error':
                     acked
                         ? null
                         : (failedByOpId[opId] ??
                             'Sync failed on server. We will retry automatically.'),
+                'retry_count':
+                    acked ? row['retry_count'] : _nextRetryCount(row),
                 'updated_at': now,
               },
               where: 'id = ?',
               whereArgs: [id],
             );
-            if (!acked) {
-              batch.rawUpdate(
-                '''
-                UPDATE sync_queue
-                SET retry_count = COALESCE(retry_count, 0) + 1
-                WHERE id = ?
-                ''',
-                [id],
+            if (!acked && _nextRetryCount(row) >= _maxRetryCount) {
+              batch.update(
+                'sync_queue',
+                {
+                  'status': 'blocked',
+                  'next_retry_at': null,
+                  'last_error':
+                      '${failedByOpId[opId] ?? 'Sync failed on server.'} Max retries reached. Please review in Sync Diagnostics.',
+                  'updated_at': now,
+                },
+                where: 'id = ?',
+                whereArgs: [id],
               );
             }
           }
@@ -279,17 +293,24 @@ class SyncService {
           name: 'app.sync',
         );
         final batch = db.batch();
-        for (final id in ids) {
-          batch.rawUpdate(
-            '''
-            UPDATE sync_queue
-            SET status = 'failed',
-                retry_count = COALESCE(retry_count, 0) + 1,
-                last_error = ?,
-                updated_at = ?
-            WHERE id = ?
-            ''',
-            [safeMsg, now, id],
+        for (final row in rowsWithOpIds) {
+          final id = row['id'] as int;
+          final nextRetryCount = _nextRetryCount(row);
+          final blocked = nextRetryCount >= _maxRetryCount;
+          batch.update(
+            'sync_queue',
+            {
+              'status': blocked ? 'blocked' : 'failed',
+              'retry_count': nextRetryCount,
+              'next_retry_at': blocked ? null : _nextRetryAtIso(nextRetryCount),
+              'last_error':
+                  blocked
+                      ? '$safeMsg Max retries reached. Please review in Sync Diagnostics.'
+                      : safeMsg,
+              'updated_at': now,
+            },
+            where: 'id = ?',
+            whereArgs: [id],
           );
         }
         result = SyncRunResult(
@@ -409,6 +430,20 @@ class SyncService {
         name: 'app.sync',
       );
     }
+  }
+
+  int _nextRetryCount(Map<String, dynamic> row) {
+    final current = (row['retry_count'] as num?)?.toInt() ?? 0;
+    return current + 1;
+  }
+
+  String _nextRetryAtIso(int retryCount) {
+    final retryStep = retryCount <= 0 ? 1 : retryCount;
+    final seconds = _baseRetrySeconds * (1 << (retryStep - 1));
+    final clampedSeconds = seconds > 300 ? 300 : seconds;
+    return DateTime.now()
+        .add(Duration(seconds: clampedSeconds))
+        .toIso8601String();
   }
 
   Future<void> _overwriteCustomerMetricsCache(
@@ -545,22 +580,20 @@ class SyncService {
 
     final now = DateTime.now().toIso8601String();
     for (final productId in productIds) {
+      final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
       final existingPending =
           Sqflite.firstIntValue(
-            await db.rawQuery(
-              '''
+            await db.rawQuery('''
               SELECT 1
               FROM sync_queue
               WHERE entity = 'product'
                 AND entity_id = ?
                 AND operation = 'UPSERT'
                 AND synced = 0
-                AND COALESCE(status, 'pending') IN ('pending', 'syncing', 'failed')
-                AND (? IS NULL OR store_id IS NULL OR store_id = ?)
+                AND COALESCE(status, 'pending') IN ('pending', 'syncing', 'failed', 'blocked')
+                ${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}
               LIMIT 1
-              ''',
-              [productId, activeStoreId, activeStoreId],
-            ),
+              ''', hasStoreScope ? [productId, activeStoreId] : [productId]),
           ) ??
           0;
       if (existingPending == 1) continue;

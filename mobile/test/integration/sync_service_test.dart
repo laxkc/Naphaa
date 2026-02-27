@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sme_digital/core/network/backend_gateway.dart';
 import 'package:sme_digital/core/network/models/sync_models.dart';
 import 'package:sme_digital/core/network/session_service.dart';
@@ -137,6 +138,12 @@ class _FakeSessionService extends SessionService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('ack reconciliation marks only acked outbox rows as synced', () async {
     final db = await createTestDb('sync_service_ack');
     final sql = await db.database;
@@ -192,6 +199,193 @@ void main() {
     expect(rows[1]['status'], 'failed');
     expect(rows[1]['synced'], 0);
     expect((rows[1]['retry_count'] as num?)?.toInt(), 1);
+
+    await db.reset();
+  });
+
+  test('failed row is blocked after max retries', () async {
+    final db = await createTestDb('sync_service_block_after_max_retries');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+    final now = DateTime.now();
+
+    await sql.insert('sync_queue', {
+      'op_id': 'op-block-me',
+      'entity': 'expense',
+      'entity_id': 'e-block',
+      'operation': 'UPSERT',
+      'payload': jsonEncode({
+        'id': 'e-block',
+        'category': 'OTHER',
+        'amount': 5,
+      }),
+      'created_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'synced': 0,
+      'status': 'failed',
+      'retry_count': 4,
+      'next_retry_at':
+          now.subtract(const Duration(seconds: 1)).toIso8601String(),
+    });
+
+    gateway.pushAckBatches.add(const []);
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
+    );
+    final result = await service.processPendingSyncDetailed(localeCode: 'en');
+    expect(result.pendingAtStart, 1);
+    expect(result.failedEvents, 1);
+
+    final row = (await sql.query('sync_queue')).single;
+    expect(row['status'], 'blocked');
+    expect((row['retry_count'] as num?)?.toInt(), 5);
+    expect(row['next_retry_at'], isNull);
+    expect(
+      (row['last_error'] as String?) ?? '',
+      contains('Max retries reached'),
+    );
+
+    await db.reset();
+  });
+
+  test('failed row with future retry_at is skipped until eligible', () async {
+    final db = await createTestDb('sync_service_retry_window_gate');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+    final now = DateTime.now();
+
+    await sql.insert('sync_queue', {
+      'op_id': 'op-wait',
+      'entity': 'expense',
+      'entity_id': 'e-wait',
+      'operation': 'UPSERT',
+      'payload': jsonEncode({'id': 'e-wait', 'category': 'OTHER', 'amount': 5}),
+      'created_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+      'synced': 0,
+      'status': 'failed',
+      'retry_count': 1,
+      'next_retry_at': now.add(const Duration(minutes: 5)).toIso8601String(),
+    });
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
+    );
+    final result = await service.processPendingSyncDetailed(localeCode: 'en');
+    expect(result.pendingAtStart, 0);
+    expect(result.pushedEvents, 0);
+    expect(gateway.pushedBatches, isEmpty);
+
+    final row = (await sql.query('sync_queue')).single;
+    expect(row['status'], 'failed');
+    expect((row['retry_count'] as num?)?.toInt(), 1);
+
+    await db.reset();
+  });
+
+  test('offline write syncs after reconnect with push then pull', () async {
+    final db = await createTestDb('sync_service_offline_then_reconnect');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+    final now = DateTime.now().toIso8601String();
+
+    await sql.insert('sync_queue', {
+      'op_id': 'op-offline-1',
+      'entity': 'expense',
+      'entity_id': 'exp-offline-1',
+      'operation': 'UPSERT',
+      'payload': jsonEncode({
+        'id': 'exp-offline-1',
+        'category': 'OTHER',
+        'amount': 25.0,
+      }),
+      'created_at': now,
+      'updated_at': now,
+      'synced': 0,
+      'status': 'pending',
+      'retry_count': 0,
+    });
+
+    var online = false;
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck:
+          () async => [
+            online ? ConnectivityResult.wifi : ConnectivityResult.none,
+          ],
+      pushChunkSize: 100,
+    );
+
+    final offlineRun = await service.processPendingSyncDetailed(
+      localeCode: 'en',
+    );
+    expect(offlineRun.pendingAtStart, 0);
+    expect(gateway.pushedBatches, isEmpty);
+
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-exp-2',
+            entity: 'expense',
+            operation: 'UPSERT',
+            payload: const {
+              'id': 'exp-pulled-2',
+              'category': 'OTHER',
+              'amount': 70.0,
+              'note': 'from server',
+              'created_at': '2026-02-27T10:00:00Z',
+              'schema_version': 1,
+            },
+            createdAt: DateTime.parse('2026-02-27T10:00:00Z'),
+          ),
+        ],
+        nextCursor: 'evt-exp-2',
+      ),
+    );
+
+    online = true;
+    final onlineRun = await service.processPendingSyncDetailed(
+      localeCode: 'en',
+    );
+    expect(onlineRun.pendingAtStart, 1);
+    expect(onlineRun.ackedEvents, 1);
+    expect(onlineRun.pulledEvents, 1);
+
+    final queueRows = await sql.query(
+      'sync_queue',
+      where: 'op_id = ?',
+      whereArgs: ['op-offline-1'],
+    );
+    expect(queueRows.single['status'], 'synced');
+    expect(queueRows.single['synced'], 1);
+
+    final pulledRows = await sql.query(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: ['exp-pulled-2'],
+    );
+    expect(pulledRows, hasLength(1));
+    expect(await prefs.getLastSyncCursor(), 'evt-exp-2');
 
     await db.reset();
   });

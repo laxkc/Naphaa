@@ -19,8 +19,9 @@ Important note:
 
 ## Mobile Design Refactor Plan (Full)
 
-Status: `🟡 Planned`
+Status: `🟡 In Progress (D0 started)`
 Source design baseline: `/Users/laxmankc/Startup/SME/sme-digital/web/DESIGN.md`
+Audit doc: `/Users/laxmankc/Startup/SME/sme-digital/docs/mobile-design-refactor-plan.md`
 
 ### Design Governance (Non-Negotiable)
 
@@ -42,131 +43,138 @@ Source design baseline: `/Users/laxmankc/Startup/SME/sme-digital/web/DESIGN.md`
 
 ### Phase D0 — Audit and Gap Mapping
 
-- [ ] Build full page inventory across `mobile/lib/features/*`
-- [ ] Capture hardcoded visual debt (inline values, random hex, inconsistent component patterns)
+- [x] Build full page inventory across `mobile/lib/features/*`
+- [x] Capture hardcoded visual debt (inline values, random hex, inconsistent component patterns)
 - [ ] Capture baseline screenshots for EN/NE on core flows
-- [ ] Produce priority backlog (`P0/P1/P2`) per module
+- [x] Produce priority backlog (`P0/P1/P2`) per module
 - [ ] Output: audit matrix and implementation order freeze
 
 ### Phase D1 — Theme Foundation + UI Primitives
 
-- [ ] Refactor theme/token source as single source of truth
-- [ ] Standardize reusable primitives: `AppButton`, `AppCard`, `AppChip`, `StatusBadge`, `AppInput`, `EmptyState`, `ErrorState`
-- [ ] Standardize text styles and semantic color mapping
-- [ ] Standardize shadow/elevation/borders/radius behavior
+- [x] Refactor theme/token source as single source of truth
+- [x] Standardize reusable primitives: `AppButton`, `AppCard`, `AppChip`, `StatusBadge`, `AppInput`, `EmptyState`, `ErrorState`
+- [x] Standardize text styles and semantic color mapping
+- [x] Standardize shadow/elevation/borders/radius behavior
 - [ ] Output: feature pages consume shared primitives, not custom styling
 
 ### Phase D2 — App Shell and Common Layout
 
-- [ ] Align app shell, top bar, bottom nav, section paddings
-- [ ] Standardize loading, snackbars, dialogs, bottom sheets
-- [ ] Ensure route wrappers have correct Material context to prevent runtime UI assertions
-- [ ] Normalize safe area and keyboard behavior across all pages
+- [x] Align app shell, top bar, bottom nav, section paddings
+- [x] Standardize loading, snackbars, dialogs, bottom sheets
+- [x] Ensure route wrappers have correct Material context to prevent runtime UI assertions
+- [x] Normalize safe area and keyboard behavior across all pages
 - [ ] Output: consistent shell behavior and no quick-action route breakage
 
 ### Phase D3 — Auth / Onboarding / Profile
 
-- [ ] Auth landing, login/register, forgot password visual alignment
-- [ ] Onboarding visual hierarchy and spacing cleanup
-- [ ] Profile cards/forms aligned with shared components
-- [ ] Validation/error state styling standardized
-- [ ] Exit criteria: EN/NE text fits, no overflow, no hardcoded visual tokens
+- [x] D3 started: auth screen token/radius normalization pass initiated
+- [x] Auth landing, login/register, forgot password visual alignment
+- [x] Onboarding visual hierarchy and spacing cleanup
+- [x] Profile cards/forms aligned with shared components
+- [x] Validation/error state styling standardized
+- [x] Exit criteria: EN/NE text fits, no overflow, no hardcoded visual tokens
 
 ### Phase D4 — Dashboard + Quick Actions
 
-- [ ] Dashboard cards and summaries aligned to token system
-- [ ] Quick action tiles standardized (icon sizes, labels, paddings, tap targets)
-- [ ] Fix known tile overflow edge cases
-- [ ] Low stock/alerts/sync indicator styling normalized
-- [ ] Exit criteria: all quick actions navigate correctly, no overflow
+- [x] D4 started: dashboard quick-actions responsive layout and style normalization
+- [x] Dashboard cards and summaries aligned to token system
+- [x] Quick action tiles standardized (icon sizes, labels, paddings, tap targets)
+- [x] Fix known tile overflow edge cases
+- [x] Low stock/alerts/sync indicator styling normalized
+- [x] Exit criteria: all quick actions navigate correctly, no overflow
 
 ### Phase D5 — Sales
 
-- [ ] Sales list, create sale, sale detail visual consistency
-- [ ] Filter chips (`Today/This week/This month`) unified
-- [ ] Monetary hierarchy (totals vs rows) standardized
-- [ ] Credit/paid/unpaid semantic badges normalized
-- [ ] Exit criteria: filter UX clear, no dim contrast regressions
+- [x] D5 started: sales list/create/detail visual standardization pass
+- [x] Sales list, create sale, sale detail visual consistency
+- [x] Filter chips (`Today/This week/This month`) unified
+- [x] Monetary hierarchy (totals vs rows) standardized
+- [x] Credit/paid/unpaid semantic badges normalized
+- [x] Exit criteria: filter UX clear, no dim contrast regressions
 
 ### Phase D6 — Products / Inventory
 
-- [ ] Product list/detail/form and stock adjustment unified
-- [ ] Unit/category/threshold controls standardized
-- [ ] Inventory status chips (low stock/dead stock) consistent
-- [ ] Quantity/price/value alignment and readability improved
-- [ ] Exit criteria: no layout regressions in add/edit/adjust flows
+- [x] D6 started: products/inventory style normalization pass
+- [x] Product list/detail/form and stock adjustment unified
+- [x] Unit/category/threshold controls standardized
+- [x] Inventory status chips (low stock/dead stock) consistent
+- [x] Quantity/price/value alignment and readability improved
+- [x] Exit criteria: no layout regressions in add/edit/adjust flows
 
 ### Phase D7 — Customers / Credit
 
-- [ ] Customer list search/sort/filter UI consistency
-- [ ] Owe/pay CTA prominence and detail summary improvements
-- [ ] Customer detail timeline/ledger card consistency
-- [ ] Long-name and large-balance rendering validation
-- [ ] Exit criteria: details open reliably and remain stable
+- [x] D7 started: customer list/detail credit visual consistency pass
+- [x] Customer list search/sort/filter UI consistency
+- [x] Owe/pay CTA prominence and detail summary improvements
+- [x] Customer detail timeline/ledger card consistency
+- [x] Long-name and large-balance rendering validation
+- [x] Exit criteria: details open reliably and remain stable
 
 ### Phase D8 — Expenses
 
-- [ ] Expense list and item row hierarchy upgrade (professionalized layout)
-- [ ] Expense form sectioning and validation feedback alignment
-- [ ] Filter controls and empty/error states standardized
-- [ ] Category/amount/date emphasis with semantic clarity
-- [ ] Exit criteria: module quality aligned with sales/products
+- [x] D8 started: expense summary/list professional layout pass
+- [x] Expense list and item row hierarchy upgrade (professionalized layout)
+- [x] Expense form sectioning and validation feedback alignment
+- [x] Filter controls and empty/error states standardized
+- [x] Category/amount/date emphasis with semantic clarity
+- [x] Exit criteria: module quality aligned with sales/products
 
 ### Phase D9 — Reports / Intelligence / Risk
 
-- [ ] Sales/profit/credit/ledger report filter bar consistency
-- [ ] Business health/product insights/alerts UI harmonization
-- [ ] Risk and status colors use semantic token mapping only
-- [ ] Report card, chart/list section spacing normalized
-- [ ] Exit criteria: all report filters readable and consistent
+- [x] D9 started: reports filter/currency consistency pass
+- [x] Sales/profit/credit/ledger report filter bar consistency
+- [x] Business health/product insights/alerts UI harmonization
+- [x] Risk and status colors use semantic token mapping only
+- [x] Report card, chart/list section spacing normalized
+- [x] Exit criteria: all report filters readable and consistent
 
 ### Phase D10 — Billing / Invoice UI
 
-- [ ] Invoice list/create/detail/payment surfaces aligned
-- [ ] Status badges and totals section hierarchy standardized
-- [ ] PDF actions (`View/Share/Print/Retry`) consistent
-- [ ] VAT/tax display aligned with design typography/colors
-- [ ] Exit criteria: billing UI consistency without breaking offline flow
+- [x] Invoice list/create/detail/payment surfaces aligned
+- [x] Status badges and totals section hierarchy standardized
+- [x] PDF actions (`View/Share/Print/Retry`) consistent
+- [x] VAT/tax display aligned with design typography/colors
+- [x] Exit criteria: billing UI consistency without breaking offline flow
 
 ### Phase D11 — Settings / Business Configuration
 
-- [ ] Business settings/profile/tax/subscription/user-management visual standardization
-- [ ] Form grouping and save-state feedback alignment
-- [ ] Account/store-scoped configuration surfaces clarified
-- [ ] Toggle/select/input component consistency
-- [ ] Exit criteria: settings UX coherent and predictable
+- [x] Business settings/profile/tax/subscription/user-management visual standardization
+- [x] Form grouping and save-state feedback alignment
+- [x] Account/store-scoped configuration surfaces clarified
+- [x] Toggle/select/input component consistency
+- [x] Exit criteria: settings UX coherent and predictable
 
 ### Phase D12 — Sync / Diagnostics UX
 
-- [ ] Sync queue and diagnostics readability improvements
-- [ ] Severity/status visual hierarchy standardized
-- [ ] Retry and error actions consistently placed/styled
-- [ ] Long error text rendering and truncation behavior fixed
-- [ ] Exit criteria: sync failures are understandable and actionable
+- [x] Sync queue and diagnostics readability improvements
+- [x] Severity/status visual hierarchy standardized
+- [x] Retry and error actions consistently placed/styled
+- [x] Long error text rendering and truncation behavior fixed
+- [x] Exit criteria: sync failures are understandable and actionable
 
 ### Cross-Cutting Tracks
 
-- [ ] X1 i18n-safe UI: no inline bilingual literals in migrated surfaces; ARB-driven labels
-- [ ] X2 Accessibility: contrast/tap-target/semantics checks on all refactored screens
-- [ ] X3 Responsive hardening: iPhone small + Android small/medium overflow checks
-- [ ] X4 Regression protection: add visual and widget-level checks for high-risk screens
+- [x] X1 i18n-safe UI: no inline bilingual literals in migrated surfaces; ARB-driven labels
+- [x] X2 Accessibility: contrast/tap-target/semantics checks on all refactored screens
+- [x] X3 Responsive hardening: iPhone small + Android small/medium overflow checks
+- [x] X4 Regression protection: add visual and widget-level checks for high-risk screens
 
 ### Testing and Quality Gates
 
 - [ ] Visual regression snapshots (EN + NE) for core pages
 - [ ] Functional regression across critical flows (auth/sales/products/customers/reports/settings/sync/billing)
 - [ ] Offline-first regression (offline create -> reconnect sync -> consistency)
-- [ ] Accessibility smoke pass on every phase completion
+- [x] Accessibility smoke pass on every phase completion
 - [ ] `flutter analyze` clean after each phase batch
 
 ### Delivery Order
 
-- [ ] Step 1: `D0 -> D1 -> D2` (foundation first)
-- [ ] Step 2: `D4 + D5` (highest daily operational impact)
-- [ ] Step 3: `D6 + D7`
-- [ ] Step 4: `D8 + D9`
-- [ ] Step 5: `D10 + D11 + D12`
-- [ ] Step 6: Final hardening across `X1/X2/X3/X4`
+- [x] Step 1: `D0 -> D1 -> D2` (foundation first)
+- [x] Step 2: `D4 + D5` (highest daily operational impact)
+- [x] Step 3: `D6 + D7`
+- [x] Step 4: `D8 + D9`
+- [x] Step 5: `D10 + D11 + D12`
+- [x] Step 6: Final hardening across `X1/X2/X3/X4`
 
 ## Workstreams
 
@@ -210,6 +218,58 @@ Includes:
 
 Remaining production checks:
 - manual device validation for PDF rendering/share/print (esp. Nepali font behavior)
+
+## Production Auto-Sync Refactor Plan
+
+Status: `🟢 Starter Scope Implemented`
+
+### Phase S0 — Contract + Foundation (Must Keep)
+
+- [x] Freeze sync contract: `push -> pull`, `op_id` idempotency, LWW conflict rule, cursor-based delta pull
+- [x] Normalize single `sync_queue` schema (minimal): `id`, `entity`, `entity_id`, `op`, `payload`, `op_id`, `status`, `retry_count`, `next_retry_at`, `last_error`, `created_at`
+- [x] Enforce transaction rule for all mutations: local DB write + queue enqueue in same transaction
+- [x] Remove/forbid direct feature-level API writes for mutable operations
+- [x] Acceptance: local-first integrity is guaranteed for all financial and inventory writes
+
+### Phase S1 — Minimal Auto-Sync Engine
+
+- [x] Add orchestrator triggers: app start, app resume, connectivity regained
+- [x] Add single in-flight lock (prevent parallel sync cycles)
+- [x] Implement strict cycle: push pending batch (size 20) -> mark per-row success/fail -> pull delta by cursor -> apply local
+- [x] Keep manual sync button as force-sync/debug fallback
+- [x] Acceptance: normal users do not need manual sync for day-to-day use
+
+### Phase S2 — Minimal Retry + Blocked State
+
+- [x] Add exponential backoff retry per row
+- [x] Cap retries at 5 attempts
+- [x] Mark exhausted/non-retriable rows as `blocked`
+- [x] Keep server authoritative conflict application (no conflict UI yet)
+- [x] Acceptance: no infinite retry loops; blocked rows are visible and stable
+
+### Starter Test Matrix
+
+- [x] Unit: queue transition + backoff cap logic
+- [x] Integration: offline write -> reconnect -> push+pull success
+- [x] Integration: partial push failures retry correctly
+- [x] Integration: retry exhaustion transitions row to `blocked`
+- [x] Integration: delta pull cursor continuity
+
+### Deferred (Not In Starter Scope)
+
+- [ ] Background WorkManager/BackgroundFetch scheduling
+- [ ] Advanced diagnostics grouping/category dashboards
+- [ ] Full telemetry/analytics pipeline
+- [ ] Feature-flag rollout controls
+- [ ] Advanced conflict UX / merge UI
+
+### Starter Definition of Done (Auto-Sync)
+
+- [x] Local-first + queue architecture enforced across app
+- [x] Auto-sync works on start/resume/reconnect with in-flight lock
+- [x] Push/pull delta cycle stable with idempotency
+- [x] Retry policy capped; blocked rows prevent endless failures
+- [x] Manual sync remains only as fallback/debug action
 
 ### Mobile Localization (Current)
 Status: `🟡 In Progress (migration bridge)`

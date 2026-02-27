@@ -390,8 +390,8 @@ class SyncStatusState {
 
 class SyncCoordinatorController extends Notifier<SyncStatusState> {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-  Timer? _periodicTimer;
   Timer? _debounceTimer;
+  AppLifecycleListener? _lifecycleListener;
   bool _inFlight = false;
   bool _started = false;
   int _failureCount = 0;
@@ -401,8 +401,8 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
   SyncStatusState build() {
     ref.onDispose(() {
       _debounceTimer?.cancel();
-      _periodicTimer?.cancel();
       _connectivitySub?.cancel();
+      _lifecycleListener?.dispose();
     });
     Future.microtask(_startIfNeeded);
     return const SyncStatusState();
@@ -422,6 +422,14 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
     final initialOnline = initial.any((it) => it != ConnectivityResult.none);
     state = state.copyWith(online: initialOnline);
 
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () {
+        if (state.online) {
+          _scheduleSyncDebounced();
+        }
+      },
+    );
+
     _connectivitySub = ref
         .read(syncConnectivityChangesProvider)(connectivity: connectivity)
         .listen((results) {
@@ -431,13 +439,6 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
             _scheduleSyncDebounced();
           }
         });
-
-    _periodicTimer = Timer.periodic(
-      ref.read(syncCoordinatorPeriodicDurationProvider),
-      (_) {
-        _triggerSync();
-      },
-    );
 
     if (initialOnline) {
       _scheduleSyncDebounced();
@@ -547,7 +548,7 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
       SELECT COUNT(*) AS total
       FROM sync_queue
       WHERE synced = 0
-        AND COALESCE(status, 'pending') IN ('pending', 'failed')
+        AND COALESCE(status, 'pending') IN ('pending', 'failed', 'blocked')
       """);
     if (!ref.mounted) return;
     final count = (row.first['total'] as num?)?.toInt() ?? 0;

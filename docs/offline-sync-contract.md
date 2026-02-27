@@ -1,6 +1,8 @@
 # Offline Sync Contract (v1)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-27
+
+Status: `Frozen for Starter Production Scope (S0-S2)`
 
 ## Source of Truth
 
@@ -17,6 +19,8 @@ Last updated: 2026-02-23
 4. Pull server events (`/sync/pull`) with cursor pagination
 5. Apply pulled events to local DB
 6. Refresh local-first providers/UI
+
+Contract order is strict: `push -> pull`.
 
 ## Event Envelope
 
@@ -125,4 +129,5 @@ Used by `/sync/push`:
 - Push ACKs by `op_id`
 - Chunked push/pull
 - Idempotency semantics using `device_id + op_id` (backend fallback to legacy fingerprint)
-
+- Conflict policy: backend authoritative, LWW merge on pull apply
+- Retry policy (mobile outbox): exponential backoff with `next_retry_at`, max 5 retries, then `blocked`

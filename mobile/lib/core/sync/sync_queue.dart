@@ -38,12 +38,18 @@ class SyncQueueService {
   Future<List<Map<String, dynamic>>> pendingEvents() async {
     final database = await _db.database;
     final activeStoreId = await _prefs.getActiveStoreId();
+    final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
     return database.query(
       'sync_queue',
       where:
-          "synced = 0 AND COALESCE(status, 'pending') IN ('pending', 'failed') "
-          "AND (? IS NULL OR store_id IS NULL OR store_id = ?)",
-      whereArgs: [activeStoreId, activeStoreId],
+          "synced = 0 AND (COALESCE(status, 'pending') = 'pending' OR "
+          "(COALESCE(status, 'pending') = 'failed' AND "
+          "(next_retry_at IS NULL OR next_retry_at <= ?))) "
+          "${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}",
+      whereArgs:
+          hasStoreScope
+              ? [DateTime.now().toIso8601String(), activeStoreId]
+              : [DateTime.now().toIso8601String()],
       orderBy: 'id ASC',
     );
   }

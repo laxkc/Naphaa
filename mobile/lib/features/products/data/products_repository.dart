@@ -128,42 +128,44 @@ class ProductsRepository {
     final db = await _db.database;
     final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
-    await db.update(
-      'products',
-      {
-        'name': product.name,
-        'sell_price': product.sellPrice,
-        'cost_price': product.costPrice,
-        'low_stock_threshold': product.lowStockThreshold,
-        'unit': product.unit,
-        'category': product.category,
+    await db.transaction((txn) async {
+      await txn.update(
+        'products',
+        {
+          'name': product.name,
+          'sell_price': product.sellPrice,
+          'cost_price': product.costPrice,
+          'low_stock_threshold': product.lowStockThreshold,
+          'unit': product.unit,
+          'category': product.category,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [product.id],
+      );
+      await txn.insert('sync_queue', {
+        'op_id': newUuidV4(),
+        'store_id': activeStoreId,
+        'entity': 'product',
+        'entity_id': product.id,
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': product.id,
+          'name': product.name,
+          'sell_price': product.sellPrice,
+          'cost_price': product.costPrice,
+          'stock_qty': product.stockQty,
+          'low_stock_threshold': product.lowStockThreshold,
+          'unit': product.unit,
+          'category': product.category,
+          'updated_at': now,
+        }),
+        'created_at': now,
         'updated_at': now,
-      },
-      where: 'id = ?',
-      whereArgs: [product.id],
-    );
-    await db.insert('sync_queue', {
-      'op_id': newUuidV4(),
-      'store_id': activeStoreId,
-      'entity': 'product',
-      'entity_id': product.id,
-      'operation': 'UPSERT',
-      'payload': jsonEncode({
-        'id': product.id,
-        'name': product.name,
-        'sell_price': product.sellPrice,
-        'cost_price': product.costPrice,
-        'stock_qty': product.stockQty,
-        'low_stock_threshold': product.lowStockThreshold,
-        'unit': product.unit,
-        'category': product.category,
-        'updated_at': now,
-      }),
-      'created_at': now,
-      'updated_at': now,
-      'synced': 0,
-      'status': 'pending',
-      'retry_count': 0,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
     });
     await _refreshLocalIntelligence();
   }

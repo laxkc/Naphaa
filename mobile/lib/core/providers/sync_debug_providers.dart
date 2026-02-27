@@ -11,6 +11,7 @@ class SyncQueueRowData {
     required this.operation,
     required this.status,
     required this.retryCount,
+    required this.nextRetryAt,
     required this.lastError,
     required this.createdAt,
     required this.updatedAt,
@@ -24,21 +25,25 @@ class SyncQueueRowData {
   final String operation;
   final String status;
   final int retryCount;
+  final String? nextRetryAt;
   final String? lastError;
   final String createdAt;
   final String? updatedAt;
   final bool synced;
 }
 
-final syncQueueRowsProvider = FutureProvider<List<SyncQueueRowData>>((ref) async {
+final syncQueueRowsProvider = FutureProvider<List<SyncQueueRowData>>((
+  ref,
+) async {
   final db = await ref.watch(localDatabaseProvider).database;
   final activeStoreId = await ref.watch(preferencesProvider).getActiveStoreId();
+  final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
   final rows = await db.query(
     'sync_queue',
-    where:
-        '(? IS NULL OR store_id IS NULL OR store_id = ?)',
-    whereArgs: [activeStoreId, activeStoreId],
-    orderBy: 'synced ASC, CASE status WHEN "failed" THEN 0 WHEN "pending" THEN 1 ELSE 2 END, created_at DESC',
+    where: hasStoreScope ? '(store_id IS NULL OR store_id = ?)' : null,
+    whereArgs: hasStoreScope ? [activeStoreId] : null,
+    orderBy:
+        'synced ASC, CASE status WHEN "blocked" THEN 0 WHEN "failed" THEN 1 WHEN "pending" THEN 2 ELSE 3 END, created_at DESC',
   );
   return rows
       .map(
@@ -48,8 +53,11 @@ final syncQueueRowsProvider = FutureProvider<List<SyncQueueRowData>>((ref) async
           entity: row['entity']?.toString() ?? 'unknown',
           entityId: row['entity_id']?.toString(),
           operation: row['operation']?.toString() ?? '',
-          status: row['status']?.toString() ?? ((row['synced'] as num?) == 1 ? 'synced' : 'pending'),
+          status:
+              row['status']?.toString() ??
+              ((row['synced'] as num?) == 1 ? 'synced' : 'pending'),
           retryCount: (row['retry_count'] as num?)?.toInt() ?? 0,
+          nextRetryAt: row['next_retry_at']?.toString(),
           lastError: row['last_error']?.toString(),
           createdAt: row['created_at']?.toString() ?? '',
           updatedAt: row['updated_at']?.toString(),

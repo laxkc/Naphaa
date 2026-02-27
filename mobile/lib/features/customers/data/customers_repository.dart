@@ -111,19 +111,41 @@ class CustomersRepository {
 
   Future<void> updateCustomer(Customer customer) async {
     final db = await _db.database;
+    final activeStoreId = await AppPreferences().getActiveStoreId();
     final now = DateTime.now().toIso8601String();
-    await db.update(
-      'customers',
-      {
-        'name': customer.name,
-        'phone': customer.phone,
-        'address': customer.address,
-        'notes': customer.notes,
+    await db.transaction((txn) async {
+      await txn.update(
+        'customers',
+        {
+          'name': customer.name,
+          'phone': customer.phone,
+          'address': customer.address,
+          'notes': customer.notes,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [customer.id],
+      );
+      await txn.insert('sync_queue', {
+        'op_id': newUuidV4(),
+        'store_id': activeStoreId,
+        'entity': 'customer',
+        'entity_id': customer.id,
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': customer.id,
+          'name': customer.name,
+          'phone': customer.phone,
+          'balance': customer.balance,
+          'updated_at': now,
+        }),
+        'created_at': now,
         'updated_at': now,
-      },
-      where: 'id = ?',
-      whereArgs: [customer.id],
-    );
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
+    });
     await _refreshLocalIntelligence();
   }
 

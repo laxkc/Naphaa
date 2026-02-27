@@ -146,8 +146,8 @@ void main() {
       expect(state.lastError, isNull);
     });
 
-    test('periodic timer triggers sync when authenticated', () async {
-      final db = await createTestDb('sync_coordinator_periodic');
+    test('app resume triggers sync when online', () async {
+      final db = await createTestDb('sync_coordinator_resume');
       final fake = _FakeSyncManager(
         queue: SyncQueueService(db),
         onProcessDetailed:
@@ -155,14 +155,26 @@ void main() {
       );
       final container = await _buildContainer(
         testDb: db,
-        checkConnectivity: () async => [ConnectivityResult.none],
+        checkConnectivity: () async => [ConnectivityResult.wifi],
         fakeSyncManager: fake,
-        periodic: const Duration(milliseconds: 25),
+        debounce: const Duration(milliseconds: 10),
       );
       container.read(syncCoordinatorProvider);
+      for (var i = 0; i < 40; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        if (fake.calls >= 1) break;
+      }
+      expect(fake.calls, 1);
 
-      await Future<void>.delayed(const Duration(milliseconds: 70));
-      expect(fake.calls, greaterThanOrEqualTo(1));
+      final binding = TestWidgetsFlutterBinding.instance;
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      for (var i = 0; i < 40; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        if (fake.calls >= 2) break;
+      }
+      expect(fake.calls, 2);
     });
 
     test('in-flight lock prevents concurrent sync runs', () async {
