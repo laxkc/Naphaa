@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sme_digital/config/app_config.dart';
+import 'package:sme_digital/constants/branding.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import 'auth_screen.dart';
@@ -26,15 +28,17 @@ class LandingPage extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
-                child: const Icon(
-                  Icons.storefront_rounded,
-                  color: Colors.white,
-                  size: 32,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Image.asset(
+                    Branding.logoAsset,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xxl),
               Text(
-                'SME Digital',
+                AppConfig.appName,
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -42,7 +46,7 @@ class LandingPage extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                l10n.authLandingSubtitle,
+                AppConfig.tagline,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.white.withValues(alpha: 0.85),
                   height: 1.6,

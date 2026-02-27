@@ -1,0 +1,61 @@
+{
+  "version": "0.1.0",
+  "status": "draft",
+  "scope": "web-landing-v1",
+  "notes": "Foundational typography tokens and landing-page usage roles. Keep v1 to one primary font family and a small scale.",
+  "fontFamily": {
+    "primary": "Inter"
+  },
+  "tokens": {
+    "hero-title": {
+      "size": 28,
+      "weight": 600,
+      "lineHeight": 34
+    },
+    "page-title": {
+      "size": 22,
+      "weight": 600,
+      "lineHeight": 28
+    },
+    "section-title": {
+      "size": 18,
+      "weight": 600,
+      "lineHeight": 24
+    },
+    "card-title": {
+      "size": 16,
+      "weight": 600,
+      "lineHeight": 22
+    },
+    "body": {
+      "size": 14,
+      "weight": 400,
+      "lineHeight": 20
+    },
+    "small": {
+      "size": 12,
+      "weight": 400,
+      "lineHeight": 16
+    },
+    "button": {
+      "size": 14,
+      "weight": 500,
+      "lineHeight": 20
+    },
+    "total": {
+      "size": 18,
+      "weight": 600,
+      "lineHeight": 24
+    }
+  },
+  "usageMap": {
+    "hero": "hero-title",
+    "page-heading": "page-title",
+    "section-heading": "section-title",
+    "feature-card-heading": "card-title",
+    "body-copy": "body",
+    "supporting-text": "small",
+    "button-label": "button",
+    "total-amount": "total"
+  }
+}

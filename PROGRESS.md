@@ -17,6 +17,157 @@ Important note:
 - Detailed implementation history was removed from here to keep this tracker usable day-to-day.
 - Source of detailed truth remains: git history + docs in `/Users/laxmankc/Startup/SME/sme-digital/docs`
 
+## Mobile Design Refactor Plan (Full)
+
+Status: `🟡 Planned`
+Source design baseline: `/Users/laxmankc/Startup/SME/sme-digital/web/DESIGN.md`
+
+### Design Governance (Non-Negotiable)
+
+- [ ] No inline CSS-like styling for tokenizable UI (colors, spacing, radius, typography) in feature screens
+- [ ] No random hex values in feature UI; use theme tokens only
+- [ ] Maximum two brand accents in app UI (Primary Navy + Accent Coral)
+- [ ] No frequent logo/brand churn; branding stays stable
+- [ ] Single font family system-wide
+- [ ] Do not overuse gradients; only approved highlight surfaces
+- [ ] Accessibility is mandatory (contrast, tap targets, readable text scale, semantics)
+
+### Token Baseline (Mobile)
+
+- [ ] Typography scale aligned to design doc (Display 28, Title 22, Section 18, Card 16, Body 14, Small 12, Button 14, Total 18)
+- [ ] 8pt spacing grid (`4/8/16/24/32/48`) mapped to Flutter spacing constants
+- [ ] Radius scale (`6/8/12/16/pill`) mapped to Flutter radius constants
+- [ ] Palette tokens aligned (bg/surface/surface-alt/border/text/semantic/focus)
+- [ ] State styles defined and reused (hover/press/focus/disabled/loading)
+
+### Phase D0 — Audit and Gap Mapping
+
+- [ ] Build full page inventory across `mobile/lib/features/*`
+- [ ] Capture hardcoded visual debt (inline values, random hex, inconsistent component patterns)
+- [ ] Capture baseline screenshots for EN/NE on core flows
+- [ ] Produce priority backlog (`P0/P1/P2`) per module
+- [ ] Output: audit matrix and implementation order freeze
+
+### Phase D1 — Theme Foundation + UI Primitives
+
+- [ ] Refactor theme/token source as single source of truth
+- [ ] Standardize reusable primitives: `AppButton`, `AppCard`, `AppChip`, `StatusBadge`, `AppInput`, `EmptyState`, `ErrorState`
+- [ ] Standardize text styles and semantic color mapping
+- [ ] Standardize shadow/elevation/borders/radius behavior
+- [ ] Output: feature pages consume shared primitives, not custom styling
+
+### Phase D2 — App Shell and Common Layout
+
+- [ ] Align app shell, top bar, bottom nav, section paddings
+- [ ] Standardize loading, snackbars, dialogs, bottom sheets
+- [ ] Ensure route wrappers have correct Material context to prevent runtime UI assertions
+- [ ] Normalize safe area and keyboard behavior across all pages
+- [ ] Output: consistent shell behavior and no quick-action route breakage
+
+### Phase D3 — Auth / Onboarding / Profile
+
+- [ ] Auth landing, login/register, forgot password visual alignment
+- [ ] Onboarding visual hierarchy and spacing cleanup
+- [ ] Profile cards/forms aligned with shared components
+- [ ] Validation/error state styling standardized
+- [ ] Exit criteria: EN/NE text fits, no overflow, no hardcoded visual tokens
+
+### Phase D4 — Dashboard + Quick Actions
+
+- [ ] Dashboard cards and summaries aligned to token system
+- [ ] Quick action tiles standardized (icon sizes, labels, paddings, tap targets)
+- [ ] Fix known tile overflow edge cases
+- [ ] Low stock/alerts/sync indicator styling normalized
+- [ ] Exit criteria: all quick actions navigate correctly, no overflow
+
+### Phase D5 — Sales
+
+- [ ] Sales list, create sale, sale detail visual consistency
+- [ ] Filter chips (`Today/This week/This month`) unified
+- [ ] Monetary hierarchy (totals vs rows) standardized
+- [ ] Credit/paid/unpaid semantic badges normalized
+- [ ] Exit criteria: filter UX clear, no dim contrast regressions
+
+### Phase D6 — Products / Inventory
+
+- [ ] Product list/detail/form and stock adjustment unified
+- [ ] Unit/category/threshold controls standardized
+- [ ] Inventory status chips (low stock/dead stock) consistent
+- [ ] Quantity/price/value alignment and readability improved
+- [ ] Exit criteria: no layout regressions in add/edit/adjust flows
+
+### Phase D7 — Customers / Credit
+
+- [ ] Customer list search/sort/filter UI consistency
+- [ ] Owe/pay CTA prominence and detail summary improvements
+- [ ] Customer detail timeline/ledger card consistency
+- [ ] Long-name and large-balance rendering validation
+- [ ] Exit criteria: details open reliably and remain stable
+
+### Phase D8 — Expenses
+
+- [ ] Expense list and item row hierarchy upgrade (professionalized layout)
+- [ ] Expense form sectioning and validation feedback alignment
+- [ ] Filter controls and empty/error states standardized
+- [ ] Category/amount/date emphasis with semantic clarity
+- [ ] Exit criteria: module quality aligned with sales/products
+
+### Phase D9 — Reports / Intelligence / Risk
+
+- [ ] Sales/profit/credit/ledger report filter bar consistency
+- [ ] Business health/product insights/alerts UI harmonization
+- [ ] Risk and status colors use semantic token mapping only
+- [ ] Report card, chart/list section spacing normalized
+- [ ] Exit criteria: all report filters readable and consistent
+
+### Phase D10 — Billing / Invoice UI
+
+- [ ] Invoice list/create/detail/payment surfaces aligned
+- [ ] Status badges and totals section hierarchy standardized
+- [ ] PDF actions (`View/Share/Print/Retry`) consistent
+- [ ] VAT/tax display aligned with design typography/colors
+- [ ] Exit criteria: billing UI consistency without breaking offline flow
+
+### Phase D11 — Settings / Business Configuration
+
+- [ ] Business settings/profile/tax/subscription/user-management visual standardization
+- [ ] Form grouping and save-state feedback alignment
+- [ ] Account/store-scoped configuration surfaces clarified
+- [ ] Toggle/select/input component consistency
+- [ ] Exit criteria: settings UX coherent and predictable
+
+### Phase D12 — Sync / Diagnostics UX
+
+- [ ] Sync queue and diagnostics readability improvements
+- [ ] Severity/status visual hierarchy standardized
+- [ ] Retry and error actions consistently placed/styled
+- [ ] Long error text rendering and truncation behavior fixed
+- [ ] Exit criteria: sync failures are understandable and actionable
+
+### Cross-Cutting Tracks
+
+- [ ] X1 i18n-safe UI: no inline bilingual literals in migrated surfaces; ARB-driven labels
+- [ ] X2 Accessibility: contrast/tap-target/semantics checks on all refactored screens
+- [ ] X3 Responsive hardening: iPhone small + Android small/medium overflow checks
+- [ ] X4 Regression protection: add visual and widget-level checks for high-risk screens
+
+### Testing and Quality Gates
+
+- [ ] Visual regression snapshots (EN + NE) for core pages
+- [ ] Functional regression across critical flows (auth/sales/products/customers/reports/settings/sync/billing)
+- [ ] Offline-first regression (offline create -> reconnect sync -> consistency)
+- [ ] Accessibility smoke pass on every phase completion
+- [ ] `flutter analyze` clean after each phase batch
+
+### Delivery Order
+
+- [ ] Step 1: `D0 -> D1 -> D2` (foundation first)
+- [ ] Step 2: `D4 + D5` (highest daily operational impact)
+- [ ] Step 3: `D6 + D7`
+- [ ] Step 4: `D8 + D9`
+- [ ] Step 5: `D10 + D11 + D12`
+- [ ] Step 6: Final hardening across `X1/X2/X3/X4`
+
 ## Workstreams
 
 ### Offline-First Core

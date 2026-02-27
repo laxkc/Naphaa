@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sme_digital/config/app_config.dart';
 
 import 'core/providers/app_providers.dart';
 import 'core/theme/app_theme.dart';
@@ -19,7 +20,7 @@ class SmeDigitalApp extends ConsumerWidget {
     ref.watch(syncCoordinatorProvider.notifier);
 
     return MaterialApp(
-      title: 'SME Digital',
+      title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       locale: locale,

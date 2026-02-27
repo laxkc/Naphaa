@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sme_digital/config/app_config.dart';
+import 'package:sme_digital/constants/branding.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/providers/app_providers.dart';
@@ -515,15 +517,20 @@ class _Brand extends StatelessWidget {
               color: _primary,
               borderRadius: BorderRadius.circular(13),
             ),
-            child: const Icon(
-                Icons.store_rounded, color: Colors.white, size: 24),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(13),
+              child: Image.asset(
+                Branding.logoAsset,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'SME Digital',
+                AppConfig.appName,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

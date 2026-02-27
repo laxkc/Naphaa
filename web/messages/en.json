@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "home":       "Home",
+    "features":   "Features",
+    "howItWorks": "How it Works",
+    "pricing":    "Pricing",
+    "language":   "EN / नेपाली"
+  },
+  "socialProof": {
+    "quote":       "Tracks my credit customers so I don't forget who owes me.",
+    "attribution": "Ramesh Thapa, Grocery Shop · Kathmandu",
+    "stats": [
+      { "value": "500+",    "label": "Active shops" },
+      { "value": "Offline", "label": "Works without internet" },
+      { "value": "Free",    "label": "Forever on basic plan" }
+    ]
+  },
+  "cta": {
+    "badge":   "Join 500+ shops already using",
+    "heading": "Ready to digitize your shop?",
+    "desc":    "Download free today. No credit card, no commitment."
+  },
+  "footer": {
+    "tagline": "The digital ledger for your shop. Fast. Offline. Trusted.",
+    "sections": { "features": "Features", "company": "Company", "language": "Language" },
+    "featureLinks": ["Sales Tracking", "Inventory", "Credit Ledger", "Reports", "PDF Invoices"],
+    "companyLinks": [
+      { "label": "About",            "href": "#" },
+      { "label": "Contact",          "href": "#" },
+      { "label": "Privacy Policy",   "href": "/privacy" },
+      { "label": "Terms of Service", "href": "/terms" }
+    ],
+    "copy":  "All rights reserved.",
+    "made":  "Made with ♥ for small businesses in Nepal"
+  },
+  "hero": {
+    "badge":      "Run your shop without fear.",
+    "h1Brand":    "Naphaa",
+    "h1Tagline":  "The Most Reliable Business System for Nepal Shops.",
+    "desc":       "Record sales in seconds. Track who owes you money. Know your profit — even when the internet is out.",
+    "cta2":       "See how it works →",
+    "trust1":     "✓  100% Free to start",
+    "trust2":     "✓  Works offline",
+    "trust3":     "✓  Nepali & English",
+    "download":   "Download the app"
+  },
+  "features": {
+    "label":      "Features",
+    "heading":    "Everything your shop needs.",
+    "subheading": "Nothing it doesn't.",
+    "items": {
+      "sales":     { "title": "Lightning-fast sales",       "desc": "Log a cash or credit sale in under 10 seconds. No training needed."                     },
+      "inventory": { "title": "Inventory alerts",           "desc": "Auto low-stock detection — know before you run out."                                      },
+      "credit":    { "title": "Customer credit ledger",     "desc": "Track who owes you, how much, and for how long. No forgotten debts."                      },
+      "reports":   { "title": "Profit & cashflow reports",  "desc": "Daily, weekly, and monthly business health — sales, expenses, profit."                    },
+      "offline":   { "title": "Fully offline",              "desc": "Works with zero internet. Auto-syncs the moment connectivity is restored."                 },
+      "invoices":  { "title": "PDF invoices",               "desc": "Generate and send professional invoices to your customers in one tap."                    }
+    }
+  },
+  "howItWorks": {
+    "label":    "How it Works",
+    "heading":  "Up and running in 3 steps",
+    "subtext":  "No IT department. No setup fee. Just download and go.",
+    "steps": {
+      "one": {
+        "number": "01",
+        "title":  "Create your store",
+        "desc":   "Sign up free. Set your currency, business type, and VAT in under 2 minutes.",
+        "tag":    "NPR · USD · INR — Grocery, Pharmacy, Electronics & more",
+        "detail": "No credit card. No setup fee."
+      },
+      "two": {
+        "number": "02",
+        "title":  "Add your products",
+        "desc":   "Enter names, sell price, cost price, and starting stock. Works on any Android phone.",
+        "tag":    "100 products on Free · Unlimited on Pro",
+        "detail": "Import or add one by one."
+      },
+      "three": {
+        "number": "03",
+        "title":  "Start selling",
+        "desc":   "Record cash and credit sales in seconds. Dashboard updates in real time — even offline.",
+        "tag":    "Offline-first · Auto-syncs when connected",
+        "detail": "Sales, expenses, profit — all in one view."
+      }
+    }
+  },
+  "pricing": {
+    "label":    "Pricing",
+    "heading":  "Simple pricing. Start free.",
+    "subtext":  "No credit card required. Upgrade whenever you're ready.",
+    "free": {
+      "badge":  "✓ Most popular",
+      "price":  "Rs. 0",
+      "period": "/ month",
+      "desc":   "Access core features at no cost, forever.",
+      "cta":    "Download Free",
+      "features": [
+        "Unlimited cash & credit sales",
+        "Up to 100 products",
+        "Customer credit tracking",
+        "Basic reports — sales & credit",
+        "Offline-first local storage",
+        "Nepali & English support"
+      ]
+    },
+    "pro": {
+      "badge":      "🚀 Coming Soon",
+      "title":      "Pro",
+      "desc":       "Advanced features for growing businesses.",
+      "notifyPlaceholder": "your@email.com",
+      "notifyBtn":  "Notify me",
+      "notifyDone": "✓ We'll notify you at launch!",
+      "features": [
+        "Everything in Free",
+        "Cloud sync — multi-device",
+        "PDF invoice generation",
+        "Advanced analytics & exports",
+        "Unlimited products",
+        "Priority support"
+      ]
+    },
+    "download": "Download the app"
+  }
+}

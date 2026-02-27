@@ -1,0 +1,22 @@
+{
+  "version": "0.1.0",
+  "status": "draft",
+  "scope": "web-landing-v1",
+  "notes": "8pt-based spacing scale for layout and components. Non-scale values require documented exceptions.",
+  "tokens": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 40,
+    "3xl": 48,
+    "4xl": 64
+  },
+  "layoutRules": {
+    "containerPaddingMobile": "md",
+    "containerPaddingTablet": "lg",
+    "sectionGapDefault": "4xl",
+    "componentGapDefault": "sm"
+  }
+}

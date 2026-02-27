@@ -440,7 +440,7 @@ abstract class AppLocalizations {
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
-  /// **'SME Digital'**
+  /// **'Naphaa'**
   String get appName;
 
   /// No description provided for @newSale.
@@ -1148,7 +1148,7 @@ abstract class AppLocalizations {
   /// No description provided for @authTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to SME Digital'**
+  /// **'Sign in to Naphaa'**
   String get authTitle;
 
   /// No description provided for @login.
@@ -3086,7 +3086,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionFreePlanTitle.
   ///
   /// In en, this message translates to:
-  /// **'SME Digital Free'**
+  /// **'Naphaa Free'**
   String get subscriptionFreePlanTitle;
 
   /// No description provided for @subscriptionProComingSoon.

@@ -186,7 +186,7 @@ class AppLocalizationsNe extends AppLocalizations {
   String get ledgerNoEntriesSubtitle => 'बिक्री, खर्च, भुक्तानी र फिर्ता रकम यहाँ देखिनेछन्।';
 
   @override
-  String get appName => 'SME Digital';
+  String get appName => 'Naphaa';
 
   @override
   String get newSale => 'नयाँ बिक्री';
@@ -558,7 +558,7 @@ class AppLocalizationsNe extends AppLocalizations {
   String get risky => 'जोखिमपूर्ण';
 
   @override
-  String get authTitle => 'SME Digital मा साइन इन गर्नुहोस्';
+  String get authTitle => 'Naphaa मा साइन इन गर्नुहोस्';
 
   @override
   String get login => 'लगइन';
@@ -1569,7 +1569,7 @@ class AppLocalizationsNe extends AppLocalizations {
   String get subscriptionFreePlanSubtitle => 'मुख्य सुविधाहरू निःशुल्क प्रयोग गर्नुहोस्';
 
   @override
-  String get subscriptionFreePlanTitle => 'SME Digital Free';
+  String get subscriptionFreePlanTitle => 'Naphaa Free';
 
   @override
   String get subscriptionProComingSoon => 'Pro योजना चाँडै आउँदैछ। प्रतीक्षा गर्नुहोस्!';
