@@ -137,24 +137,28 @@ class ProductDetailScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   product.stockQty.toStringAsFixed(0),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                        isLowStock
-                                            ? AppColors.warning
-                                            : AppColors.success,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            isLowStock
+                                                ? AppColors.warning
+                                                : AppColors.success,
+                                      ),
                                 ),
                                 Text(
                                   product.unit,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color:
-                                        isLowStock
-                                            ? AppColors.warning
-                                            : AppColors.success,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color:
+                                            isLowStock
+                                                ? AppColors.warning
+                                                : AppColors.success,
+                                      ),
                                 ),
                               ],
                             ),

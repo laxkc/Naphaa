@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
+import '../domain/billing_calculator.dart';
 import '../domain/invoice_models.dart';
 
 class InvoiceCreateScreen extends ConsumerStatefulWidget {
@@ -20,8 +22,15 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
   final _notesCtrl = TextEditingController();
   final _discountCtrl = TextEditingController(text: '0');
   final List<_LineDraft> _lines = [const _LineDraft()];
+  late final Future<Map<String, dynamic>> _billingSettingsFuture;
   bool _issuing = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _billingSettingsFuture = ref.read(preferencesProvider).getBillingSettings();
+  }
 
   @override
   void dispose() {
@@ -46,6 +55,8 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
 
   Widget _buildScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final money = NumberFormat('#,##0.00', 'en_IN');
+    final discount = double.tryParse(_discountCtrl.text.trim()) ?? 0;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -83,6 +94,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                     decoration: InputDecoration(
                       labelText: l10n.invoiceDiscountLabel,
                     ),
+                    onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
@@ -123,7 +135,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                     (i) => _LineEditor(
                       key: ValueKey('line_$i'),
                       initial: _lines[i],
-                      onChanged: (next) => _lines[i] = next,
+                      onChanged: (next) => setState(() => _lines[i] = next),
                       onRemove:
                           _lines.length == 1
                               ? null
@@ -132,6 +144,72 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FutureBuilder<Map<String, dynamic>>(
+              future: _billingSettingsFuture,
+              builder: (context, snapshot) {
+                final settings = snapshot.data ?? const <String, dynamic>{};
+                final vatEnabled =
+                    (settings['vat_enabled'] as bool?) ?? false;
+                final vatRate =
+                    (settings['vat_rate'] as num?)?.toDouble() ?? 13.0;
+                final taxMode =
+                    ((settings['tax_mode']?.toString().toLowerCase() ==
+                            'inclusive')
+                        ? BillingTaxMode.inclusive
+                        : BillingTaxMode.exclusive);
+                final calc = BillingCalculator.calculate(
+                  lines:
+                      _lines
+                          .where((l) => l.name.trim().isNotEmpty)
+                          .map(
+                            (l) => BillingLineInput(
+                              quantity: l.quantity,
+                              unitPrice: l.unitPrice,
+                            ),
+                          )
+                          .toList(),
+                  vatEnabled: vatEnabled,
+                  vatRatePercent: vatRate,
+                  taxMode: taxMode,
+                  invoiceDiscountAmount: discount,
+                );
+                return AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.totalLabel,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.label,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _SummaryRow(
+                        label: l10n.subtotalLabel,
+                        value: '${l10n.nprLabel} ${money.format(calc.subtotal)}',
+                      ),
+                      _SummaryRow(
+                        label: l10n.discountLabel,
+                        value:
+                            '${l10n.nprLabel} ${money.format(calc.discountAmount)}',
+                      ),
+                      _SummaryRow(
+                        label: l10n.vatLabel,
+                        value: '${l10n.nprLabel} ${money.format(calc.taxAmount)}',
+                      ),
+                      const Divider(height: AppSpacing.lg),
+                      _SummaryRow(
+                        label: l10n.totalLabel,
+                        value: '${l10n.nprLabel} ${money.format(calc.total)}',
+                        highlight: true,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.xl),
             Row(
@@ -242,6 +320,37 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
     } finally {
       if (mounted) setState(() => _issuing = false);
     }
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle =
+        Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.muted);
+    final valueStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: highlight ? AppColors.primary : AppColors.label,
+      fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: labelStyle)),
+          Text(value, style: valueStyle),
+        ],
+      ),
+    );
   }
 }
 

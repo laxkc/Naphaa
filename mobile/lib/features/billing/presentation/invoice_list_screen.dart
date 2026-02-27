@@ -87,12 +87,53 @@ class InvoiceListScreen extends ConsumerWidget {
             );
           }
 
+          final totalBalance = invoices.fold<double>(
+            0,
+            (sum, inv) => sum + inv.balanceDue,
+          );
+          final overdueCount =
+              invoices.where((inv) => inv.status == InvoiceStatus.overdue).length;
+
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: invoices.length,
+            itemCount: invoices.length + 1,
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, i) {
-              final inv = invoices[i];
+              if (i == 0) {
+                return AppCard(
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      SizedBox(
+                        width: MediaQuery.sizeOf(context).width > 380 ? 96 : 88,
+                        child: _SummaryMetric(
+                          label: l10n.invoices,
+                          value: '${invoices.length}',
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      SizedBox(
+                        width: MediaQuery.sizeOf(context).width > 380 ? 160 : 136,
+                        child: _SummaryMetric(
+                          label: l10n.balanceLabel,
+                          value: '${l10n.nprLabel} ${money.format(totalBalance)}',
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      SizedBox(
+                        width: MediaQuery.sizeOf(context).width > 380 ? 120 : 104,
+                        child: _SummaryMetric(
+                          label: l10n.invoiceStatusOverdueLabel,
+                          value: '$overdueCount',
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final inv = invoices[i - 1];
               final statusColor = _statusColor(inv.status);
               return AppCard(
                 onTap:
@@ -123,10 +164,9 @@ class InvoiceListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      l10n.invoiceListTotalsSummary(
-                        money.format(inv.total),
-                        money.format(inv.balanceDue),
-                      ),
+                      '${l10n.totalLabel}: ${l10n.nprLabel} ${money.format(inv.total)}   •   ${l10n.balanceLabel}: ${l10n.nprLabel} ${money.format(inv.balanceDue)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,
@@ -161,4 +201,48 @@ class InvoiceListScreen extends ConsumerWidget {
     InvoiceStatus.overdue => AppColors.error,
     InvoiceStatus.cancelled => AppColors.warning,
   };
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
 }

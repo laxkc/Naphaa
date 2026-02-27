@@ -7,20 +7,19 @@ import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/app_shell.dart';
+import '../../../shared/widgets/ui_kit.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
 import '../domain/auth_state.dart';
 import 'forgot_password_page.dart';
 
 // ─── palette ──────────────────────────────────────────────────────────────────
-const _primary   = Color(0xFF00695C);
-const _bg        = Color(0xFFF5F7F6);
+const _primary   = AppColors.primary;
+const _bg        = AppColors.bg;
 const _surface   = Colors.white;
-const _label     = Color(0xFF0D1F1C);
-const _muted     = Color(0xFF6B7774);
-const _border    = Color(0xFFDDE3E1);
-const _errBg     = Color(0xFFFDEDED);
-const _errBdr    = Color(0xFFF5C6C6);
-const _errText   = Color(0xFFB71C1C);
+const _label     = AppColors.label;
+const _muted     = AppColors.muted;
+const _border    = AppColors.border;
+const _errText   = AppColors.error;
 
 // ─── root ─────────────────────────────────────────────────────────────────────
 
@@ -230,7 +229,9 @@ class _LoginFormState extends State<_LoginForm> {
             Text(l.welcomeBack, style: _headStyle(context)),
             const SizedBox(height: 6),
             Text(l.signInToContinue,
-                style: const TextStyle(fontSize: 14, color: _muted)),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: _muted)),
             const SizedBox(height: 36),
 
             _Lbl(l.phone),
@@ -284,7 +285,7 @@ class _LoginFormState extends State<_LoginForm> {
             ),
 
             if (widget.auth.error != null) ...[
-              _ErrBanner(widget.auth.error!),
+              InlineBanner(message: widget.auth.error!, type: BannerType.error),
               const SizedBox(height: 14),
             ],
 
@@ -371,10 +372,10 @@ class _SignupFormState extends State<_SignupForm> {
                     const SizedBox(width: 5),
                     Text(
                       l.authBackLabel,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: _label),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: _label,
+                      ),
                     ),
                   ],
                 ),
@@ -385,7 +386,9 @@ class _SignupFormState extends State<_SignupForm> {
             Text(l.createAccount, style: _headStyle(context)),
             const SizedBox(height: 6),
             Text(l.startManagingYourBusiness,
-                style: const TextStyle(fontSize: 14, color: _muted)),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: _muted)),
             const SizedBox(height: 36),
 
             _Lbl(l.businessName),
@@ -439,7 +442,7 @@ class _SignupFormState extends State<_SignupForm> {
             const SizedBox(height: 28),
 
             if (widget.auth.error != null) ...[
-              _ErrBanner(widget.auth.error!),
+              InlineBanner(message: widget.auth.error!, type: BannerType.error),
               const SizedBox(height: 14),
             ],
 
@@ -481,7 +484,7 @@ InputDecoration _inputDec({
 }) =>
     InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFFB0BAB7), fontSize: 14),
+      hintStyle: const TextStyle(color: AppColors.hint, fontSize: 14),
       prefixIcon:
           Icon(icon, size: 19, color: _muted),
       suffixIcon: eye,
@@ -498,7 +501,7 @@ InputDecoration _inputDec({
     );
 
 OutlineInputBorder _ob(Color c, {double w = 1.0}) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       borderSide: BorderSide(color: c, width: w),
     );
 
@@ -515,10 +518,10 @@ class _Brand extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               color: _primary,
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               child: Image.asset(
                 Branding.logoAsset,
                 fit: BoxFit.cover,
@@ -594,14 +597,14 @@ class _Btn extends StatelessWidget {
   @override
   Widget build(BuildContext _) => SizedBox(
         width: double.infinity,
-        height: 52,
+        height: 48,
         child: FilledButton(
           onPressed: loading ? null : onPressed,
           style: FilledButton.styleFrom(
             backgroundColor: _primary,
             disabledBackgroundColor: _primary.withAlpha(180),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(AppRadius.md)),
             elevation: 0,
           ),
           child: loading
@@ -622,34 +625,6 @@ class _Btn extends StatelessWidget {
       );
 }
 
-// error banner
-class _ErrBanner extends StatelessWidget {
-  const _ErrBanner(this.msg);
-  final String msg;
-
-  @override
-  Widget build(BuildContext _) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: _errBg,
-          border: Border.all(color: _errBdr),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 16, color: _errText),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(msg,
-                  style: const TextStyle(fontSize: 13, color: _errText)),
-            ),
-          ],
-        ),
-      );
-}
-
 // switch prompt ("Don't have an account? Sign up")
 class _Switch extends StatelessWidget {
   const _Switch({
@@ -662,17 +637,18 @@ class _Switch extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext _) => Row(
+  Widget build(BuildContext context) => Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text('$question ',
-              style: const TextStyle(fontSize: 14, color: _muted)),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: _muted)),
           GestureDetector(
             onTap: onTap,
             child: Text(
               action,
-              style: const TextStyle(
-                fontSize: 14,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: _primary,
                 fontWeight: FontWeight.w600,
               ),

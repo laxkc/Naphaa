@@ -47,10 +47,8 @@ class ProfileScreen extends ConsumerWidget {
                         if (p.phone != null)
                           Text(
                             p.phone!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.muted,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.muted),
                           ),
                       ],
                     ),

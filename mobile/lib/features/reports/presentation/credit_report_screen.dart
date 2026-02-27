@@ -57,6 +57,7 @@ class CreditReportScreen extends ConsumerWidget {
                   vertical: AppSpacing.lg,
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
                       Icons.warning_amber_rounded,
@@ -70,11 +71,15 @@ class CreditReportScreen extends ConsumerWidget {
                         children: [
                           Text(
                             l10n.creditReportTotalOutstanding,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: AppColors.warning),
                           ),
                           Text(
-                            'NPR ${currFmt.format(totalOutstanding)}',
+                            '${l10n.nprLabel} ${currFmt.format(totalOutstanding)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(
                               context,
                             ).textTheme.titleLarge?.copyWith(
@@ -82,14 +87,14 @@ class CreditReportScreen extends ConsumerWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.creditReportCustomerCount(customers.length),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.warning),
+                          ),
                         ],
                       ),
-                    ),
-                    Text(
-                      l10n.creditReportCustomerCount(customers.length),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
                     ),
                   ],
                 ),
@@ -134,11 +139,15 @@ class CreditReportScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   c.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.titleSmall,
                                 ),
                                 if (c.phone != null)
                                   Text(
                                     c.phone!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -149,12 +158,18 @@ class CreditReportScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          Text(
-                            'NPR ${currFmt.format(c.balance)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.warning,
+                          SizedBox(
+                            width: 84,
+                            child: Text(
+                              '${l10n.nprLabel} ${currFmt.format(c.balance)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.warning,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.xs),

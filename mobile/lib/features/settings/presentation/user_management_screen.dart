@@ -19,14 +19,54 @@ class UserManagementScreen extends ConsumerWidget {
         backgroundColor: AppColors.surface,
       ),
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const SizedBox.shrink(),
+        loading:
+            () => ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: const [
+                SkeletonListTile(),
+                SizedBox(height: AppSpacing.sm),
+                SkeletonListTile(),
+              ],
+            ),
+        error:
+            (_, __) => ErrorRetry(
+              onRetry: () => ref.invalidate(profileProvider),
+            ),
         data: (profile) => SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Owner card
+              AppCard(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: const Icon(
+                        Icons.manage_accounts_outlined,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        l10n.settingsUserManagementSubtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
               AppCard(
                 child: Row(
                   children: [
@@ -58,8 +98,14 @@ class UserManagementScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.h),
-              SectionHeader(l10n.userManagementStaffMembers),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l10n.userManagementStaffMembers,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               AppCard(
                 child: Column(
@@ -99,6 +145,9 @@ class UserManagementScreen extends ConsumerWidget {
                   icon: const Icon(Icons.person_add_outlined, size: 18),
                   label: Text(l10n.userManagementInviteStaffMember),
                   onPressed: () => _showInviteDialog(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
                 ),
               ),
             ],

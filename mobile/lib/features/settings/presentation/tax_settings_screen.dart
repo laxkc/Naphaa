@@ -60,6 +60,36 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppCard(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: const Icon(
+                      Icons.receipt_long_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      l10n.settingsTaxSettingsSubtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -101,27 +131,33 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _panCtl,
-              decoration: InputDecoration(
-                labelText: l10n.taxSettingsPanOptionalLabel,
-                hintText: l10n.taxSettingsPanHint,
+            AppCard(
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _panCtl,
+                    decoration: InputDecoration(
+                      labelText: l10n.taxSettingsPanOptionalLabel,
+                      hintText: l10n.taxSettingsPanHint,
+                    ),
+                    maxLength: 9,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: _vatRateCtl,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: l10n.taxSettingsVatRateLabel,
+                      hintText: '13',
+                      suffixText: '%',
+                    ),
+                    enabled: _vatEnabled,
+                  ),
+                ],
               ),
-              maxLength: 9,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _vatRateCtl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: InputDecoration(
-                labelText: l10n.taxSettingsVatRateLabel,
-                hintText: '13',
-                suffixText: '%',
-              ),
-              enabled: _vatEnabled,
             ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.md),
@@ -130,18 +166,22 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
             const SizedBox(height: AppSpacing.h),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
+              child: FilledButton.icon(
                 onPressed: _saving ? null : _save,
-                child:
+                icon:
                     _saving
                         ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 16,
+                          width: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
                           ),
                         )
+                        : const Icon(Icons.save_outlined, size: 18),
+                label:
+                    _saving
+                        ? Text(l10n.loadingLabel)
                         : Text(
                           l10n.taxSettingsSaveAction,
                         ),

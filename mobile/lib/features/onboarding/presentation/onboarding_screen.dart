@@ -190,7 +190,7 @@ class _StepOne extends StatelessWidget {
                     showCheckmark: false,
                     backgroundColor: AppColors.surface,
                     selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
+                    labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: currency == c ? Colors.white : AppColors.label,
                       fontWeight:
                           currency == c ? FontWeight.w700 : FontWeight.w600,
@@ -234,7 +234,7 @@ class _StepOne extends StatelessWidget {
                     showCheckmark: false,
                     backgroundColor: AppColors.surface,
                     selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
+                    labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: businessType == t ? Colors.white : AppColors.label,
                       fontWeight:
                           businessType == t ? FontWeight.w700 : FontWeight.w600,
@@ -304,7 +304,7 @@ class _StepTwo extends StatelessWidget {
                     showCheckmark: false,
                     backgroundColor: AppColors.surface,
                     selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
+                    labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: unit == u ? Colors.white : AppColors.label,
                       fontWeight: unit == u ? FontWeight.w700 : FontWeight.w600,
                     ),
@@ -330,7 +330,9 @@ class _StepTwo extends StatelessWidget {
                 taxEnabled
                     ? l10n.onboardingTaxWillApply
                     : l10n.onboardingNoTaxApplied,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
               ),
               value: taxEnabled,
               activeThumbColor: AppColors.primary,

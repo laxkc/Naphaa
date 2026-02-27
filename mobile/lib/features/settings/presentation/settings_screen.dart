@@ -157,7 +157,7 @@ class SettingsScreen extends ConsumerWidget {
                     segments: [
                       ButtonSegment(
                         value: 'ne',
-                        label: Text('नेपाली'),
+                        label: Text(l10n.nepaliLabel),
                         icon: Icon(Icons.translate, size: 14),
                       ),
                       ButtonSegment(
@@ -275,13 +275,12 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: AppColors.border),
+      child: AppCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: children,
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: children),
       ),
     );
   }

@@ -85,7 +85,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                             child: _HealthStatTile(
                               label: l10n.sales,
                               value:
-                                  'NPR ${currFmt.format(_toDouble(summary['sales_total']))}',
+                                  '${l10n.nprLabel} ${currFmt.format(_toDouble(summary['sales_total']))}',
                               color: AppColors.success,
                               icon: Icons.trending_up_rounded,
                             ),
@@ -95,7 +95,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                             child: _HealthStatTile(
                               label: l10n.expenses,
                               value:
-                                  'NPR ${currFmt.format(_toDouble(summary['expenses_total']))}',
+                                  '${l10n.nprLabel} ${currFmt.format(_toDouble(summary['expenses_total']))}',
                               color: AppColors.error,
                               icon: Icons.receipt_long_outlined,
                             ),
@@ -109,7 +109,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                             child: _HealthStatTile(
                               label: l10n.businessHealthEstimatedProfitLabel,
                               value:
-                                  'NPR ${currFmt.format(_toDouble(summary['profit_est']))}',
+                                  '${l10n.nprLabel} ${currFmt.format(_toDouble(summary['profit_est']))}',
                               color:
                                   _toDouble(summary['profit_est']) >= 0
                                       ? AppColors.primary
@@ -122,7 +122,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                             child: _HealthStatTile(
                               label: l10n.businessHealthOutstandingCreditLabel,
                               value:
-                                  'NPR ${currFmt.format(_toDouble(summary['outstanding_total']))}',
+                                  '${l10n.nprLabel} ${currFmt.format(_toDouble(summary['outstanding_total']))}',
                               color: AppColors.warning,
                               icon: Icons.account_balance_wallet_outlined,
                             ),
@@ -218,7 +218,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           Expanded(
                             child: _HealthStatTile(
                               label: l10n.businessHealthExpectedIncomingLabel,
-                              value: 'NPR ${currFmt.format(incoming)}',
+                              value: '${l10n.nprLabel} ${currFmt.format(incoming)}',
                               color: AppColors.success,
                               icon: Icons.south_west_rounded,
                             ),
@@ -227,7 +227,7 @@ class BusinessHealthScreen extends ConsumerWidget {
                           Expanded(
                             child: _HealthStatTile(
                               label: l10n.businessHealthExpectedOutgoingLabel,
-                              value: 'NPR ${currFmt.format(outgoing)}',
+                              value: '${l10n.nprLabel} ${currFmt.format(outgoing)}',
                               color: AppColors.error,
                               icon: Icons.north_east_rounded,
                             ),
@@ -447,6 +447,8 @@ class _HealthStatTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.label,
@@ -466,6 +468,7 @@ class _CreditRiskSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final items =
         (body['items'] as List? ?? const [])
             .whereType<Map>()
@@ -490,16 +493,16 @@ class _CreditRiskSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _RiskSummaryPill(
-                  label: AppLocalizations.of(context)!.creditAgingOutstandingLabel,
-                  value: 'NPR ${currFmt.format(totalOutstanding)}',
+                  label: l10n.creditAgingOutstandingLabel,
+                  value: '${l10n.nprLabel} ${currFmt.format(totalOutstanding)}',
                   color: AppColors.warning,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _RiskSummaryPill(
-                  label: AppLocalizations.of(context)!.creditAgingOverdueLabel,
-                  value: 'NPR ${currFmt.format(totalOverdue)}',
+                  label: l10n.creditAgingOverdueLabel,
+                  value: '${l10n.nprLabel} ${currFmt.format(totalOverdue)}',
                   color: AppColors.error,
                 ),
               ),
@@ -507,7 +510,7 @@ class _CreditRiskSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            AppLocalizations.of(context)!.creditAgingHighRiskCustomersCount(
+            l10n.creditAgingHighRiskCustomersCount(
               highRiskCount,
             ),
             style: Theme.of(
@@ -519,9 +522,9 @@ class _CreditRiskSummaryCard extends StatelessWidget {
             ...topHighRisk.map(
               (row) => _TapLine(
                 title:
-                    '${row['customer_name'] ?? AppLocalizations.of(context)!.customerLabel} • NPR ${currFmt.format(_toDouble(row['outstanding_amount']))}',
+                    '${row['customer_name'] ?? l10n.customerLabel} • ${l10n.nprLabel} ${currFmt.format(_toDouble(row['outstanding_amount']))}',
                 subtitle:
-                    '${AppLocalizations.of(context)!.creditAgingOldestDueLabel}: ${AppLocalizations.of(context)!.businessHealthDaysShort(_toInt(row['oldest_due_days']))}',
+                    '${l10n.creditAgingOldestDueLabel}: ${l10n.businessHealthDaysShort(_toInt(row['oldest_due_days']))}',
                 color: AppColors.error,
                 onTap:
                     row['customer_id'] == null
@@ -645,6 +648,7 @@ class _FastMoversCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final items =
         (body['items'] as List?)?.whereType<ProductMetricItem>().toList() ??
         const <ProductMetricItem>[];
@@ -670,7 +674,7 @@ class _FastMoversCard extends StatelessWidget {
               return _TapLine(
                 title: '${p.productName} • ${p.qtySold7d.toStringAsFixed(0)}',
                 subtitle:
-                    '${AppLocalizations.of(context)!.businessHealthSevenDayQtySoldLabel} • ${AppLocalizations.of(context)!.revenueLabel}: NPR ${p.revenue30d.toStringAsFixed(2)}',
+                    '${l10n.businessHealthSevenDayQtySoldLabel} • ${l10n.revenueLabel}: ${l10n.nprLabel} ${p.revenue30d.toStringAsFixed(2)}',
                 color: AppColors.primary,
                 onTap:
                     () => Navigator.of(context).push(
@@ -718,6 +722,8 @@ class _RiskSummaryPill extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),

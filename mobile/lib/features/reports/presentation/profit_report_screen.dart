@@ -67,13 +67,13 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                     onSelected: (_) => setState(() => _period = p),
                     showCheckmark: false,
                     backgroundColor: AppColors.surface,
-                    selectedColor: AppColors.primary,
+                    selectedColor: AppColors.accent,
                     labelStyle: TextStyle(
                       color: selected ? Colors.white : AppColors.label,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     ),
                     side: BorderSide(
-                      color: selected ? AppColors.primary : AppColors.border,
+                      color: selected ? AppColors.accent : AppColors.border,
                       width: 1,
                     ),
                   ),
@@ -128,7 +128,7 @@ class _ProfitReportScreenState extends ConsumerState<ProfitReportScreen> {
                                     Theme.of(context).textTheme.bodySmall),
                             const SizedBox(height: 4),
                             Text(
-                              'NPR ${_currFmt.format(netProfit)}',
+                              '${l10n.nprLabel} ${_currFmt.format(netProfit)}',
                               style: Theme.of(context)
                                   .textTheme
                                   .headlineMedium
@@ -224,6 +224,7 @@ class _ProfitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -237,7 +238,7 @@ class _ProfitRow extends StatelessWidget {
                     )),
           ),
           Text(
-            '${value < 0 ? '-' : ''}NPR ${currFmt.format(value.abs())}',
+            '${value < 0 ? '-' : ''}${l10n.nprLabel} ${currFmt.format(value.abs())}',
             style: TextStyle(
               fontSize: isBold ? 15 : 14,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,

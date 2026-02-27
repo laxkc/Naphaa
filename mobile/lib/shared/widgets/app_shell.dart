@@ -45,8 +45,14 @@ class _AppShellState extends ConsumerState<AppShell> {
       ),
       child: Scaffold(
         backgroundColor: AppColors.bg,
+        resizeToAvoidBottomInset: true,
+        extendBody: false,
         appBar: _buildAppBar(context, l10n, storeName, syncStatus),
-        body: _pages[_index],
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: _pages[_index],
+        ),
         bottomNavigationBar: _buildNavBar(l10n),
       ),
     );
@@ -171,6 +177,13 @@ class _AppShellState extends ConsumerState<AppShell> {
       child: Container(
         width: double.infinity,
         color: bg,
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border(
+            top: BorderSide(color: AppColors.border.withValues(alpha: 0.7)),
+            bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.7)),
+          ),
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.xs,
@@ -188,8 +201,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                     text,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: fg,
                     ),
@@ -214,8 +226,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                         isConflict
                             ? l10n.pullRetryShort
                             : l10n.syncNowLabel,
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: fg,
                         ),

@@ -493,7 +493,9 @@ class _ProductRow extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           color:
-              inCart ? AppColors.primary.withAlpha(20) : AppColors.surfaceAlt,
+              inCart
+                  ? AppColors.primary.withValues(alpha: 0.20)
+                  : AppColors.surfaceAlt,
           shape: BoxShape.circle,
         ),
         child: Icon(
@@ -639,13 +641,14 @@ class _CartFooter extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   l10n.salesCartItemsCount(totalQty),
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
                 const Spacer(),
                 Text(
                   formatCurrency(totalAmt, localeCode),
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.label,
                   ),
@@ -662,7 +665,9 @@ class _CartFooter extends StatelessWidget {
                   icon: const Icon(Icons.payments_outlined, size: 16),
                   label: Text(
                     l10n.saveCashSale,
-                    style: const TextStyle(fontSize: 13),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: Colors.white),
                   ),
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
                 ),
@@ -674,9 +679,15 @@ class _CartFooter extends StatelessWidget {
                   icon: const Icon(Icons.credit_card_outlined, size: 16),
                   label: Text(
                     l10n.saveCreditSale,
-                    style: const TextStyle(fontSize: 13),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: AppColors.primary),
                   ),
-                  style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    backgroundColor: AppColors.surfaceAlt,
+                    foregroundColor: AppColors.primary,
+                  ),
                 ),
               ),
             ],

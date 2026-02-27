@@ -173,13 +173,13 @@ class _StockAdjustmentScreenState
                   onSelected: (_) => setState(() => _reason = r),
                   showCheckmark: false,
                   backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.primary,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
                     color: _reason == r ? Colors.white : AppColors.label,
                     fontWeight: _reason == r ? FontWeight.w700 : FontWeight.w600,
                   ),
                   side: BorderSide(
-                    color: _reason == r ? AppColors.primary : AppColors.border,
+                    color: _reason == r ? AppColors.accent : AppColors.border,
                     width: 1,
                   ),
                 );

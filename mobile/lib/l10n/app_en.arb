@@ -544,6 +544,22 @@
   "pendingLabel": "Pending",
   "ackedLabel": "Acked",
   "failedLabel": "Failed",
+  "syncDiagnosticsFailedRowsBanner": "{count} sync rows failed. Retry sync or open a row for details.",
+  "@syncDiagnosticsFailedRowsBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDiagnosticsInvalidRowsBanner": "{count} offline changes are invalid and could not be synced.",
+  "@syncDiagnosticsInvalidRowsBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noSyncQueueItemsTitle": "No sync queue items",
   "noSyncQueueItemsSubtitle": "Offline changes and sync errors will appear here.",
   "retryCountShort": "retry {count}",

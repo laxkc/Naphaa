@@ -65,13 +65,13 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                     onSelected: (_) => setState(() => _period = p),
                     showCheckmark: false,
                     backgroundColor: AppColors.surface,
-                    selectedColor: AppColors.primary,
+                    selectedColor: AppColors.accent,
                     labelStyle: TextStyle(
                       color: selected ? Colors.white : AppColors.label,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     ),
                     side: BorderSide(
-                      color: selected ? AppColors.primary : AppColors.border,
+                      color: selected ? AppColors.accent : AppColors.border,
                       width: 1,
                     ),
                   ),
@@ -111,7 +111,7 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
                                     Theme.of(context).textTheme.bodySmall),
                             const SizedBox(height: 4),
                             Text(
-                              'NPR ${_currFmt.format(totalRevenue)}',
+                              '${l10n.nprLabel} ${_currFmt.format(totalRevenue)}',
                               style: Theme.of(context)
                                   .textTheme
                                   .headlineMedium
@@ -192,6 +192,7 @@ class _BreakdownRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final pct = total > 0 ? (amount / total * 100) : 0.0;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -204,7 +205,7 @@ class _BreakdownRow extends StatelessWidget {
                 child: Text(label,
                     style: Theme.of(context).textTheme.bodyMedium),
               ),
-              Text('NPR ${currFmt.format(amount)}',
+              Text('${l10n.nprLabel} ${currFmt.format(amount)}',
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall

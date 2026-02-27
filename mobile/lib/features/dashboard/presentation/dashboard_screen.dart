@@ -200,58 +200,72 @@ class _DashboardTopRow extends StatelessWidget {
               if (count > 0)
                 Text(
                   l10n.alertCount(count),
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
             ],
           ),
         ),
-        Material(
-          color: AppColors.surface,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AlertsFeedScreen()),
-              );
-            },
-            child: Tooltip(
-              message:
-                  count > 0
-                      ? l10n.alertsCountWithStatus(count, statusLabel)
-                      : l10n.alertsLabel,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(icon, color: bellColor, size: 22),
-                    if (count > 0)
-                      Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          constraints: const BoxConstraints(minWidth: 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          height: 16,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white, width: 1.2),
-                          ),
-                          child: Text(
-                            count > 9 ? '9+' : '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
+        Semantics(
+          button: true,
+          label:
+              count > 0
+                  ? l10n.alertsCountWithStatus(count, statusLabel)
+                  : l10n.alertsLabel,
+          child: Material(
+            color: AppColors.surface,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AlertsFeedScreen()),
+                );
+              },
+              child: Tooltip(
+                message:
+                    count > 0
+                        ? l10n.alertsCountWithStatus(count, statusLabel)
+                        : l10n.alertsLabel,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(icon, color: bellColor, size: 22),
+                        if (count > 0)
+                          Positioned(
+                            right: -4,
+                            top: -4,
+                            child: Container(
+                              constraints: const BoxConstraints(minWidth: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              height: 16,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: badgeColor,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill,
+                                ),
+                                border: Border.all(color: Colors.white, width: 1.2),
+                              ),
+                              child: Text(
+                                count > 9 ? '9+' : '$count',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -283,8 +297,7 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profitColor =
-        profit >= 0 ? const Color(0xFF80CBC4) : const Color(0xFFEF9A9A);
+    final profitColor = profit >= 0 ? AppColors.successBg : AppColors.errorBg;
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Stack(
@@ -296,7 +309,7 @@ class _HeroCard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF004D40), Color(0xFF00897B)],
+                  colors: [AppColors.primaryDark, AppColors.primary],
                 ),
               ),
             ),
@@ -310,7 +323,8 @@ class _HeroCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withAlpha(13),
+                color: Colors.white.withValues(alpha: 0.13),
+                
               ),
             ),
           ),
@@ -322,7 +336,7 @@ class _HeroCard extends StatelessWidget {
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withAlpha(8),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -335,36 +349,52 @@ class _HeroCard extends StatelessWidget {
                 // top row: label + date chip
                 Row(
                   children: [
-                    const Icon(
-                      Icons.bar_chart_rounded,
-                      size: 16,
-                      color: Colors.white60,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      l10n.dashboardOverview.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white70,
-                        letterSpacing: 0.8,
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.bar_chart_rounded,
+                            size: 16,
+                            color: Colors.white60,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              l10n.dashboardOverview.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(20),
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text(
-                        today,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.white70,
+                    const SizedBox(width: AppSpacing.sm),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 82),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.20),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          today,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white70,
+                          ),
                         ),
                       ),
                     ),
@@ -401,7 +431,7 @@ class _HeroCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 // thin divider
-                Container(height: 1, color: Colors.white.withAlpha(25)),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.25)),
                 const SizedBox(height: AppSpacing.md),
                 // sub-stats row
                 Row(
@@ -417,7 +447,7 @@ class _HeroCard extends StatelessWidget {
                     Container(
                       width: 1,
                       height: 32,
-                      color: Colors.white.withAlpha(25),
+                      color: Colors.white.withValues(alpha: 0.25),
                     ),
                     Expanded(
                       child: _HeroStat(
@@ -475,9 +505,14 @@ class _HeroStat extends StatelessWidget {
             children: [
               Icon(icon, size: 12, color: Colors.white60),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 11, color: Colors.white60),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: alignEnd ? TextAlign.right : TextAlign.left,
+                  style: const TextStyle(fontSize: 11, color: Colors.white60),
+                ),
               ),
             ],
           ),
@@ -652,9 +687,15 @@ class _LowStockCard extends StatelessWidget {
                 color: AppColors.muted,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                l10n.lowStockItemsTitle,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              Expanded(
+                child: Text(
+                  l10n.lowStockItemsTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -663,18 +704,24 @@ class _LowStockCard extends StatelessWidget {
             loading:
                 () => Text(
                   l10n.checkingStock,
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 ),
             error:
                 (_, __) => Text(
                   l10n.unableLoadLowStockData,
-                  style: TextStyle(fontSize: 12, color: AppColors.error),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.error),
                 ),
             data: (items) {
               if (items.isEmpty) {
                 return Text(
                   l10n.allProductsAboveThreshold,
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                 );
               }
               final top = items.take(4).toList();
@@ -879,8 +926,12 @@ class _QuickActions extends ConsumerWidget {
             ];
 
             const spacing = AppSpacing.sm;
-            const columns = 4;
-            const itemHeight = 90.0;
+            final columns = switch (constraints.maxWidth) {
+              <= 340 => 3,
+              <= 560 => 4,
+              _ => 5,
+            };
+            final itemHeight = columns == 3 ? 96.0 : 90.0;
             final itemWidth =
                 (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
@@ -939,44 +990,51 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color.withAlpha(18),
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        splashColor: color.withAlpha(30),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.sm,
-            horizontal: AppSpacing.sm,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withAlpha(45),
-                ),
-                child: Icon(icon, size: 19, color: color),
+    return Semantics(
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: Material(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            splashColor: color.withValues(alpha: 0.16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.sm,
+                horizontal: AppSpacing.sm,
               ),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.labelSub,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withValues(alpha: 0.20),
+                    ),
+                    child: Icon(icon, size: 19, color: color),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.labelSub,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

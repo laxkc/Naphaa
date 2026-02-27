@@ -59,15 +59,14 @@ class _ProductInsightsReportScreenState
                   onSelected: (v) => setState(() => _deadStockOnly = v),
                   showCheckmark: false,
                   backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.primary,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
                     color: _deadStockOnly ? Colors.white : AppColors.label,
                     fontWeight:
                         _deadStockOnly ? FontWeight.w700 : FontWeight.w600,
                   ),
                   side: BorderSide(
-                    color:
-                        _deadStockOnly ? AppColors.primary : AppColors.border,
+                    color: _deadStockOnly ? AppColors.accent : AppColors.border,
                   ),
                 ),
               ],
@@ -158,7 +157,7 @@ class _ProductInsightsReportScreenState
                             child: _SummaryMini(
                               label: l10n.productInsightsLockedValueLabel,
                               value:
-                                  'NPR ${currFmt.format(deadStockValueTotal)}',
+                                  '${l10n.nprLabel} ${currFmt.format(deadStockValueTotal)}',
                               color: AppColors.error,
                             ),
                           ),
@@ -198,7 +197,7 @@ class _ProductInsightsReportScreenState
                               return _MetricLine(
                                 title: p.productName,
                                 subtitle:
-                                    '${l10n.productInsightsProfitLabel}: NPR ${currFmt.format(p.profit30d ?? 0)} • ${l10n.revenueLabel}: NPR ${currFmt.format(p.revenue30d)}',
+                                    '${l10n.productInsightsProfitLabel}: ${l10n.nprLabel} ${currFmt.format(p.profit30d ?? 0)} • ${l10n.revenueLabel}: ${l10n.nprLabel} ${currFmt.format(p.revenue30d)}',
                                 color: AppColors.success,
                                 onTap:
                                     () => Navigator.of(context).push(
@@ -225,7 +224,7 @@ class _ProductInsightsReportScreenState
                               return _MetricLine(
                                 title: p.productName,
                                 subtitle:
-                                    '${l10n.productInsightsQtySold7dLabel}: ${p.qtySold7d.toStringAsFixed(0)} • ${l10n.revenueLabel}: NPR ${currFmt.format(p.revenue30d)}',
+                                    '${l10n.productInsightsQtySold7dLabel}: ${p.qtySold7d.toStringAsFixed(0)} • ${l10n.revenueLabel}: ${l10n.nprLabel} ${currFmt.format(p.revenue30d)}',
                                 color: AppColors.primary,
                                 onTap:
                                     () => Navigator.of(context).push(
@@ -254,7 +253,7 @@ class _ProductInsightsReportScreenState
                               final deadValue =
                                   p.deadStockValue == null
                                       ? l10n.productInsightsCostNotSet
-                                      : 'NPR ${currFmt.format(p.deadStockValue)}';
+                                      : '${l10n.nprLabel} ${currFmt.format(p.deadStockValue)}';
                               return _MetricLine(
                                 title:
                                     '${p.productName} • ${p.stockQty.toStringAsFixed(0)}',

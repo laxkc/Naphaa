@@ -544,6 +544,22 @@
   "pendingLabel": "बाँकी",
   "ackedLabel": "स्वीकृत",
   "failedLabel": "असफल",
+  "syncDiagnosticsFailedRowsBanner": "{count} सिंक पंक्ति असफल भए। फेरि सिंक गर्नुहोस् वा विवरणका लागि पंक्ति खोल्नुहोस्।",
+  "@syncDiagnosticsFailedRowsBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDiagnosticsInvalidRowsBanner": "{count} अफलाइन परिवर्तन अवैध छन् र सिंक हुन सकेनन्।",
+  "@syncDiagnosticsInvalidRowsBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noSyncQueueItemsTitle": "सिंक क्यू खाली छ",
   "noSyncQueueItemsSubtitle": "अफलाइन परिवर्तन र सिंक त्रुटिहरू यहाँ देखिनेछन्।",
   "retryCountShort": "पुन:प्रयास {count}",

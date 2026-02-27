@@ -59,7 +59,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                         .then((_) => ref.invalidate(customersListProvider)),
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
                 label: Text(l10n.addCustomer),
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 50)),
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
               ),
             ],
           ),
@@ -148,11 +148,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                           leading: InitialsAvatar(name: c.name, size: 40),
                           title: Text(
                             c.name,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.label,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           subtitle:
                               (c.phone != null || risk != null)
@@ -164,10 +161,10 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                                       if (c.phone != null)
                                         Text(
                                           c.phone!,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.muted,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: AppColors.muted),
                                         ),
                                       if (risk != null)
                                         Padding(
@@ -194,9 +191,11 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                                             CrossAxisAlignment.end,
                                         children: [
                                           Text(
-                                            'Rs ${balance.abs().toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontSize: 14,
+                                            '${l10n.nprLabel} ${balance.abs().toStringAsFixed(0)}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                               color:
                                                   isDebt
@@ -208,8 +207,10 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                                             isDebt
                                                 ? l10n.owesYouLabel
                                                 : l10n.creditLabel,
-                                            style: TextStyle(
-                                              fontSize: 10,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall
+                                                ?.copyWith(
                                               color:
                                                   isDebt
                                                       ? AppColors.warning
@@ -295,11 +296,12 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(l10n.customers),
         backgroundColor: AppColors.surface,
       ),
-      body: content,
+      body: SafeArea(top: false, child: content),
     );
   }
 }

@@ -19,7 +19,6 @@ class SubscriptionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Current plan card
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,8 +46,13 @@ class SubscriptionScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Text(l10n.subscriptionFreePlanTitle,
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    l10n.subscriptionFreePlanTitle,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.label,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     l10n.subscriptionFreePlanSubtitle,
@@ -60,8 +64,36 @@ class SubscriptionScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.h),
-            SectionHeader(l10n.subscriptionFreePlanIncludes),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _PlanMetric(
+                      label: l10n.subscriptionFeatureBasicReports,
+                      value: '4',
+                      color: AppColors.success,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _PlanMetric(
+                      label: l10n.subscriptionFeatureCloudSync,
+                      value: 'Pro',
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.subscriptionFreePlanIncludes,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.muted,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               padding: EdgeInsets.zero,
@@ -114,7 +146,7 @@ class SubscriptionScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.h),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
+              child: FilledButton.tonalIcon(
                 icon: const Icon(Icons.workspace_premium_outlined, size: 18),
                 label: Text(l10n.subscriptionUpgradeToPro),
                 onPressed: () {
@@ -130,6 +162,48 @@ class SubscriptionScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlanMetric extends StatelessWidget {
+  const _PlanMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }

@@ -26,15 +26,23 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = Container(
       decoration: BoxDecoration(
+        color: color,
         border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: padding,
       child: child,
     );
 
     return Material(
-      color: color,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       clipBehavior: Clip.antiAlias,
       child: onTap == null ? content : InkWell(onTap: onTap, child: content),
@@ -369,14 +377,14 @@ class InitialsAvatar extends StatelessWidget {
   final Color? color;
 
   static const _palette = [
-    Color(0xFF1565C0),
-    Color(0xFF00695C),
-    Color(0xFF6A1B9A),
-    Color(0xFFAD1457),
-    Color(0xFF00838F),
-    Color(0xFFE65100),
-    Color(0xFF558B2F),
-    Color(0xFF4527A0),
+    AppColors.primary,
+    AppColors.accent,
+    AppColors.success,
+    AppColors.error,
+    AppColors.labelSub,
+    AppColors.primaryDark,
+    AppColors.primaryLight,
+    AppColors.warning,
   ];
 
   Color _colorFor(String name) {
@@ -453,8 +461,8 @@ class SkeletonBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFFE0E5E4),
-      highlightColor: const Color(0xFFF5F7F6),
+      baseColor: AppColors.surfaceAlt,
+      highlightColor: AppColors.bg,
       child: Container(
         width: width,
         height: height,
@@ -539,17 +547,23 @@ Future<T?> showAppBottomSheet<T>(
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: isScrollControlled,
+    useSafeArea: true,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(AppRadius.xl),
       ),
     ),
-    builder: (_) => Padding(
+    builder: (sheetContext) => AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
       padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
+        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
       ),
-      child: child,
+      child: SafeArea(
+        top: false,
+        child: child,
+      ),
     ),
   );
 }

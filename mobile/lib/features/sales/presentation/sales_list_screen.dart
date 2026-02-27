@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
+import 'package:sme_digital/core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/sale.dart';
@@ -50,6 +51,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      resizeToAvoidBottomInset: true,
       appBar:
           widget.standalone
               ? AppBar(
@@ -57,7 +59,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 backgroundColor: AppColors.surface,
               )
               : null,
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
           Container(
             color: AppColors.surface,
@@ -79,7 +83,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                           onSelected: (_) => setState(() => _filter = f),
                           showCheckmark: false,
                           backgroundColor: AppColors.surface,
-                          selectedColor: AppColors.primary,
+                          selectedColor: AppColors.accent,
                           labelStyle: TextStyle(
                             color: selected ? Colors.white : AppColors.label,
                             fontWeight:
@@ -87,7 +91,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                           ),
                           side: BorderSide(
                             color:
-                                selected ? AppColors.primary : AppColors.border,
+                                selected ? AppColors.accent : AppColors.border,
                             width: 1,
                           ),
                         ),
@@ -153,6 +157,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
           ),
         ],
+      ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
@@ -252,14 +257,14 @@ class _SaleTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'NPR ${currFmt.format(sale.totalAmount)}',
+                '${l10n.nprLabel} ${currFmt.format(sale.totalAmount)}',
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(color: AppColors.label),
               ),
               const SizedBox(height: 4),
               StatusChip(
-                label: sale.saleType,
+                label: paymentMethodLabel(context, sale.saleType),
                 color: isCash ? AppColors.success : AppColors.warning,
               ),
             ],

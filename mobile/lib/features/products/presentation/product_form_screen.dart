@@ -120,7 +120,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       ),
                       decoration: InputDecoration(
                         labelText: l10n.sellPriceLabel,
-                        prefixText: 'NPR ',
+                        prefixText: '${l10n.nprLabel} ',
                       ),
                       validator: (v) {
                         final p = double.tryParse(v ?? '');
@@ -140,7 +140,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       ),
                       decoration: InputDecoration(
                         labelText: l10n.costPriceLabel,
-                        prefixText: 'NPR ',
+                        prefixText: '${l10n.nprLabel} ',
                       ),
                     ),
                   ),
@@ -199,7 +199,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         onSelected: (_) => setState(() => _unit = u),
                         showCheckmark: false,
                         backgroundColor: AppColors.surface,
-                        selectedColor: AppColors.primary,
+                        selectedColor: AppColors.accent,
                         labelStyle: TextStyle(
                           color: _unit == u ? Colors.white : AppColors.label,
                           fontWeight:
@@ -207,7 +207,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         ),
                         side: BorderSide(
                           color:
-                              _unit == u ? AppColors.primary : AppColors.border,
+                              _unit == u ? AppColors.accent : AppColors.border,
                           width: 1,
                         ),
                       );

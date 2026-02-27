@@ -54,8 +54,7 @@ class CustomerDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ExcludeSemantics(
-        child: customerAsync.when(
+      body: customerAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error:
               (e, _) => ErrorRetry(
@@ -331,8 +330,10 @@ class CustomerDetailScreen extends ConsumerWidget {
                                         ),
                                         Text(
                                           '${isPayment ? '-' : '+'}${l10n.nprLabel} ${currFmt.format(amount)}',
-                                          style: TextStyle(
-                                            fontSize: 14,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
                                             fontWeight: FontWeight.w600,
                                             color:
                                                 isPayment
@@ -355,7 +356,6 @@ class CustomerDetailScreen extends ConsumerWidget {
             );
           },
         ),
-      ),
     );
   }
 }

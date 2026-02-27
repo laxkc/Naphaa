@@ -129,11 +129,12 @@ class ProductsScreen extends ConsumerWidget {
                                     Expanded(
                                       child: Text(
                                         p.name,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.label,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                       ),
                                     ),
                                     if (lowStock)
@@ -145,21 +146,23 @@ class ProductsScreen extends ConsumerWidget {
                                 ),
                                 subtitle: Text(
                                   '${l10n.stock}  ${p.stockQty.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.muted,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: AppColors.muted),
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       '${l10n.rsLabel} ${p.sellPrice.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.label,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.label,
+                                          ),
                                     ),
                                     const SizedBox(width: AppSpacing.xs),
                                     IconButton(
@@ -243,11 +246,12 @@ class ProductsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(l10n.manageProducts),
         backgroundColor: AppColors.surface,
       ),
-      body: content,
+      body: SafeArea(top: false, child: content),
     );
   }
 }

@@ -1123,6 +1123,16 @@ class AppLocalizationsNe extends AppLocalizations {
   String get failedLabel => 'असफल';
 
   @override
+  String syncDiagnosticsFailedRowsBanner(int count) {
+    return '$count सिंक पंक्ति असफल भए। फेरि सिंक गर्नुहोस् वा विवरणका लागि पंक्ति खोल्नुहोस्।';
+  }
+
+  @override
+  String syncDiagnosticsInvalidRowsBanner(int count) {
+    return '$count अफलाइन परिवर्तन अवैध छन् र सिंक हुन सकेनन्।';
+  }
+
+  @override
   String get noSyncQueueItemsTitle => 'सिंक क्यू खाली छ';
 
   @override

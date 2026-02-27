@@ -39,7 +39,8 @@ class ReportsScreen extends ConsumerWidget {
                     children: [
                       _QuickStatCard(
                         label: l10n.reportsQuickStatTodaySales,
-                        value: 'NPR ${currFmt.format(summary.todaySales)}',
+                        value:
+                            '${l10n.nprLabel} ${currFmt.format(summary.todaySales)}',
                         icon: Icons.trending_up_rounded,
                         color: AppColors.success,
                       ),
@@ -47,7 +48,7 @@ class ReportsScreen extends ConsumerWidget {
                       _QuickStatCard(
                         label: l10n.reportsQuickStatPendingCredit,
                         value:
-                            'NPR ${currFmt.format(summary.creditOutstanding)}',
+                            '${l10n.nprLabel} ${currFmt.format(summary.creditOutstanding)}',
                         icon: Icons.warning_amber_rounded,
                         color: AppColors.warning,
                       ),

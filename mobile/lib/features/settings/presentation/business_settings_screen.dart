@@ -90,34 +90,80 @@ class _BusinessSettingsScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _nameCtl,
-                textCapitalization: TextCapitalization.words,
-                decoration: InputDecoration(
-                  labelText: l10n.businessSettingsNameLabel,
+              AppCard(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: const Icon(
+                        Icons.store_outlined,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.businessSettings,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.settingsBusinessSettingsSubtitle,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                validator:
-                    (v) =>
-                        (v == null || v.trim().isEmpty)
-                            ? l10n.businessSettingsNameRequired
-                            : null,
               ),
               const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _phoneCtl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: l10n.businessSettingsPhoneOptionalLabel,
+              AppCard(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameCtl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: l10n.businessSettingsNameLabel,
+                      ),
+                      validator:
+                          (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? l10n.businessSettingsNameRequired
+                                  : null,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _phoneCtl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: l10n.businessSettingsPhoneOptionalLabel,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _addressCtl,
+                      decoration: InputDecoration(
+                        labelText: l10n.businessSettingsAddressOptionalLabel,
+                        hintText: l10n.businessSettingsAddressHint,
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _addressCtl,
-                decoration: InputDecoration(
-                  labelText: l10n.businessSettingsAddressOptionalLabel,
-                  hintText: l10n.businessSettingsAddressHint,
-                ),
-                maxLines: 2,
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
@@ -135,7 +181,7 @@ class _BusinessSettingsScreenState
                         onSelected: (_) => setState(() => _currency = c),
                         showCheckmark: false,
                         backgroundColor: AppColors.surface,
-                        selectedColor: AppColors.primary,
+                        selectedColor: AppColors.accent,
                         labelStyle: TextStyle(
                           color:
                               _currency == c ? Colors.white : AppColors.label,
@@ -147,7 +193,7 @@ class _BusinessSettingsScreenState
                         side: BorderSide(
                           color:
                               _currency == c
-                                  ? AppColors.primary
+                                  ? AppColors.accent
                                   : AppColors.border,
                           width: 1,
                         ),
@@ -178,7 +224,7 @@ class _BusinessSettingsScreenState
                         onSelected: (_) => setState(() => _businessType = t),
                         showCheckmark: false,
                         backgroundColor: AppColors.surface,
-                        selectedColor: AppColors.primary,
+                        selectedColor: AppColors.accent,
                         labelStyle: TextStyle(
                           color:
                               _businessType == t
@@ -192,7 +238,7 @@ class _BusinessSettingsScreenState
                         side: BorderSide(
                           color:
                               _businessType == t
-                                  ? AppColors.primary
+                                  ? AppColors.accent
                                   : AppColors.border,
                           width: 1,
                         ),
@@ -206,18 +252,22 @@ class _BusinessSettingsScreenState
               const SizedBox(height: AppSpacing.h),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: FilledButton.icon(
                   onPressed: _saving ? null : _save,
-                  child:
+                  icon:
                       _saving
                           ? const SizedBox(
-                            height: 20,
-                            width: 20,
+                            height: 16,
+                            width: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
+                          : const Icon(Icons.save_outlined, size: 18),
+                  label:
+                      _saving
+                          ? Text(l10n.loadingLabel)
                           : Text(l10n.save),
                 ),
               ),

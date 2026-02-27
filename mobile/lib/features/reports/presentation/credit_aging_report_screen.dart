@@ -57,14 +57,14 @@ class _CreditAgingReportScreenState
                   onSelected: (v) => setState(() => _overdueOnly = v),
                   showCheckmark: false,
                   backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.primary,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
                     color: _overdueOnly ? Colors.white : AppColors.label,
                     fontWeight:
                         _overdueOnly ? FontWeight.w700 : FontWeight.w600,
                   ),
                   side: BorderSide(
-                    color: _overdueOnly ? AppColors.primary : AppColors.border,
+                    color: _overdueOnly ? AppColors.accent : AppColors.border,
                   ),
                 ),
                 FilterChip(
@@ -73,14 +73,14 @@ class _CreditAgingReportScreenState
                   onSelected: (v) => setState(() => _highRiskOnly = v),
                   showCheckmark: false,
                   backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.primary,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
                     color: _highRiskOnly ? Colors.white : AppColors.label,
                     fontWeight:
                         _highRiskOnly ? FontWeight.w700 : FontWeight.w600,
                   ),
                   side: BorderSide(
-                    color: _highRiskOnly ? AppColors.primary : AppColors.border,
+                    color: _highRiskOnly ? AppColors.accent : AppColors.border,
                   ),
                 ),
               ],
@@ -173,7 +173,7 @@ class _CreditAgingReportScreenState
                   Expanded(
                     child: _SummaryStat(
                       label: AppLocalizations.of(context)!.creditAgingOutstandingLabel,
-                      value: 'NPR ${_currFmt.format(totalOutstanding)}',
+                      value: '${AppLocalizations.of(context)!.nprLabel} ${_currFmt.format(totalOutstanding)}',
                       color: AppColors.warning,
                     ),
                   ),
@@ -181,7 +181,7 @@ class _CreditAgingReportScreenState
                   Expanded(
                     child: _SummaryStat(
                       label: AppLocalizations.of(context)!.creditAgingOverdueLabel,
-                      value: 'NPR ${_currFmt.format(totalOverdue)}',
+                      value: '${AppLocalizations.of(context)!.nprLabel} ${_currFmt.format(totalOverdue)}',
                       color: AppColors.error,
                     ),
                   ),
@@ -223,7 +223,7 @@ class _CreditAgingReportScreenState
               _BucketRow(
                 label: AppLocalizations.of(context)!.creditAgingBucket31to60,
                 amount: _toDouble(totals['d31_60']),
-                color: const Color(0xFFE67E22),
+                color: AppColors.accent,
                 fmt: _currFmt,
               ),
               const Divider(height: 1),
@@ -308,6 +308,7 @@ class _BucketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
@@ -325,7 +326,7 @@ class _BucketRow extends StatelessWidget {
             child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ),
           Text(
-            'NPR ${fmt.format(amount)}',
+            '${l10n.nprLabel} ${fmt.format(amount)}',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,
@@ -424,8 +425,8 @@ class _CustomerAgingCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'NPR ${currFmt.format(outstandingAmount)}',
-                style: const TextStyle(
+                '${l10n.nprLabel} ${currFmt.format(outstandingAmount)}',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: AppColors.warning,
                   fontWeight: FontWeight.w700,
                 ),

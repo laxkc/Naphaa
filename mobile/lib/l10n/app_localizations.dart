@@ -2207,6 +2207,18 @@ abstract class AppLocalizations {
   /// **'Failed'**
   String get failedLabel;
 
+  /// No description provided for @syncDiagnosticsFailedRowsBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sync rows failed. Retry sync or open a row for details.'**
+  String syncDiagnosticsFailedRowsBanner(int count);
+
+  /// No description provided for @syncDiagnosticsInvalidRowsBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} offline changes are invalid and could not be synced.'**
+  String syncDiagnosticsInvalidRowsBanner(int count);
+
   /// No description provided for @noSyncQueueItemsTitle.
   ///
   /// In en, this message translates to:

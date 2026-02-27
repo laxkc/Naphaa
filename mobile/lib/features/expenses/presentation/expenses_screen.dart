@@ -15,11 +15,11 @@ class _Cat {
 }
 
 const _categories = [
-  _Cat('RENT', Icons.home_outlined, Color(0xFF6A1B9A)),
-  _Cat('TRANSPORT', Icons.directions_car_outlined, Color(0xFF1565C0)),
-  _Cat('UTILITIES', Icons.bolt_outlined, Color(0xFFEF6C00)),
-  _Cat('SALARY', Icons.badge_outlined, Color(0xFF00695C)),
-  _Cat('OTHER', Icons.category_outlined, Color(0xFF546E7A)),
+  _Cat('RENT', Icons.home_outlined, AppColors.primary),
+  _Cat('TRANSPORT', Icons.directions_car_outlined, AppColors.accent),
+  _Cat('UTILITIES', Icons.bolt_outlined, AppColors.warning),
+  _Cat('SALARY', Icons.badge_outlined, AppColors.success),
+  _Cat('OTHER', Icons.category_outlined, AppColors.labelSub),
 ];
 
 _Cat _catFor(String key) =>
@@ -68,7 +68,7 @@ class ExpensesScreen extends ConsumerWidget {
                 onPressed: () => _showExpenseSheet(context, ref, l10n),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text(l10n.addExpense),
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
               ),
             ],
           ),
@@ -88,64 +88,70 @@ class ExpensesScreen extends ConsumerWidget {
                   message: l10n.failedToLoadExpenses,
                 ),
             data:
-                (items) =>
-                    items.isEmpty
-                        ? EmptyState(
-                          icon: Icons.receipt_long_outlined,
-                          title: l10n.trackExpenses,
-                          subtitle: l10n.expensesEmptySubtitle,
-                          action: l10n.addExpense,
-                          onAction: () => _showExpenseSheet(context, ref, l10n),
-                        )
-                        : ListView.separated(
-                          itemCount: items.length,
-                          separatorBuilder:
-                              (_, __) => const Divider(
+                (items) {
+                  if (items.isEmpty) {
+                    return EmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: l10n.trackExpenses,
+                      subtitle: l10n.expensesEmptySubtitle,
+                      action: l10n.addExpense,
+                      onAction: () => _showExpenseSheet(context, ref, l10n),
+                    );
+                  }
+                  final total = items.fold<double>(0, (sum, e) => sum + e.amount);
+                  return ListView.separated(
+                    itemCount: items.length + 1,
+                    separatorBuilder:
+                        (_, i) => i == 0
+                            ? const SizedBox(height: AppSpacing.sm)
+                            : const Divider(
                                 indent: 72,
                                 endIndent: AppSpacing.lg,
                                 height: 0,
                               ),
-                          itemBuilder: (_, i) {
-                            final e = items[i];
-                            final cat = _catFor(e.category);
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.lg,
-                                vertical: AppSpacing.xs,
-                              ),
-                              leading: CategoryBadge(
-                                icon: cat.icon,
-                                color: cat.color,
-                              ),
-                              title: Text(
-                                _catLabel(context, cat.key),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.label,
-                                ),
-                              ),
-                              subtitle:
-                                  e.note != null
-                                      ? Text(
-                                        e.note!,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.muted,
-                                        ),
-                                      )
-                                      : null,
-                              trailing: Text(
-                                'Rs ${e.amount.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: cat.color,
-                                ),
-                              ),
-                            );
-                          },
+                    itemBuilder: (_, i) {
+                      if (i == 0) {
+                        return _ExpensesSummaryCard(
+                          total: total,
+                          count: items.length,
+                        );
+                      }
+                      final e = items[i - 1];
+                      final cat = _catFor(e.category);
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.xs,
                         ),
+                        leading: CategoryBadge(
+                          icon: cat.icon,
+                          color: cat.color,
+                        ),
+                        title: Text(
+                          _catLabel(context, cat.key),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle:
+                            e.note != null && e.note!.trim().isNotEmpty
+                                ? Text(
+                                    e.note!,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(color: AppColors.muted),
+                                  )
+                                : null,
+                        trailing: Text(
+                          '${l10n.nprLabel} ${e.amount.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.label,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
           ),
         ),
       ],
@@ -226,7 +232,7 @@ class _ExpenseFormState extends State<ExpenseFormSheet> {
                           label: Text(_catLabel(context, c.key)),
                           selected: selected,
                           onSelected: (_) => setState(() => _category = c),
-                          selectedColor: c.color.withAlpha(28),
+                          selectedColor: c.color.withValues(alpha: 0.12),
                           labelStyle: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -248,7 +254,7 @@ class _ExpenseFormState extends State<ExpenseFormSheet> {
                   ),
                   decoration: InputDecoration(
                     labelText: l10n.amount,
-                    prefixText: 'Rs ',
+                    prefixText: '${l10n.nprLabel} ',
                   ),
                   validator: (v) {
                     final a = double.tryParse(v ?? '');
@@ -323,5 +329,54 @@ class _ExpenseFormState extends State<ExpenseFormSheet> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+}
+
+class _ExpensesSummaryCard extends StatelessWidget {
+  const _ExpensesSummaryCard({required this.total, required this.count});
+
+  final double total;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        0,
+      ),
+      child: AppCard(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.totalLabel,
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: AppColors.muted),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${l10n.nprLabel} ${total.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            StatusChip(
+              label: '$count',
+              color: AppColors.primary,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

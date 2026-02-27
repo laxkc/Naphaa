@@ -75,7 +75,7 @@ class LandingPage extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.primary,
-                    minimumSize: const Size(double.infinity, 52),
+                    minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
@@ -83,8 +83,7 @@ class LandingPage extends StatelessWidget {
                   onPressed: () => _goToAuth(context, showRegister: true),
                   child: Text(
                     l10n.authLandingStartFree,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -96,7 +95,7 @@ class LandingPage extends StatelessWidget {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 52),
+                    minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
@@ -105,8 +104,8 @@ class LandingPage extends StatelessWidget {
                   onPressed: () => _goToAuth(context, showRegister: false),
                   child: Text(
                     l10n.login,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -151,9 +150,8 @@ class _FeatureBullet extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.white,
-              fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),

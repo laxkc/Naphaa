@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 
 import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
@@ -139,27 +142,40 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                       l10n.vatLabel,
                       '${l10n.nprLabel} ${money.format(invoice.taxAmount)}',
                     ),
-                    const Divider(height: AppSpacing.lg * 2),
-                    _kv(
-                      context,
-                      l10n.totalLabel,
-                      '${l10n.nprLabel} ${money.format(invoice.total)}',
-                      bold: true,
-                    ),
-                    _kv(
-                      context,
-                      l10n.paidLabel,
-                      '${l10n.nprLabel} ${money.format(invoice.paidAmount)}',
-                    ),
-                    _kv(
-                      context,
-                      l10n.balanceLabel,
-                      '${l10n.nprLabel} ${money.format(invoice.balanceDue)}',
-                      bold: true,
-                      valueColor:
-                          invoice.balanceDue > 0
-                              ? AppColors.warning
-                              : AppColors.success,
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        children: [
+                          _kv(
+                            context,
+                            l10n.totalLabel,
+                            '${l10n.nprLabel} ${money.format(invoice.total)}',
+                            bold: true,
+                          ),
+                          _kv(
+                            context,
+                            l10n.paidLabel,
+                            '${l10n.nprLabel} ${money.format(invoice.paidAmount)}',
+                          ),
+                          _kv(
+                            context,
+                            l10n.balanceLabel,
+                            '${l10n.nprLabel} ${money.format(invoice.balanceDue)}',
+                            bold: true,
+                            valueColor:
+                                invoice.balanceDue > 0
+                                    ? AppColors.warning
+                                    : AppColors.success,
+                          ),
+                        ],
+                      ),
                     ),
                     if ((invoice.notes ?? '').trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.md),
@@ -325,6 +341,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
 
   Widget _buildActions(BuildContext context, InvoiceRecord invoice) {
     final l10n = AppLocalizations.of(context)!;
+    final hasPdf = (invoice.pdfPath ?? '').isNotEmpty;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,13 +387,19 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                             : l10n.invoicePdfGenerate),
                   ),
                 ),
-              if ((invoice.pdfPath ?? '').isNotEmpty)
+              if (hasPdf)
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _viewPdf(context, invoice),
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: Text(l10n.openLabel),
+                ),
+              if (hasPdf)
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _sharePdf(context),
                   icon: const Icon(Icons.share_outlined),
                   label: Text(l10n.invoicePdfShare),
                 ),
-              if ((invoice.pdfPath ?? '').isNotEmpty)
+              if (hasPdf)
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _printPdf(context),
                   icon: const Icon(Icons.print_outlined),
@@ -403,6 +426,23 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       await ref.read(invoicePdfServiceProvider).generateInvoicePdf(invoice.id);
       _showMessage(AppLocalizations.of(context)!.invoicePdfGeneratedSuccess, BannerType.success);
     });
+  }
+
+  Future<void> _viewPdf(BuildContext context, InvoiceRecord invoice) async {
+    final path = invoice.pdfPath;
+    if (path == null || path.isEmpty) {
+      _showMessage(AppLocalizations.of(context)!.invoicePdfGenerate, BannerType.warning);
+      return;
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      _showMessage(AppLocalizations.of(context)!.invoicePdfGenerate, BannerType.warning);
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => _InvoicePdfPreviewScreen(filePath: path)),
+    );
   }
 
   Future<void> _sharePdf(BuildContext context) async {
@@ -604,4 +644,29 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     InvoiceStatus.overdue => AppColors.error,
     InvoiceStatus.cancelled => AppColors.warning,
   };
+}
+
+class _InvoicePdfPreviewScreen extends StatelessWidget {
+  const _InvoicePdfPreviewScreen({required this.filePath});
+
+  final String filePath;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        title: Text(l10n.invoicePdfTitle),
+        backgroundColor: AppColors.surface,
+      ),
+      body: PdfPreview(
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        allowSharing: false,
+        allowPrinting: false,
+        build: (_) async => File(filePath).readAsBytes(),
+      ),
+    );
+  }
 }

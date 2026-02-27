@@ -1123,6 +1123,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedLabel => 'Failed';
 
   @override
+  String syncDiagnosticsFailedRowsBanner(int count) {
+    return '$count sync rows failed. Retry sync or open a row for details.';
+  }
+
+  @override
+  String syncDiagnosticsInvalidRowsBanner(int count) {
+    return '$count offline changes are invalid and could not be synced.';
+  }
+
+  @override
   String get noSyncQueueItemsTitle => 'No sync queue items';
 
   @override
