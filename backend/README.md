@@ -21,6 +21,25 @@ cd backend
 uv run uvicorn app.main:app --reload
 ```
 
+## Run on Azure App Service
+
+Use this startup command if the whole repo is deployed and the backend lives in
+the `backend/` folder:
+
+```bash
+bash backend/startup.sh
+```
+
+On local macOS, the script also sets
+`OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` to avoid Gunicorn worker crashes
+during prefork startup.
+
+Equivalent direct command:
+
+```bash
+APP_PORT=8080 gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 -k uvicorn.workers.UvicornWorker --chdir backend app.main:app
+```
+
 API will be available at:
 
 - `http://127.0.0.1:8000`

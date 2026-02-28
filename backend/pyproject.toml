@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "httpx>=0.28.0",
     "python-dotenv>=1.0.0",
+    "gunicorn>=25.1.0",
 ]
 
 [project.optional-dependencies]

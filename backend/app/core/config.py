@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str
     api_v1_prefix: str
+    app_port: int
     debug: bool
 
     database_url: str | None = None
