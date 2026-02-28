@@ -34,6 +34,10 @@ On local macOS, the script also sets
 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` to avoid Gunicorn worker crashes
 during prefork startup.
 
+When Azure App Service uses Oryx build from the repo root, keep a root-level
+`requirements.txt` that points to `./backend` so the backend package and its
+dependencies are installed into the App Service virtual environment.
+
 Equivalent direct command:
 
 ```bash
@@ -101,6 +105,10 @@ AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 DEFAULT_BUSINESS_TIMEZONE=Asia/Kathmandu
 DEFAULT_CALENDAR_MODE=BS
 ```
+
+For Azure App Service, define the same settings directly in Azure App
+Settings. Keep secrets like `DB_PASSWORD` and `JWT_SECRET_KEY` set in Azure,
+not in git.
 
 ## Tests
 

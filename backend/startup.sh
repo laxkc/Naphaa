@@ -9,7 +9,7 @@ fi
 cd "$(dirname "$0")"
 
 exec gunicorn \
-  --bind "0.0.0.0:${PORT:-8080}" \
+  --bind "0.0.0.0:${PORT:-${APP_PORT:-8080}}" \
   --workers 2 \
   --timeout 120 \
   -k uvicorn.workers.UvicornWorker \
