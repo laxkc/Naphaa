@@ -5,6 +5,7 @@ from threading import Lock
 from fastapi import Request, status
 
 from app.core.errors import raise_api_error
+from app.core.config import settings
 
 
 class InMemoryRateLimiter:
@@ -30,7 +31,10 @@ class InMemoryRateLimiter:
             q.append(now)
 
 
-_auth_limiter = InMemoryRateLimiter(max_requests=30, window_seconds=60)
+_auth_limiter = InMemoryRateLimiter(
+    max_requests=settings.auth_rate_limit_max_requests,
+    window_seconds=settings.auth_rate_limit_window_seconds,
+)
 
 
 def auth_rate_limit(request: Request) -> None:

@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
@@ -23,9 +23,7 @@ def summary_report(
     store: Store = Depends(get_current_store),
     db: Session = Depends(get_db),
 ) -> SummaryReport:
-    date_from = datetime.combine(from_date, time.min) if from_date else None
-    date_to = datetime.combine(to_date, time.max) if to_date else None
-    return ReportService.summary(db, store.id, date_from, date_to)
+    return ReportService.summary(db, store.id, from_date, to_date)
 
 
 @router.get("/low-stock", response_model=LowStockReport)

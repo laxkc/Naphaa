@@ -97,6 +97,7 @@ class SyncEventService:
             "customer_id": payment.customer_id,
             "method": payment.method,
             "amount": payment.amount,
+            "payment_date_ad": payment.payment_date_ad.isoformat() if payment.payment_date_ad else None,
             "note": payment.note,
             "created_at": payment.created_at or datetime.now(UTC),
         }
@@ -108,6 +109,7 @@ class SyncEventService:
             "id": expense.id,
             "category": expense.category,
             "amount": expense.amount,
+            "expense_date_ad": expense.expense_date_ad.isoformat() if expense.expense_date_ad else None,
             "note": expense.note,
             "created_at": expense.created_at or datetime.now(UTC),
         }
@@ -121,6 +123,7 @@ class SyncEventService:
             "payment_method": sale.payment_method or "CASH",
             "customer_id": sale.customer_id,
             "total_amount": sale.total_amount,
+            "sale_date_ad": sale.sale_date_ad.isoformat() if sale.sale_date_ad else None,
             "created_at": sale.created_at or datetime.now(UTC),
             "items": [
                 {

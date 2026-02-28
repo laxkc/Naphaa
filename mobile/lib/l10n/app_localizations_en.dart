@@ -650,6 +650,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todayLabel => 'Today';
 
   @override
+  String get yearLabel => 'Year';
+
+  @override
+  String get monthLabel => 'Month';
+
+  @override
+  String get dayLabel => 'Day';
+
+  @override
+  String get invoicePickBsDateTitle => 'Enter BS date';
+
+  @override
+  String get invalidBsDate => 'Enter a valid BS date';
+
+  @override
   String get thisWeekLabel => 'This Week';
 
   @override
@@ -1362,6 +1377,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nepaliLabel => 'Nepali';
+
+  @override
+  String get calendarModeLabel => 'Calendar mode';
+
+  @override
+  String get calendarBsLabel => 'Bikram Sambat (BS)';
+
+  @override
+  String get calendarAdLabel => 'Gregorian (AD)';
+
+  @override
+  String get businessTimezoneLabel => 'Business timezone';
 
   @override
   String get settingsSectionAccount => 'ACCOUNT';

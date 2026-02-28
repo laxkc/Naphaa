@@ -6,6 +6,7 @@ from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_store, get_current_user
+from app.core.calendar import business_date_from_timestamp
 from app.core.database import get_db
 from app.core.errors import raise_api_error
 from app.models.customer import Customer
@@ -235,6 +236,10 @@ def create_customer_payment(
         customer_id=customer.id,
         method=payload.method.upper(),
         amount=amount,
+        payment_date_ad=business_date_from_timestamp(
+            value=None,
+            timezone_name=store.business_timezone,
+        ),
         note=payload.note,
         created_by=user.id,
         device_id=device_id,

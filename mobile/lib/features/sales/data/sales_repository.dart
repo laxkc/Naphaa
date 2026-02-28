@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/storage/local_db.dart';
 import '../../../core/storage/preferences.dart';
+import '../../../core/date/business_time.dart';
 import '../../../core/utils/uuid_id.dart';
 import '../../products/domain/product.dart';
 import '../../reports/data/metrics_repository.dart';
@@ -9,10 +10,15 @@ import '../domain/sale.dart';
 import '../domain/sale_models.dart';
 
 class SalesRepository {
-  SalesRepository(this._db, {MetricsRepository? metricsRepository})
-    : _metricsRepository = metricsRepository;
+  SalesRepository(
+    this._db, {
+    AppPreferences? preferences,
+    MetricsRepository? metricsRepository,
+  }) : _prefs = preferences ?? AppPreferences(),
+       _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final AppPreferences _prefs;
   final MetricsRepository? _metricsRepository;
 
   Future<void> createSale(SaleInput input) async {
@@ -37,7 +43,9 @@ class SalesRepository {
       }
 
       final saleId = _id();
-      final now = DateTime.now().toIso8601String();
+      final now = BusinessTime.nowUtcIso();
+      final timezone = await _prefs.getBusinessTimezone();
+      final saleDateAd = BusinessTime.businessDateAd(timezone: timezone);
       await txn.insert('sales', {
         'id': saleId,
         'sale_type': input.saleType,
@@ -46,6 +54,7 @@ class SalesRepository {
         ),
         'customer_id': input.customerId,
         'total_amount': input.totalAmount,
+        'sale_date_ad': saleDateAd,
         'created_at': now,
       });
 
@@ -108,15 +117,16 @@ class SalesRepository {
         'entity': 'sale',
         'entity_id': saleId,
         'operation': 'UPSERT',
-        'payload': jsonEncode({
-          'id': saleId,
-          'sale_type': input.saleType,
+          'payload': jsonEncode({
+            'id': saleId,
+            'sale_type': input.saleType,
           'payment_method': paymentMethodToApi(
             input.paymentMethod ?? PaymentMethod.cash,
           ),
-          'customer_id': input.customerId,
-          'total_amount': input.totalAmount,
-          'created_at': now,
+            'customer_id': input.customerId,
+            'total_amount': input.totalAmount,
+            'sale_date_ad': saleDateAd,
+            'created_at': now,
           'items': [
             for (final item in input.items)
               {
@@ -146,43 +156,20 @@ class SalesRepository {
 
   Future<double> todaySalesTotal() async {
     final db = await _db.database;
-    final now = DateTime.now();
-    final dayStart = DateTime(now.year, now.month, now.day);
-    final nextDayStart = dayStart.add(const Duration(days: 1));
-    final rows = await db.query(
-      'sales',
-      columns: ['total_amount', 'created_at'],
+      final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(total_amount), 0) AS total FROM sales WHERE sale_date_ad = ?',
+      [BusinessTime.businessDateAd(timezone: await _prefs.getBusinessTimezone())],
     );
-    var total = 0.0;
-    for (final row in rows) {
-      final createdAtRaw = row['created_at'] as String?;
-      if (createdAtRaw == null) continue;
-      final createdAt = DateTime.parse(createdAtRaw).toLocal();
-      if (createdAt.isBefore(dayStart) || !createdAt.isBefore(nextDayStart)) {
-        continue;
-      }
-      total += (row['total_amount'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
+    return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> todayExpenseTotal() async {
     final db = await _db.database;
-    final now = DateTime.now();
-    final dayStart = DateTime(now.year, now.month, now.day);
-    final nextDayStart = dayStart.add(const Duration(days: 1));
-    final rows = await db.query('expenses', columns: ['amount', 'created_at']);
-    var total = 0.0;
-    for (final row in rows) {
-      final createdAtRaw = row['created_at'] as String?;
-      if (createdAtRaw == null) continue;
-      final createdAt = DateTime.parse(createdAtRaw).toLocal();
-      if (createdAt.isBefore(dayStart) || !createdAt.isBefore(nextDayStart)) {
-        continue;
-      }
-      total += (row['amount'] as num?)?.toDouble() ?? 0;
-    }
-    return total;
+    final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE expense_date_ad = ?',
+      [BusinessTime.businessDateAd(timezone: await _prefs.getBusinessTimezone())],
+    );
+    return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> creditOutstanding() async {
@@ -205,22 +192,26 @@ class SalesRepository {
       where += ' AND s.customer_id = ?';
       args.add(customerId);
     }
+    if (fromDate != null) {
+      where += ' AND s.sale_date_ad >= ?';
+      args.add(BusinessTime.formatDateOnly(fromDate));
+    }
+    if (toDate != null) {
+      where += ' AND s.sale_date_ad <= ?';
+      args.add(
+        BusinessTime.formatDateOnly(
+          toDate.subtract(const Duration(milliseconds: 1)),
+        ),
+      );
+    }
     final rows = await db.rawQuery('''
       SELECT s.*, c.name as customer_name
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.id
       WHERE $where
-      ORDER BY s.created_at DESC
+      ORDER BY s.sale_date_ad DESC, s.created_at DESC
     ''', args);
-    final localFrom = fromDate?.toLocal();
-    final localTo = toDate?.toLocal();
-
-    return rows.map((r) => Sale.fromMap(r)).where((sale) {
-      final createdAt = sale.createdAt.toLocal();
-      if (localFrom != null && createdAt.isBefore(localFrom)) return false;
-      if (localTo != null && createdAt.isAfter(localTo)) return false;
-      return true;
-    }).toList();
+    return rows.map((r) => Sale.fromMap(r)).toList();
   }
 
   Future<Sale?> getSaleById(String id) async {

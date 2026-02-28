@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -44,6 +44,7 @@ class CustomerPaymentOut(BaseModel):
     customer_id: str
     method: str
     amount: Decimal
+    payment_date_ad: date | None = None
     note: str | None
     created_at: datetime
 

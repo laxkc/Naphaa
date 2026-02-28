@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../storage/local_db.dart';
 import '../storage/preferences.dart';
+import '../date/business_time.dart';
 import '../utils/uuid_id.dart';
 
 class SyncQueueService {
@@ -17,7 +18,7 @@ class SyncQueueService {
     String? entityId,
   }) async {
     final database = await _db.database;
-    final now = DateTime.now().toIso8601String();
+    final now = BusinessTime.nowUtcIso();
     final activeStoreId = await _prefs.getActiveStoreId();
     await database.insert('sync_queue', {
       'op_id': newUuidV4(),
@@ -48,8 +49,8 @@ class SyncQueueService {
           "${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}",
       whereArgs:
           hasStoreScope
-              ? [DateTime.now().toIso8601String(), activeStoreId]
-              : [DateTime.now().toIso8601String()],
+              ? [BusinessTime.nowUtcIso(), activeStoreId]
+              : [BusinessTime.nowUtcIso()],
       orderBy: 'id ASC',
     );
   }
@@ -62,7 +63,7 @@ class SyncQueueService {
         'synced': 1,
         'status': 'synced',
         'last_error': null,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': BusinessTime.nowUtcIso(),
       },
       where: 'id = ?',
       whereArgs: [id],

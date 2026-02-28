@@ -1325,6 +1325,36 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get todayLabel;
 
+  /// No description provided for @yearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get yearLabel;
+
+  /// No description provided for @monthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get monthLabel;
+
+  /// No description provided for @dayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get dayLabel;
+
+  /// No description provided for @invoicePickBsDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter BS date'**
+  String get invoicePickBsDateTitle;
+
+  /// No description provided for @invalidBsDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid BS date'**
+  String get invalidBsDate;
+
   /// No description provided for @thisWeekLabel.
   ///
   /// In en, this message translates to:
@@ -2668,6 +2698,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nepali'**
   String get nepaliLabel;
+
+  /// No description provided for @calendarModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar mode'**
+  String get calendarModeLabel;
+
+  /// No description provided for @calendarBsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bikram Sambat (BS)'**
+  String get calendarBsLabel;
+
+  /// No description provided for @calendarAdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gregorian (AD)'**
+  String get calendarAdLabel;
+
+  /// No description provided for @businessTimezoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Business timezone'**
+  String get businessTimezoneLabel;
 
   /// No description provided for @settingsSectionAccount.
   ///

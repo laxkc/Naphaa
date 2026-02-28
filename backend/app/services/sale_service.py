@@ -4,6 +4,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.calendar import business_date_from_timestamp
+from app.models.store import Store
 from app.models.customer import Customer
 from app.models.sale_payment import SalePayment
 from app.models.sale import Sale, SaleItem
@@ -27,6 +29,7 @@ class SaleService:
         idempotency_key: str | None = None,
         device_id: str | None = None,
     ) -> Sale:
+        store = db.scalar(select(Store).where(Store.id == store_id))
         if idempotency_key:
             existing_sale = db.scalar(
                 select(Sale).where(
@@ -125,6 +128,10 @@ class SaleService:
                 payment_method=resolved_payment_method,
                 customer_id=payload.customer_id,
                 total_amount=Decimal("0"),
+                sale_date_ad=business_date_from_timestamp(
+                    value=None,
+                    timezone_name=store.business_timezone if store else None,
+                ),
                 idempotency_key=idempotency_key,
                 created_by=actor_user_id,
                 updated_by=actor_user_id,
@@ -238,6 +245,7 @@ class SaleService:
         actor_user_id: str,
         device_id: str | None = None,
     ) -> SaleRefund:
+        store = db.scalar(select(Store).where(Store.id == store_id))
         sale = db.scalar(
             select(Sale)
             .where(Sale.id == sale_id, Sale.store_id == store_id)
@@ -354,6 +362,10 @@ class SaleService:
                 store_id=store_id,
                 sale_id=sale_id,
                 amount=refund_total,
+                refund_date_ad=business_date_from_timestamp(
+                    value=None,
+                    timezone_name=store.business_timezone if store else None,
+                ),
                 reason=(payload.reason or "").strip() or None,
                 created_by=actor_user_id,
                 device_id=device_id,

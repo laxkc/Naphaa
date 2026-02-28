@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/date/business_clock.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -16,22 +17,20 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   _Period _period = _Period.today;
   final _currFmt = NumberFormat('#,##0.00');
 
-  ReportParams get _params {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final tomorrowStart = todayStart.add(const Duration(days: 1));
+  ReportParams _params(BusinessClock clock) {
+    final todayRange = clock.todayRange();
     return switch (_period) {
       _Period.today => ReportParams(
-          fromDate: todayStart,
-          toDate: tomorrowStart,
+          fromDate: todayRange.fromDate,
+          toDate: todayRange.toDate,
         ),
       _Period.week => ReportParams(
-          fromDate: todayStart.subtract(Duration(days: now.weekday - 1)),
-          toDate: tomorrowStart,
+          fromDate: clock.currentWeekRange().fromDate,
+          toDate: clock.currentWeekRange().toDate,
         ),
       _Period.month => ReportParams(
-          fromDate: DateTime(now.year, now.month, 1),
-          toDate: tomorrowStart,
+          fromDate: clock.currentMonthRange().fromDate,
+          toDate: clock.currentMonthRange().toDate,
         ),
     };
   }
@@ -39,7 +38,12 @@ class _SalesReportScreenState extends ConsumerState<SalesReportScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final params = _params;
+    final clockAsync = ref.watch(businessClockProvider);
+    final clock =
+        clockAsync is AsyncData<BusinessClock>
+            ? clockAsync.value
+            : BusinessClock.fallback();
+    final params = _params(clock);
     final reportAsync = ref.watch(salesReportProvider(params));
 
     return Scaffold(

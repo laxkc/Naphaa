@@ -8,16 +8,22 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/storage/preferences.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/invoice_models.dart';
 import 'billing_repository.dart';
 
 class InvoicePdfService {
-  InvoicePdfService(this._repo, this._prefs);
+  InvoicePdfService(
+    this._repo,
+    this._prefs, {
+    Future<CalendarAdapter> Function()? calendarAdapterLoader,
+  }) : _calendarAdapterLoader = calendarAdapterLoader;
 
   final BillingRepository _repo;
   final AppPreferences _prefs;
+  final Future<CalendarAdapter> Function()? _calendarAdapterLoader;
 
   Future<String> generateInvoicePdf(String invoiceId) async {
     final invoice = await _repo.getInvoiceById(invoiceId);
@@ -28,9 +34,15 @@ class InvoicePdfService {
 
     try {
       final settings = await _prefs.getBillingSettings();
+      final adapter =
+          _calendarAdapterLoader == null
+              ? CalendarAdapter(
+                calendarMode: await _prefs.getCalendarMode(),
+                localeCode: settings['language']?.toString() ?? 'en',
+              )
+              : await _calendarAdapterLoader.call();
       final pdf = pw.Document();
       final nf = _currencyFormatter;
-      final dateFmt = _dateFormatter;
       final lang =
           (invoice.languageSnapshot.trim().isNotEmpty
                   ? invoice.languageSnapshot
@@ -135,11 +147,11 @@ class InvoicePdfService {
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                         pw.Text(
-                          '${l10n.dateLabel}: ${dateFmt.format((invoice.issueDate ?? DateTime.now()).toLocal())}',
+                          '${l10n.dateLabel}: ${adapter.formatBusinessDate(invoice.issueDateAd ?? invoice.issueDate ?? DateTime.now())}',
                         ),
-                        if (invoice.dueDate != null)
+                        if (invoice.dueDateAd != null || invoice.dueDate != null)
                           pw.Text(
-                            '${l10n.invoiceDueShortLabel}: ${dateFmt.format(invoice.dueDate!.toLocal())}',
+                            '${l10n.invoiceDueShortLabel}: ${adapter.formatBusinessDate(invoice.dueDateAd ?? invoice.dueDate)}',
                           ),
                       ],
                     ),
@@ -226,7 +238,7 @@ class InvoicePdfService {
                   pw.SizedBox(height: 4),
                   ...payments.map(
                     (p) => pw.Text(
-                      '${dateFmt.format(p.paidAt.toLocal())} • ${p.method} • $currencyCode ${nf.format(p.amount)}',
+                      '${adapter.formatBusinessDate(p.paidAt, includeTime: true)} • ${p.method} • $currencyCode ${nf.format(p.amount)}',
                     ),
                   ),
                 ],
@@ -330,7 +342,6 @@ class InvoicePdfService {
   }
 
   NumberFormat get _currencyFormatter => NumberFormat('#,##0.00', 'en_IN');
-  DateFormat get _dateFormatter => DateFormat('yyyy-MM-dd');
 
   String _firstNonEmpty(String? a, String? b, {String fallback = ''}) {
     final primary = (a ?? '').trim();

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -31,6 +31,7 @@ class ExpenseOut(BaseModel):
     store_id: str
     category: ExpenseCategory
     amount: Decimal
+    expense_date_ad: date | None = None
     note: str | None
     created_at: datetime
 

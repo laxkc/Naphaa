@@ -115,7 +115,7 @@ def test_sync_pull_since_fallback_compatibility(client, auth_headers, store_id):
     )
     assert second.status_code == 200
 
-    since_value = "2000-01-01T00:00:00+00:00"
+    since_value = "2000-01-01T00:00:00Z"
     pull = client.get("/api/v1/sync/pull", params={"since": since_value}, headers=auth_headers)
     assert pull.status_code == 200
     ids = {e["payload"].get("id") for e in pull.json()["events"]}
@@ -147,6 +147,84 @@ def test_sync_push_returns_acked_op_ids(client, auth_headers, store_id):
     body = resp.json()
     assert sorted(body["acked_op_ids"]) == ["op-1", "op-2"]
     assert body["failed_events"] == []
+
+
+def test_sync_push_rejects_non_z_timestamps(client, auth_headers, store_id):
+    resp = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "bad-ts-1",
+                    "device_id": "dev-ts-1",
+                    "entity": "expense",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "exp-ts-1",
+                        "category": "OTHER",
+                        "amount": 50,
+                        "created_at": "2026-02-27T12:00:00+00:00",
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+    assert "UTC Z format" in resp.text
+
+
+def test_sync_push_rejects_financial_business_date_mutation(client, auth_headers, store_id):
+    first = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "exp-op-1",
+                    "device_id": "dev-exp-1",
+                    "entity": "expense",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "exp-immutable-1",
+                        "category": "OTHER",
+                        "amount": 50,
+                        "expense_date_ad": "2026-02-27",
+                        "created_at": "2026-02-27T12:00:00Z",
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert first.status_code == 200
+    assert first.json()["failed_events"] == []
+
+    second = client.post(
+        "/api/v1/sync/push",
+        json={
+            "events": [
+                {
+                    "op_id": "exp-op-2",
+                    "device_id": "dev-exp-1",
+                    "entity": "expense",
+                    "operation": "UPSERT",
+                    "payload": {
+                        "id": "exp-immutable-1",
+                        "category": "OTHER",
+                        "amount": 75,
+                        "expense_date_ad": "2026-02-28",
+                        "created_at": "2026-02-27T12:00:00Z",
+                    },
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+    assert second.status_code == 200
+    body = second.json()
+    assert body["acked_op_ids"] == []
+    assert len(body["failed_events"]) == 1
+    assert body["failed_events"][0]["code"] == "IMMUTABLE_BUSINESS_DATE"
 
 
 def test_sync_push_invalid_event_is_not_acked_and_returns_failure(client, auth_headers, store_id):
@@ -761,8 +839,8 @@ def test_sync_push_invalid_sale_event_does_not_partially_apply(client, auth_head
 
 
 def test_sync_push_rejects_stale_product_upsert_conflict(client, auth_headers, store_id):
-    newer = "2026-02-24T12:00:00+00:00"
-    older = "2026-02-24T11:00:00+00:00"
+    newer = "2026-02-24T12:00:00Z"
+    older = "2026-02-24T11:00:00Z"
     seed = client.post(
         "/api/v1/sync/push",
         json={
@@ -818,8 +896,8 @@ def test_sync_push_rejects_stale_product_upsert_conflict(client, auth_headers, s
 
 
 def test_sync_push_rejects_stale_customer_upsert_conflict(client, auth_headers, store_id):
-    newer = "2026-02-24T12:00:00+00:00"
-    older = "2026-02-24T11:00:00+00:00"
+    newer = "2026-02-24T12:00:00Z"
+    older = "2026-02-24T11:00:00Z"
     seed = client.post(
         "/api/v1/sync/push",
         json={

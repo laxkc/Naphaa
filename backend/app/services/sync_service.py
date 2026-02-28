@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 import hashlib
 import json
@@ -8,6 +8,7 @@ from time import perf_counter
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.calendar import business_date_from_timestamp
 from app.models.customer import Customer
 from app.models.customer_payment import CustomerPayment
 from app.models.expense import Expense
@@ -49,13 +50,49 @@ class SyncService:
     @staticmethod
     def _to_datetime(value: object) -> datetime | None:
         if isinstance(value, datetime):
+            if value.tzinfo is None:
+                return None
+            return value.astimezone(UTC)
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            if not raw.endswith("Z"):
+                return None
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    return None
+                return parsed.astimezone(UTC)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _ensure_immutable_business_date(
+        *,
+        entity_name: str,
+        existing_date: date | None,
+        incoming_date: date | None,
+    ) -> None:
+        if incoming_date is None or existing_date is None:
+            return
+        if incoming_date != existing_date:
+            raise SyncApplyError(
+                "IMMUTABLE_BUSINESS_DATE",
+                f"{entity_name} business date cannot be changed after creation",
+            )
+
+    @staticmethod
+    def _to_date(value: object) -> date | None:
+        if isinstance(value, date) and not isinstance(value, datetime):
             return value
         if isinstance(value, str):
             raw = value.strip()
             if not raw:
                 return None
             try:
-                return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                return date.fromisoformat(raw)
             except ValueError:
                 return None
         return None
@@ -240,7 +277,16 @@ class SyncService:
                 CustomerPayment.store_id == store_id,
             )
         )
+        incoming_payment_date = SyncService._to_date(payload.get("payment_date_ad")) or business_date_from_timestamp(
+            value=SyncService._to_datetime(payload.get("created_at")),
+            timezone_name=None,
+        )
         if existing is not None:
+            SyncService._ensure_immutable_business_date(
+                entity_name="customer_payment",
+                existing_date=existing.payment_date_ad,
+                incoming_date=incoming_payment_date,
+            )
             return
 
         customer = db.scalar(
@@ -262,9 +308,10 @@ class SyncService:
             customer_id=customer_id,
             method=str(payload.get("method") or "CASH").upper(),
             amount=amount,
+            payment_date_ad=incoming_payment_date,
             note=payload.get("note"),
             device_id=str(payload.get("device_id")) if payload.get("device_id") else None,
-            created_at=payload.get("created_at") if isinstance(payload.get("created_at"), datetime) else None,
+            created_at=SyncService._to_datetime(payload.get("created_at")),
         )
         customer.balance = max(Decimal("0"), Decimal(customer.balance) - amount)
         if payload.get("device_id"):
@@ -296,6 +343,10 @@ class SyncService:
                 expense.device_id = str(payload.get("device_id"))
             db.add(expense)
             return
+        incoming_expense_date = SyncService._to_date(payload.get("expense_date_ad")) or business_date_from_timestamp(
+            value=SyncService._to_datetime(payload.get("created_at")),
+            timezone_name=None,
+        )
         if expense is None:
             category = str(payload.get("category") or "").strip()
             if category == "":
@@ -305,13 +356,20 @@ class SyncService:
                 store_id=store_id,
                 category=category,
                 amount=SyncService._to_decimal(payload.get("amount")),
+                expense_date_ad=incoming_expense_date,
                 note=payload.get("note"),
                 device_id=str(payload.get("device_id")) if payload.get("device_id") else None,
-                created_at=payload.get("created_at") if isinstance(payload.get("created_at"), datetime) else None,
+                created_at=SyncService._to_datetime(payload.get("created_at")),
             )
             db.add(expense)
             LedgerService.record_expense(db, expense)
             return
+
+        SyncService._ensure_immutable_business_date(
+            entity_name="expense",
+            existing_date=expense.expense_date_ad,
+            incoming_date=incoming_expense_date,
+        )
 
         if "category" in payload and str(payload.get("category") or "").strip() != "":
             expense.category = str(payload["category"]).strip()
@@ -352,8 +410,17 @@ class SyncService:
                 Sale.store_id == store_id,
             )
         )
+        incoming_sale_date = SyncService._to_date(payload.get("sale_date_ad")) or business_date_from_timestamp(
+            value=SyncService._to_datetime(payload.get("created_at")),
+            timezone_name=None,
+        )
         # Avoid double-deducting stock / customer balance on duplicate or replayed sale events.
         if existing_sale is not None:
+            SyncService._ensure_immutable_business_date(
+                entity_name="sale",
+                existing_date=existing_sale.sale_date_ad,
+                incoming_date=incoming_sale_date,
+            )
             return
 
         items = payload.get("items") if isinstance(payload.get("items"), list) else []
@@ -434,8 +501,9 @@ class SyncService:
             payment_method=str(payload.get("payment_method") or "CASH").upper(),
             customer_id=(str(payload.get("customer_id")).strip() if payload.get("customer_id") else None),
             total_amount=SyncService._to_decimal(payload.get("total_amount")),
+            sale_date_ad=incoming_sale_date,
             device_id=str(payload.get("device_id")) if payload.get("device_id") else None,
-            created_at=payload.get("created_at") if isinstance(payload.get("created_at"), datetime) else None,
+            created_at=SyncService._to_datetime(payload.get("created_at")),
         )
         db.add(sale)
         db.flush()

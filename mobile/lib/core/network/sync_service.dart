@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import '../storage/local_db.dart';
 import '../storage/preferences.dart';
 import '../utils/uuid_id.dart';
+import '../date/business_time.dart';
 import '../config/app_config.dart';
 import '../sync/sync_error_mapper.dart';
 import 'backend_gateway.dart';
@@ -64,6 +65,28 @@ class SyncService {
   static const int _maxRetryCount = 5;
   static const int _baseRetrySeconds = 5;
 
+  Map<String, dynamic> _normalizeOutgoingPayload(Map<String, dynamic> payload) {
+    Object? normalize(Object? value, {String? key}) {
+      if (value is Map) {
+        return <String, dynamic>{
+          for (final entry in value.entries)
+            entry.key.toString(): normalize(entry.value, key: entry.key.toString()),
+        };
+      }
+      if (value is List) {
+        return value.map((item) => normalize(item)).toList();
+      }
+      if (key != null && (key == 'created_at' || key == 'updated_at' || key == 'deleted_at' || key.endsWith('_at'))) {
+        return BusinessTime.normalizeUtcIso(value);
+      }
+      return value;
+    }
+
+    return Map<String, dynamic>.from(
+      normalize(payload) as Map<String, dynamic>,
+    );
+  }
+
   Future<int> processPendingSync({required String localeCode}) async {
     final result = await processPendingSyncDetailed(localeCode: localeCode);
     return result.pendingAtStart;
@@ -94,7 +117,7 @@ class SyncService {
     final deviceId = await _prefs.getOrCreateDeviceId();
     final activeStoreId = await _prefs.getActiveStoreId();
     if (activeStoreId != null && activeStoreId.isNotEmpty) {
-      final nowIso = DateTime.now().toIso8601String();
+      final nowIso = BusinessTime.nowUtcIso();
       await db.rawUpdate(
         '''
         UPDATE sync_queue
@@ -129,7 +152,7 @@ class SyncService {
         localCustomersCount > 0 ||
         localExpensesCount > 0;
 
-    final nowIso = DateTime.now().toIso8601String();
+    final nowIso = BusinessTime.nowUtcIso();
     final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
     final pending = await db.query(
       'sync_queue',
@@ -155,7 +178,7 @@ class SyncService {
 
     if (pending.isNotEmpty) {
       final ids = pending.map((e) => e['id'] as int).toList();
-      final startedAt = DateTime.now().toIso8601String();
+      final startedAt = BusinessTime.nowUtcIso();
       final markSyncing = db.batch();
       final rowsWithOpIds = <Map<String, dynamic>>[];
       for (final id in ids) {
@@ -194,12 +217,12 @@ class SyncService {
                       'device_id': deviceId,
                       'entity': row['entity'],
                       'operation': row['operation'],
-                      'payload': {
+                      'payload': _normalizeOutgoingPayload({
                         ...Map<String, dynamic>.from(
                           jsonDecode(row['payload'] as String) as Map,
                         ),
                         'schema_version': 1,
-                      },
+                      }),
                     },
                   )
                   .toList();
@@ -234,7 +257,7 @@ class SyncService {
           }
 
           final batch = db.batch();
-          final now = DateTime.now().toIso8601String();
+          final now = BusinessTime.nowUtcIso();
           for (final row in chunk) {
             final id = row['id'] as int;
             final opId = row['op_id'] as String?;
@@ -285,7 +308,7 @@ class SyncService {
           await batch.commit(noResult: true);
         }
       } catch (e) {
-        final now = DateTime.now().toIso8601String();
+        final now = BusinessTime.nowUtcIso();
         final mapped = SyncErrorMapper.fromException(e);
         final safeMsg = mapped.userMessage;
         developer.log(
@@ -402,7 +425,7 @@ class SyncService {
       });
     }
     await _refreshIntelligenceCaches();
-    await _prefs.setLastSyncAt(DateTime.now().toIso8601String());
+    await _prefs.setLastSyncAt(BusinessTime.nowUtcIso());
     _logRun('success', result, startedAt);
     return result;
   }
@@ -450,7 +473,7 @@ class SyncService {
     DatabaseExecutor txn,
     Map<String, dynamic> body,
   ) async {
-    final now = DateTime.now().toIso8601String();
+    final now = BusinessTime.nowUtcIso();
     final items = (body['items'] as List? ?? const []).whereType<Map>();
     await txn.delete('customer_metrics');
     for (final raw in items) {
@@ -498,7 +521,7 @@ class SyncService {
                 ? null
                 : jsonEncode(item['action_payload']),
         'created_at':
-            (item['created_at'] ?? DateTime.now().toIso8601String()).toString(),
+            BusinessTime.normalizeUtcIso(item['created_at']),
         'resolved_at': item['resolved_at']?.toString(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
@@ -536,8 +559,7 @@ class SyncService {
                 ? null
                 : _toDoubleAny(item['dead_stock_value']),
         'computed_at':
-            (item['computed_at'] ?? DateTime.now().toIso8601String())
-                .toString(),
+            BusinessTime.normalizeUtcIso(item['computed_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
@@ -546,7 +568,7 @@ class SyncService {
     DatabaseExecutor txn,
     Map<String, dynamic> body,
   ) async {
-    final now = DateTime.now().toIso8601String();
+    final now = BusinessTime.nowUtcIso();
     await txn.insert('business_metrics_cache', {
       'cache_key': 'default',
       'from_date': body['period_start']?.toString(),
@@ -578,7 +600,7 @@ class SyncService {
     };
     if (productIds.isEmpty) return;
 
-    final now = DateTime.now().toIso8601String();
+    final now = BusinessTime.nowUtcIso();
     for (final productId in productIds) {
       final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
       final existingPending =
@@ -692,7 +714,7 @@ class SyncService {
           {
             'stock_qty': nextQty,
             'updated_at':
-                payload['updated_at'] ?? DateTime.now().toIso8601String(),
+                BusinessTime.normalizeUtcIso(payload['updated_at']),
           },
           where: 'id = ?',
           whereArgs: [productId],
@@ -711,8 +733,7 @@ class SyncService {
         'unit': (payload['unit'] ?? 'piece').toString(),
         'category': payload['category']?.toString(),
         'updated_at':
-            payload['updated_at']?.toString() ??
-            DateTime.now().toIso8601String(),
+            BusinessTime.normalizeUtcIso(payload['updated_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
     }
@@ -742,8 +763,9 @@ class SyncService {
         'name': payload['name'],
         'phone': payload['phone'],
         'balance': (payload['balance'] as num?)?.toDouble() ?? 0,
+        'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
         'is_deleted': (payload['is_deleted'] == true) ? 1 : 0,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': BusinessTime.normalizeUtcIso(payload['updated_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
     }
@@ -760,12 +782,15 @@ class SyncService {
         'method': (payload['method'] ?? 'CASH').toString().toUpperCase(),
         'amount': amount,
         'note': payload['note'],
-        'created_at': payload['created_at'] ?? DateTime.now().toIso8601String(),
+        'payment_date_ad':
+            payload['payment_date_ad']?.toString() ??
+            _businessDateFromPayload(payload),
+        'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
 
       await txn.rawUpdate(
         'UPDATE customers SET balance = MAX(balance - ?, 0), updated_at = ? WHERE id = ?',
-        [amount, DateTime.now().toIso8601String(), customerId],
+        [amount, BusinessTime.nowUtcIso(), customerId],
       );
       return;
     }
@@ -785,7 +810,10 @@ class SyncService {
         'category': payload['category'],
         'amount': (payload['amount'] as num?)?.toDouble() ?? 0,
         'note': payload['note'],
-        'created_at': payload['created_at'] ?? DateTime.now().toIso8601String(),
+        'expense_date_ad':
+            payload['expense_date_ad']?.toString() ??
+            _businessDateFromPayload(payload),
+        'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
     }
@@ -810,7 +838,9 @@ class SyncService {
         'payment_method': payload['payment_method'] ?? 'CASH',
         'customer_id': payload['customer_id'],
         'total_amount': (payload['total_amount'] as num?)?.toDouble() ?? 0,
-        'created_at': payload['created_at'] ?? DateTime.now().toIso8601String(),
+        'sale_date_ad':
+            payload['sale_date_ad']?.toString() ?? _businessDateFromPayload(payload),
+        'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
 
       await txn.delete('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
@@ -843,7 +873,7 @@ class SyncService {
           'method': (payload['payment_method'] ?? 'CASH').toString(),
           'amount': total,
           'created_at':
-              payload['created_at'] ?? DateTime.now().toIso8601String(),
+              BusinessTime.normalizeUtcIso(payload['created_at']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
       } else {
         for (final p in payments) {
@@ -856,8 +886,7 @@ class SyncService {
             'method': payment['method'],
             'amount': (payment['amount'] as num?)?.toDouble() ?? 0,
             'created_at':
-                payment['created_at']?.toString() ??
-                DateTime.now().toIso8601String(),
+                BusinessTime.normalizeUtcIso(payment['created_at']),
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
@@ -872,10 +901,19 @@ class SyncService {
               updated_at = ?
           WHERE id = ?
           ''',
-          [creditAmount, DateTime.now().toIso8601String(), customerId],
+          [creditAmount, BusinessTime.nowUtcIso(), customerId],
         );
       }
     }
+  }
+
+  String _businessDateFromPayload(Map<String, dynamic> payload) {
+    final createdAt = payload['created_at'];
+    final parsed =
+        createdAt == null ? null : DateTime.tryParse(createdAt.toString());
+    return BusinessTime.businessDateAd(
+      timestampUtc: (parsed ?? BusinessTime.nowUtc()).toUtc(),
+    );
   }
 
   double _saleCreditAmount(Map<String, dynamic> payload) {
@@ -922,7 +960,7 @@ class SyncService {
       SET balance = 0,
           updated_at = COALESCE(updated_at, ?)
       ''',
-      [DateTime.now().toIso8601String()],
+      [BusinessTime.nowUtcIso()],
     );
 
     await txn.rawUpdate(
@@ -942,7 +980,7 @@ class SyncService {
           ), 0),
           updated_at = ?
       ''',
-      [DateTime.now().toIso8601String()],
+      [BusinessTime.nowUtcIso()],
     );
 
     await txn.rawUpdate(
@@ -952,7 +990,7 @@ class SyncService {
           updated_at = ?
       WHERE balance < 0
       ''',
-      [DateTime.now().toIso8601String()],
+      [BusinessTime.nowUtcIso()],
     );
   }
 }

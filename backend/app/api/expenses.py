@@ -1,10 +1,11 @@
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_store, get_current_user
+from app.core.calendar import business_date_from_timestamp
 from app.core.database import get_db
 from app.core.errors import raise_api_error
 from app.models.expense import Expense
@@ -27,6 +28,10 @@ def create_expense(
 ) -> Expense:
     expense = Expense(
         store_id=store.id,
+        expense_date_ad=business_date_from_timestamp(
+            value=None,
+            timezone_name=store.business_timezone,
+        ),
         created_by=user.id,
         updated_by=user.id,
         device_id=device_id,
@@ -62,16 +67,16 @@ def list_expenses(
         Expense.deleted_at.is_(None),
     )
     if from_date is not None:
-        query = query.where(Expense.created_at >= datetime.combine(from_date, time.min))
+        query = query.where(Expense.expense_date_ad >= from_date)
     if to_date is not None:
-        query = query.where(Expense.created_at <= datetime.combine(to_date, time.max))
+        query = query.where(Expense.expense_date_ad <= to_date)
     if search and search.strip():
         term = f"%{search.strip()}%"
         query = query.where(Expense.note.ilike(term))
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     offset = (page - 1) * page_size
     items = db.scalars(
-        query.order_by(Expense.created_at.desc()).offset(offset).limit(page_size)
+        query.order_by(Expense.expense_date_ad.desc(), Expense.created_at.desc()).offset(offset).limit(page_size)
     ).all()
     return ExpenseListResponse(items=items, total=total, page=page, page_size=page_size)
 

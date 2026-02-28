@@ -36,6 +36,8 @@ import '../network/api_error.dart';
 import '../network/backend_gateway.dart';
 import '../network/session_service.dart';
 import '../network/sync_service.dart';
+import '../date/calendar_adapter.dart';
+import '../date/business_clock.dart';
 import '../storage/local_db.dart';
 import '../storage/preferences.dart';
 import '../storage/secure_storage.dart';
@@ -55,6 +57,29 @@ final environmentConfigProvider = Provider<EnvironmentConfig>((ref) {
 
 final preferencesProvider = Provider<AppPreferences>((ref) => AppPreferences());
 
+class DataRefreshRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+final dataRefreshRevisionProvider = NotifierProvider<DataRefreshRevision, int>(
+  DataRefreshRevision.new,
+);
+
+final businessClockProvider = FutureProvider<BusinessClock>((ref) async {
+  final timezone = await ref.watch(preferencesProvider).getBusinessTimezone();
+  return BusinessClock(timezone: timezone);
+});
+
+final calendarAdapterProvider = FutureProvider<CalendarAdapter>((ref) async {
+  final prefs = ref.watch(preferencesProvider);
+  final locale = ref.watch(localeControllerProvider).languageCode;
+  final calendarMode = await prefs.getCalendarMode();
+  return CalendarAdapter(calendarMode: calendarMode, localeCode: locale);
+});
+
 final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
   final settings = await ref.watch(preferencesProvider).getBillingSettings();
   final lang = (settings['language']?.toString() ?? '').trim().toLowerCase();
@@ -64,14 +89,14 @@ final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final env = ref.watch(environmentConfigProvider);
-  const baseUrl =
-      'https://ad8e-2605-b100-32a-f95e-b8d8-22d0-7be3-99d.ngrok-free.app/api/v1';
+  // const baseUrl =
+  //     'https://ad8e-2605-b100-32a-f95e-b8d8-22d0-7be3-99d.ngrok-free.app/api/v1';
   // ignore: avoid_print
-  print('[ApiClient] baseUrl → $baseUrl');
+  // print('[ApiClient] baseUrl → $baseUrl');
   return ApiClient(
     // TEMP (internal testing): hardcoded ngrok backend URL.
-    baseUrl: baseUrl,
-    // baseUrl: env.baseUrl,
+    // baseUrl: baseUrl,
+    baseUrl: env.baseUrl,
     connectTimeoutSeconds: env.connectTimeoutSeconds,
     receiveTimeoutSeconds: env.receiveTimeoutSeconds,
   );
@@ -244,7 +269,19 @@ class AuthController extends Notifier<AuthState> {
     final gateway = ref.read(backendGatewayProvider);
     final store = await gateway.getStoreMe();
     final currentStoreId = store['id']?.toString();
+    final businessTimezone =
+        store['business_timezone']?.toString().trim().isNotEmpty == true
+            ? store['business_timezone'].toString().trim()
+            : null;
+    final calendarMode =
+        store['calendar_mode']?.toString().trim().toUpperCase() == 'AD'
+            ? 'AD'
+            : 'BS';
     if (currentStoreId == null || currentStoreId.isEmpty) return;
+    if (businessTimezone != null) {
+      await _prefs.setBusinessTimezone(businessTimezone);
+    }
+    await _prefs.setCalendarMode(calendarMode);
 
     final previousStoreId = await _prefs.getActiveStoreId();
     final switchedStore =
@@ -538,6 +575,7 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
       ref.invalidate(alertsUnreadFeedProvider);
       ref.invalidate(customerMetricsReportProvider);
       ref.invalidate(productMetricsReportProvider);
+      ref.read(dataRefreshRevisionProvider.notifier).bump();
     } catch (e) {
       if (e is SessionAuthException) {
         await ref.read(authControllerProvider.notifier).logout();
@@ -599,6 +637,7 @@ final productsRepositoryProvider = Provider<ProductsRepository>(
 final customersRepositoryProvider = Provider<CustomersRepository>(
   (ref) => CustomersRepository(
     ref.watch(localDatabaseProvider),
+    preferences: ref.watch(preferencesProvider),
     metricsRepository: ref.watch(metricsRepositoryProvider),
   ),
 );
@@ -606,6 +645,7 @@ final customersRepositoryProvider = Provider<CustomersRepository>(
 final expensesRepositoryProvider = Provider<ExpensesRepository>(
   (ref) => ExpensesRepository(
     ref.watch(localDatabaseProvider),
+    preferences: ref.watch(preferencesProvider),
     metricsRepository: ref.watch(metricsRepositoryProvider),
   ),
 );
@@ -640,12 +680,16 @@ final customersListProvider = FutureProvider<List<Customer>>(
 );
 
 final expensesListProvider = FutureProvider<List<Expense>>(
-  (ref) => ref.watch(expensesRepositoryProvider).listExpenses(),
+  (ref) {
+    ref.watch(dataRefreshRevisionProvider);
+    return ref.watch(expensesRepositoryProvider).listExpenses();
+  },
 );
 
 final salesRepositoryProvider = Provider<SalesRepository>(
   (ref) => SalesRepository(
     ref.watch(localDatabaseProvider),
+    preferences: ref.watch(preferencesProvider),
     metricsRepository: ref.watch(metricsRepositoryProvider),
   ),
 );
@@ -658,6 +702,7 @@ final invoicePdfServiceProvider = Provider<InvoicePdfService>(
   (ref) => InvoicePdfService(
     ref.watch(billingRepositoryProvider),
     ref.watch(preferencesProvider),
+    calendarAdapterLoader: () async => ref.read(calendarAdapterProvider.future),
   ),
 );
 
@@ -701,6 +746,7 @@ class DashboardSummary {
 }
 
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
+  ref.watch(dataRefreshRevisionProvider);
   final salesRepo = ref.watch(salesRepositoryProvider);
   final localTodaySales = await salesRepo.todaySalesTotal();
   final localTodayExpenses = await salesRepo.todayExpenseTotal();
@@ -742,6 +788,8 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
   String? businessType;
   String? localeDefault;
   String? currency;
+  String? calendarMode;
+  String? businessTimezone;
   try {
     final locale = ref.watch(localeControllerProvider).languageCode;
     await ref.watch(sessionServiceProvider).ensureReady(localeCode: locale);
@@ -755,6 +803,8 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
     businessType = profile['business_type']?.toString();
     localeDefault = profile['locale_default']?.toString();
     currency = profile['currency']?.toString();
+    calendarMode = profile['calendar_mode']?.toString();
+    businessTimezone = profile['business_timezone']?.toString();
     final apiRole = profile['role']?.toString().trim().toLowerCase();
     if (apiRole != null && apiRole.isNotEmpty) {
       role = apiRole;
@@ -771,12 +821,16 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
     final missingStorePhone = (storePhone?.trim().isEmpty ?? true);
     final missingBusinessType = (businessType?.trim().isEmpty ?? true);
     final missingCurrency = (currency?.trim().isEmpty ?? true);
+    final missingCalendarMode = (calendarMode?.trim().isEmpty ?? true);
+    final missingBusinessTimezone = (businessTimezone?.trim().isEmpty ?? true);
     if (missingStoreName ||
         missingLocaleDefault ||
         missingStoreAddress ||
         missingStorePhone ||
         missingBusinessType ||
-        missingCurrency) {
+        missingCurrency ||
+        missingCalendarMode ||
+        missingBusinessTimezone) {
       final store = await gateway.getStoreMe();
       storeName =
           storeName?.trim().isNotEmpty == true
@@ -802,6 +856,14 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
           currency?.trim().isNotEmpty == true
               ? currency
               : store['currency']?.toString();
+      calendarMode =
+          calendarMode?.trim().isNotEmpty == true
+              ? calendarMode
+              : store['calendar_mode']?.toString();
+      businessTimezone =
+          businessTimezone?.trim().isNotEmpty == true
+              ? businessTimezone
+              : store['business_timezone']?.toString();
     }
   } catch (_) {
     // Offline or unauthenticated fallback
@@ -814,6 +876,8 @@ final profileProvider = FutureProvider<ProfileData>((ref) async {
     businessType: businessType,
     localeDefault: localeDefault,
     currency: currency,
+    calendarMode: calendarMode,
+    businessTimezone: businessTimezone,
     role: role,
   );
 });
@@ -840,6 +904,7 @@ class SalesListParams {
 
 final salesListProvider = FutureProvider.autoDispose
     .family<List<Sale>, SalesListParams>((ref, params) {
+      ref.watch(dataRefreshRevisionProvider);
       final repo = ref.watch(salesRepositoryProvider);
       return repo.listSales(
         fromDate: params.fromDate,
@@ -1102,6 +1167,7 @@ class ReportParams {
 
 final salesReportProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, ReportParams>((ref, params) async {
+      ref.watch(dataRefreshRevisionProvider);
       final repo = ref.watch(salesRepositoryProvider);
       final sales = await repo.listSales(
         fromDate: params.fromDate,

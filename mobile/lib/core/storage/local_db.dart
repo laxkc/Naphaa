@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../date/business_time.dart';
 import 'db_open_strategy.dart';
 
 class LocalDatabase {
@@ -27,9 +28,9 @@ class LocalDatabase {
 
   Future<Database> _initDb() async {
     final dbPath = await getDatabasesPath();
-    return _openStrategy.open(
+    final db = await _openStrategy.open(
       path: join(dbPath, dbName),
-      version: 12,
+      version: 13,
       onCreate: (db, version) async {
         await _createSchema(db);
       },
@@ -359,8 +360,106 @@ class LocalDatabase {
             );
           } catch (_) {}
         }
+        if (oldVersion < 13) {
+          try {
+            await db.execute(
+              "ALTER TABLE sales ADD COLUMN sale_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "ALTER TABLE expenses ADD COLUMN expense_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "ALTER TABLE customer_payments ADD COLUMN payment_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "ALTER TABLE sale_refunds ADD COLUMN refund_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "ALTER TABLE invoices ADD COLUMN issue_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "ALTER TABLE invoices ADD COLUMN due_date_ad TEXT",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_sales_sale_date_ad ON sales(sale_date_ad)',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_expenses_expense_date_ad ON expenses(expense_date_ad)',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_customer_payments_payment_date_ad ON customer_payments(payment_date_ad)',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_sale_refunds_refund_date_ad ON sale_refunds(refund_date_ad)',
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              'CREATE INDEX IF NOT EXISTS ix_invoices_business_issue_date_ad ON invoices(business_id, issue_date_ad)',
+            );
+          } catch (_) {}
+          try {
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS migration_diagnostics (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TEXT NOT NULL
+              )
+            ''');
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE sales SET sale_date_ad = substr(created_at, 1, 10) WHERE sale_date_ad IS NULL AND created_at IS NOT NULL",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE expenses SET expense_date_ad = substr(created_at, 1, 10) WHERE expense_date_ad IS NULL AND created_at IS NOT NULL",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE customer_payments SET payment_date_ad = substr(created_at, 1, 10) WHERE payment_date_ad IS NULL AND created_at IS NOT NULL",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE sale_refunds SET refund_date_ad = substr(created_at, 1, 10) WHERE refund_date_ad IS NULL AND created_at IS NOT NULL",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE invoices SET issue_date_ad = substr(issue_date, 1, 10) WHERE issue_date_ad IS NULL AND issue_date IS NOT NULL",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE invoices SET due_date_ad = substr(due_date, 1, 10) WHERE due_date_ad IS NULL AND due_date IS NOT NULL",
+            );
+          } catch (_) {}
+        }
       },
     );
+    await _runCalendarCompatibilityPass(db);
+    return db;
   }
 
   Future<void> _createSchema(Database db) async {
@@ -399,9 +498,13 @@ class LocalDatabase {
         payment_method TEXT NOT NULL DEFAULT 'CASH',
         customer_id TEXT,
         total_amount REAL NOT NULL,
+        sale_date_ad TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
+    await db.execute(
+      'CREATE INDEX ix_sales_sale_date_ad ON sales(sale_date_ad)',
+    );
 
     await db.execute('''
       CREATE TABLE sale_items (
@@ -430,9 +533,13 @@ class LocalDatabase {
         sale_id TEXT NOT NULL,
         amount REAL NOT NULL,
         reason TEXT,
+        refund_date_ad TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
+    await db.execute(
+      'CREATE INDEX ix_sale_refunds_refund_date_ad ON sale_refunds(refund_date_ad)',
+    );
 
     await db.execute('''
       CREATE TABLE sale_refund_items (
@@ -463,9 +570,13 @@ class LocalDatabase {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         note TEXT,
+        expense_date_ad TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
+    await db.execute(
+      'CREATE INDEX ix_expenses_expense_date_ad ON expenses(expense_date_ad)',
+    );
 
     await db.execute('''
       CREATE TABLE customer_payments (
@@ -474,9 +585,13 @@ class LocalDatabase {
         method TEXT NOT NULL DEFAULT 'CASH',
         amount REAL NOT NULL,
         note TEXT,
+        payment_date_ad TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
+    await db.execute(
+      'CREATE INDEX ix_customer_payments_payment_date_ad ON customer_payments(payment_date_ad)',
+    );
 
     await db.execute('''
       CREATE TABLE sync_queue (
@@ -577,6 +692,14 @@ class LocalDatabase {
     ''');
 
     await db.execute('''
+      CREATE TABLE migration_diagnostics (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE invoices (
         id TEXT PRIMARY KEY,
         business_id TEXT NOT NULL,
@@ -585,6 +708,8 @@ class LocalDatabase {
         status TEXT NOT NULL DEFAULT 'draft',
         issue_date TEXT,
         due_date TEXT,
+        issue_date_ad TEXT,
+        due_date_ad TEXT,
         currency_code TEXT NOT NULL DEFAULT 'NPR',
         fiscal_calendar_snapshot TEXT NOT NULL DEFAULT 'AD',
         language_snapshot TEXT NOT NULL DEFAULT 'en',
@@ -615,6 +740,9 @@ class LocalDatabase {
     ''');
     await db.execute(
       'CREATE INDEX ix_invoices_business_issue_date ON invoices(business_id, issue_date)',
+    );
+    await db.execute(
+      'CREATE INDEX ix_invoices_business_issue_date_ad ON invoices(business_id, issue_date_ad)',
     );
     await db.execute(
       'CREATE INDEX ix_invoices_business_status ON invoices(business_id, status)',
@@ -686,7 +814,7 @@ class LocalDatabase {
         0;
     if (rows > 0) return;
 
-    final now = DateTime.now().toIso8601String();
+    final now = BusinessTime.nowUtcIso();
     Future<void> seedProduct({
       required String name,
       required double sellPrice,
@@ -738,7 +866,7 @@ class LocalDatabase {
   Future<void> injectRealisticTestData({int salesCount = 100}) async {
     final db = await database;
     final rng = Random(42);
-    final now = DateTime.now();
+    final now = BusinessTime.nowUtc();
     var seq = 0;
 
     String nextId(String prefix) {
@@ -812,7 +940,7 @@ class LocalDatabase {
           'name': product['name'] as String,
           'sell_price': product['price'] as double,
           'stock_qty': product['stock'] as double,
-          'updated_at': now.toIso8601String(),
+          'updated_at': now.toUtc().toIso8601String(),
         };
         productRecords.add(row);
         await txn.insert('products', row);
@@ -827,7 +955,7 @@ class LocalDatabase {
           'name': customerNames[i],
           'phone': '98${(10000000 + i).toString().padLeft(8, '0')}',
           'balance': 0.0,
-          'updated_at': now.toIso8601String(),
+          'updated_at': now.toUtc().toIso8601String(),
         });
       }
 
@@ -903,7 +1031,8 @@ class LocalDatabase {
           'payment_method': isCredit ? 'CREDIT' : 'CASH',
           'customer_id': customerId,
           'total_amount': total,
-          'created_at': saleDate.toIso8601String(),
+          'sale_date_ad': BusinessTime.formatDateOnly(saleDate),
+          'created_at': saleDate.toUtc().toIso8601String(),
         });
 
         await txn.insert('sale_payments', {
@@ -911,13 +1040,13 @@ class LocalDatabase {
           'sale_id': saleId,
           'method': isCredit ? 'CREDIT' : 'CASH',
           'amount': total,
-          'created_at': saleDate.toIso8601String(),
+          'created_at': saleDate.toUtc().toIso8601String(),
         });
 
         if (isCredit && customerId != null) {
           await txn.rawUpdate(
             'UPDATE customers SET balance = balance + ?, updated_at = ? WHERE id = ?',
-            [total, now.toIso8601String(), customerId],
+            [total, now.toUtc().toIso8601String(), customerId],
           );
         }
 
@@ -925,7 +1054,8 @@ class LocalDatabase {
           'entity': 'sale',
           'operation': 'UPSERT',
           'payload': '{"seeded":true}',
-          'created_at': saleDate.toIso8601String(),
+          'created_at': saleDate.toUtc().toIso8601String(),
+          'updated_at': saleDate.toUtc().toIso8601String(),
           'synced': 1,
         });
       }
@@ -944,10 +1074,137 @@ class LocalDatabase {
           'category': categories[rng.nextInt(categories.length)],
           'amount': 200 + rng.nextInt(3200) + (rng.nextDouble()),
           'note': 'Seeded expense ${i + 1}',
-          'created_at': expenseDate.toIso8601String(),
+          'expense_date_ad': BusinessTime.formatDateOnly(expenseDate),
+          'created_at': expenseDate.toUtc().toIso8601String(),
         });
       }
     });
+  }
+
+  Future<void> _runCalendarCompatibilityPass(Database db) async {
+    final nowIso = BusinessTime.nowUtcIso();
+    final diagnostics = <String, int>{};
+
+    Future<void> repairDateColumn({
+      required String table,
+      required String idColumn,
+      required String dateColumn,
+      required String timestampColumn,
+    }) async {
+      final rows = await db.query(
+        table,
+        columns: [idColumn, dateColumn, timestampColumn],
+        where: "$dateColumn IS NULL OR trim($dateColumn) = ''",
+      );
+      var repaired = 0;
+      var malformed = 0;
+      for (final row in rows) {
+        final rawTimestamp = row[timestampColumn]?.toString();
+        final parsed =
+            rawTimestamp == null ? null : DateTime.tryParse(rawTimestamp);
+        if (parsed == null) {
+          malformed += 1;
+          continue;
+        }
+        await db.update(
+          table,
+          {dateColumn: BusinessTime.businessDateAd(timestampUtc: parsed.toUtc())},
+          where: '$idColumn = ?',
+          whereArgs: [row[idColumn]],
+        );
+        repaired += 1;
+      }
+      diagnostics['${table}_repaired'] = repaired;
+      diagnostics['${table}_malformed'] = malformed;
+    }
+
+    await repairDateColumn(
+      table: 'sales',
+      idColumn: 'id',
+      dateColumn: 'sale_date_ad',
+      timestampColumn: 'created_at',
+    );
+    await repairDateColumn(
+      table: 'expenses',
+      idColumn: 'id',
+      dateColumn: 'expense_date_ad',
+      timestampColumn: 'created_at',
+    );
+    await repairDateColumn(
+      table: 'customer_payments',
+      idColumn: 'id',
+      dateColumn: 'payment_date_ad',
+      timestampColumn: 'created_at',
+    );
+    await repairDateColumn(
+      table: 'sale_refunds',
+      idColumn: 'id',
+      dateColumn: 'refund_date_ad',
+      timestampColumn: 'created_at',
+    );
+
+    final invoiceRows = await db.query(
+      'invoices',
+      columns: ['id', 'issue_date_ad', 'issue_date', 'due_date_ad', 'due_date'],
+      where:
+          "(issue_date IS NOT NULL AND (issue_date_ad IS NULL OR trim(issue_date_ad) = '')) "
+          "OR (due_date IS NOT NULL AND (due_date_ad IS NULL OR trim(due_date_ad) = ''))",
+    );
+    var issueRepaired = 0;
+    var issueMalformed = 0;
+    var dueRepaired = 0;
+    var dueMalformed = 0;
+    for (final row in invoiceRows) {
+      final updates = <String, Object?>{};
+      final rawIssue = row['issue_date']?.toString();
+      if ((row['issue_date_ad']?.toString().trim().isEmpty ?? true) &&
+          rawIssue != null &&
+          rawIssue.isNotEmpty) {
+        final parsed = DateTime.tryParse(rawIssue);
+        if (parsed == null) {
+          issueMalformed += 1;
+        } else {
+          updates['issue_date_ad'] = BusinessTime.businessDateAd(
+            timestampUtc: parsed.toUtc(),
+          );
+          issueRepaired += 1;
+        }
+      }
+      final rawDue = row['due_date']?.toString();
+      if ((row['due_date_ad']?.toString().trim().isEmpty ?? true) &&
+          rawDue != null &&
+          rawDue.isNotEmpty) {
+        final parsed = DateTime.tryParse(rawDue);
+        if (parsed == null) {
+          dueMalformed += 1;
+        } else {
+          updates['due_date_ad'] = BusinessTime.businessDateAd(
+            timestampUtc: parsed.toUtc(),
+          );
+          dueRepaired += 1;
+        }
+      }
+      if (updates.isNotEmpty) {
+        await db.update(
+          'invoices',
+          updates,
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+    }
+    diagnostics['invoices_issue_repaired'] = issueRepaired;
+    diagnostics['invoices_issue_malformed'] = issueMalformed;
+    diagnostics['invoices_due_repaired'] = dueRepaired;
+    diagnostics['invoices_due_malformed'] = dueMalformed;
+
+    for (final entry in diagnostics.entries) {
+      await db.insert('migration_diagnostics', {
+        'key': entry.key,
+        'value': entry.value.toString(),
+        'updated_at': nowIso,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 
   String _id() {

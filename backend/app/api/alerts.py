@@ -19,7 +19,7 @@ def list_alerts(
 ) -> AlertsResponse:
     # IR6 v1: only open alerts are supported; keep API shape future-ready.
     if status.lower() != "open":
-        return AlertsResponse(items=[], total=0, computed_at=IntelligenceService._as_utc(None).isoformat())
+        return AlertsResponse(items=[], total=0, computed_at=IntelligenceService._as_utc(None))
 
     result = IntelligenceService.compute_and_cache_open_alerts(db, store.id)
     db.commit()
@@ -37,14 +37,11 @@ def list_alerts(
                 body=row.body,
                 action_type=row.action_type,
                 action_payload=row.action_payload_json,
-                created_at=IntelligenceService._as_utc(row.created_at).isoformat(),
-                resolved_at=IntelligenceService._as_utc(row.resolved_at).isoformat()
-                if row.resolved_at
-                else None,
+                created_at=IntelligenceService._as_utc(row.created_at),
+                resolved_at=IntelligenceService._as_utc(row.resolved_at) if row.resolved_at else None,
             )
             for row in rows
         ],
         total=len(rows),
-        computed_at=str(result["computed_at"]),
+        computed_at=IntelligenceService._as_utc(result["computed_at"]),
     )
-

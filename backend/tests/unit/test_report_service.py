@@ -28,8 +28,16 @@ def test_summary_report_aggregation(db_session):
 
 def test_summary_report_with_date_filter(db_session):
     now = datetime.now()
-    db_session.add(Sale(store_id="store-1", sale_type="CASH", total_amount=Decimal("200"), created_at=now))
+    db_session.add(
+        Sale(
+            store_id="store-1",
+            sale_type="CASH",
+            total_amount=Decimal("200"),
+            created_at=now,
+            sale_date_ad=now.date(),
+        )
+    )
     db_session.commit()
 
-    summary = ReportService.summary(db_session, "store-1", now, now)
+    summary = ReportService.summary(db_session, "store-1", now.date(), now.date())
     assert summary.total_sales == Decimal("200")

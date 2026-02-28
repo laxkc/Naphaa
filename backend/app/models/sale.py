@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -20,6 +20,7 @@ class Sale(Base):
     payment_method: Mapped[str | None] = mapped_column(String(24), nullable=True)
     customer_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("customers.id"), nullable=True)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    sale_date_ad: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(72), nullable=True, index=True)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     updated_by: Mapped[str | None] = mapped_column(String(36), nullable=True)

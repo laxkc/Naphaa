@@ -1,16 +1,21 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/storage/local_db.dart';
 
 class InvoiceNumberingService {
-  InvoiceNumberingService(this._db);
+  InvoiceNumberingService(this._db, {CalendarAdapter? adapter})
+    : _adapter =
+          adapter ??
+          const CalendarAdapter(calendarMode: 'AD', localeCode: 'en');
 
   final LocalDatabase _db;
+  final CalendarAdapter _adapter;
 
   Future<String> nextInvoiceNumber({
     required String businessId,
     required String prefix,
-    required DateTime issueDate,
+    required DateTime issueDateAd,
     required String fiscalCalendar,
   }) async {
     final db = await _db.database;
@@ -19,7 +24,7 @@ class InvoiceNumberingService {
         txn,
         businessId: businessId,
         prefix: prefix,
-        issueDate: issueDate,
+        issueDateAd: issueDateAd,
         fiscalCalendar: fiscalCalendar,
       );
     });
@@ -29,11 +34,14 @@ class InvoiceNumberingService {
     DatabaseExecutor txn, {
     required String businessId,
     required String prefix,
-    required DateTime issueDate,
+    required DateTime issueDateAd,
     required String fiscalCalendar,
   }) async {
     final safePrefix = _sanitizePrefix(prefix);
-    final yearKey = _yearKey(issueDate: issueDate, fiscalCalendar: fiscalCalendar);
+    final yearKey = _yearKey(
+      issueDateAd: issueDateAd,
+      fiscalCalendar: fiscalCalendar,
+    );
 
     final row = await txn.query(
       'invoice_sequence',
@@ -86,16 +94,21 @@ class InvoiceNumberingService {
   }
 
   String _yearKey({
-    required DateTime issueDate,
+    required DateTime issueDateAd,
     required String fiscalCalendar,
   }) {
-    // v1 stores AD timestamps; BS support can plug in a converter later.
     final normalized = fiscalCalendar.trim().toUpperCase();
-    if (normalized == 'BS') {
-      // Placeholder hook: display year can be replaced with true BS conversion later.
-      return issueDate.year.toString();
-    }
-    return issueDate.year.toString();
+    final adapter =
+        normalized == 'BS'
+            ? CalendarAdapter(
+              calendarMode: 'BS',
+              localeCode: _adapter.localeCode,
+            )
+            : CalendarAdapter(
+              calendarMode: 'AD',
+              localeCode: _adapter.localeCode,
+            );
+    return adapter.invoiceYearKey(issueDateAd);
   }
 
   String _sanitizePrefix(String prefix) {
@@ -112,4 +125,3 @@ class InvoiceNumberingService {
     return '$prefix-$yearKey-$seq';
   }
 }
-

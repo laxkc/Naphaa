@@ -203,6 +203,51 @@ void main() {
     await db.reset();
   });
 
+  test('outgoing sync payload timestamps are normalized to UTC Z strings', () async {
+    final db = await createTestDb('sync_service_utc_normalize');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    await sql.insert('sync_queue', {
+      'op_id': 'op-z-1',
+      'entity': 'expense',
+      'entity_id': 'exp-z-1',
+      'operation': 'UPSERT',
+      'payload': jsonEncode({
+        'id': 'exp-z-1',
+        'category': 'OTHER',
+        'amount': 10,
+        'created_at': '2026-02-27T12:00:00',
+        'updated_at': '2026-02-27T12:00:00',
+      }),
+      'created_at': '2026-02-27T12:00:00',
+      'updated_at': '2026-02-27T12:00:00',
+      'synced': 0,
+      'status': 'pending',
+      'retry_count': 0,
+    });
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
+    );
+
+    await service.processPendingSyncDetailed(localeCode: 'en');
+
+    expect(gateway.pushedBatches, hasLength(1));
+    final payload = gateway.pushedBatches.single.single['payload'] as Map<String, dynamic>;
+    expect(payload['created_at'], endsWith('Z'));
+    expect(payload['updated_at'], endsWith('Z'));
+
+    await db.reset();
+  });
+
   test('failed row is blocked after max retries', () async {
     final db = await createTestDb('sync_service_block_after_max_retries');
     final sql = await db.database;
@@ -261,7 +306,7 @@ void main() {
     final prefs = _FakePrefs();
     final gateway = _FakeGateway();
     final session = _FakeSessionService();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
 
     await sql.insert('sync_queue', {
       'op_id': 'op-wait',
@@ -629,8 +674,9 @@ void main() {
       'id': 'exp-local-1',
       'category': 'OTHER',
       'amount': 10.0,
+      'expense_date_ad': '2026-02-27',
       'note': 'local',
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
     });
     await prefs.setLastSyncAt('2026-02-23T00:00:00.000Z');
     gateway.pullResponses.add(

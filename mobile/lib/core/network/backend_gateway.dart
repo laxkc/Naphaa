@@ -64,6 +64,8 @@ class BackendGateway {
     String? businessType,
     String? localeDefault,
     String? currency,
+    String? calendarMode,
+    String? businessTimezone,
   }) async {
     final payload = <String, dynamic>{};
     if (name != null && name.trim().isNotEmpty) payload['name'] = name.trim();
@@ -75,6 +77,12 @@ class BackendGateway {
     }
     if (currency != null && currency.trim().isNotEmpty) {
       payload['currency'] = currency.trim();
+    }
+    if (calendarMode != null && calendarMode.trim().isNotEmpty) {
+      payload['calendar_mode'] = calendarMode.trim().toUpperCase();
+    }
+    if (businessTimezone != null && businessTimezone.trim().isNotEmpty) {
+      payload['business_timezone'] = businessTimezone.trim();
     }
     final res = await _dio.patch('/stores/$storeId', data: payload);
     return Map<String, dynamic>.from(res.data as Map);

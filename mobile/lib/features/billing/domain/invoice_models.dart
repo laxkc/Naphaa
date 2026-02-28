@@ -36,7 +36,7 @@ class InvoiceDraftInput {
     this.customerId,
     required this.items,
     this.notes,
-    this.dueDate,
+    this.dueDateAd,
     this.invoiceDiscountAmount = 0,
   });
 
@@ -44,7 +44,7 @@ class InvoiceDraftInput {
   final String? customerId;
   final List<InvoiceDraftLineInput> items;
   final String? notes;
-  final DateTime? dueDate;
+  final DateTime? dueDateAd;
   final double invoiceDiscountAmount;
 }
 
@@ -79,6 +79,8 @@ class InvoiceRecord {
     this.customerId,
     this.issueDate,
     this.dueDate,
+    this.issueDateAd,
+    this.dueDateAd,
     this.notes,
     this.pdfStatus,
     this.pdfPath,
@@ -100,6 +102,8 @@ class InvoiceRecord {
   final String? customerId;
   final DateTime? issueDate;
   final DateTime? dueDate;
+  final DateTime? issueDateAd;
+  final DateTime? dueDateAd;
   final double subtotal;
   final double discountAmount;
   final double taxAmount;
@@ -134,6 +138,8 @@ class InvoiceRecord {
       customerId: row['customer_id']?.toString(),
       issueDate: parseDate('issue_date'),
       dueDate: parseDate('due_date'),
+      issueDateAd: parseDate('issue_date_ad'),
+      dueDateAd: parseDate('due_date_ad'),
       subtotal: (row['subtotal'] as num?)?.toDouble() ?? 0,
       discountAmount: (row['discount_amount'] as num?)?.toDouble() ?? 0,
       taxAmount: (row['tax_amount'] as num?)?.toDouble() ?? 0,

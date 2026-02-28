@@ -29,12 +29,58 @@ API will be available at:
 
 ## Environment (optional)
 
-Create `backend/.env` to override defaults, for example:
+The backend now defaults to PostgreSQL. It loads `.env` first and
+falls back to `.env.development`. Database connection settings and
+`JWT_SECRET_KEY` are expected from env, not hardcoded in Python.
+
+Current development database:
 
 ```env
-DATABASE_URL=sqlite:///./sme_digital.db
-JWT_SECRET_KEY=change-me
+APP_NAME=SME Digitization API
+API_V1_PREFIX=/api/v1
 DEBUG=true
+DB_HOST=naphaa-server.postgres.database.azure.com
+DB_PORT=5432
+DB_NAME=naphaa-database
+DB_USER=nvaecgrwtz
+DB_PASSWORD=your_password
+DB_SSLMODE=require
+JWT_SECRET_KEY=change-me-development
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+CORS_ALLOWED_ORIGINS=["*"]
+SYNC_PULL_DEFAULT_LIMIT=100
+SYNC_PULL_MAX_LIMIT=500
+AUTH_RATE_LIMIT_MAX_REQUESTS=30
+AUTH_RATE_LIMIT_WINDOW_SECONDS=60
+DEFAULT_BUSINESS_TIMEZONE=Asia/Kathmandu
+DEFAULT_CALENDAR_MODE=BS
+```
+
+If needed, create `backend/.env` to override development values:
+
+```env
+APP_NAME=SME Digitization API
+API_V1_PREFIX=/api/v1
+DEBUG=true
+DB_HOST=naphaa-server.postgres.database.azure.com
+DB_PORT=5432
+DB_NAME=naphaa-database
+DB_USER=nvaecgrwtz
+DB_PASSWORD=your_password
+DB_SSLMODE=require
+JWT_SECRET_KEY=change-me
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+CORS_ALLOWED_ORIGINS=["*"]
+SYNC_PULL_DEFAULT_LIMIT=100
+SYNC_PULL_MAX_LIMIT=500
+AUTH_RATE_LIMIT_MAX_REQUESTS=30
+AUTH_RATE_LIMIT_WINDOW_SECONDS=60
+DEFAULT_BUSINESS_TIMEZONE=Asia/Kathmandu
+DEFAULT_CALENDAR_MODE=BS
 ```
 
 ## Tests
@@ -42,4 +88,32 @@ DEBUG=true
 ```bash
 cd backend
 uv run pytest
+```
+
+## Migrations
+
+This backend now uses Alembic for schema management.
+
+For an existing database that already matches the current models, stamp the
+baseline revision once:
+
+```bash
+cd backend
+uv run alembic stamp 20260228_120000
+```
+
+For future schema changes:
+
+```bash
+cd backend
+uv run alembic revision --autogenerate -m "describe_change"
+uv run alembic upgrade head
+```
+
+Useful commands:
+
+```bash
+uv run alembic current
+uv run alembic history
+uv run alembic upgrade head
 ```

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/date/business_time.dart';
 import '../../../core/storage/local_db.dart';
 import 'alerts_repository.dart';
 
@@ -37,7 +38,7 @@ class MetricsRepository {
       alerts = _computeAlerts(
         customerMetrics,
         productMetrics,
-        txnNowIso: DateTime.now().toIso8601String(),
+        txnNowIso: BusinessTime.nowUtcIso(),
       );
     });
     await _alerts.replaceOpenAlerts(alerts);
@@ -52,18 +53,18 @@ class MetricsRepository {
       where: 'COALESCE(is_deleted, 0) = 0',
     );
     final saleRows = await txn.rawQuery('''
-      SELECT s.id, s.customer_id, s.created_at, s.total_amount,
+      SELECT s.id, s.customer_id, s.sale_date_ad, s.created_at, s.total_amount,
              SUM(CASE WHEN UPPER(COALESCE(sp.method, '')) = 'CREDIT' THEN COALESCE(sp.amount, 0) ELSE 0 END) AS credit_amount
       FROM sales s
       LEFT JOIN sale_payments sp ON sp.sale_id = s.id
       WHERE s.customer_id IS NOT NULL
-      GROUP BY s.id, s.customer_id, s.created_at, s.total_amount
-      ORDER BY s.created_at ASC
+      GROUP BY s.id, s.customer_id, s.sale_date_ad, s.created_at, s.total_amount
+      ORDER BY COALESCE(s.sale_date_ad, substr(s.created_at, 1, 10)) ASC, s.created_at ASC
     ''');
     final paymentRows = await txn.query(
       'customer_payments',
-      columns: ['customer_id', 'amount', 'created_at'],
-      orderBy: 'created_at ASC',
+      columns: ['customer_id', 'amount', 'payment_date_ad', 'created_at'],
+      orderBy: 'COALESCE(payment_date_ad, substr(created_at, 1, 10)) ASC, created_at ASC',
     );
 
     final paymentsByCustomer = <String, double>{};
@@ -85,7 +86,8 @@ class MetricsRepository {
           .add(Map<String, dynamic>.from(row));
     }
 
-    final now = DateTime.now();
+    final now = BusinessTime.nowUtc();
+    final todayAd = BusinessTime.businessDateAd(timestampUtc: now);
     final items = <Map<String, dynamic>>[];
     final totals = {'d0_7': 0.0, 'd8_30': 0.0, 'd31_60': 0.0, 'd60_plus': 0.0};
     var totalOutstanding = 0.0;
@@ -123,15 +125,12 @@ class MetricsRepository {
         final outstanding = creditAmount - applied;
         if (outstanding <= 0) continue;
 
-        final createdAt =
-            DateTime.tryParse(sale['created_at']?.toString() ?? '')?.toLocal();
-        if (createdAt == null) continue;
-        final ageDays =
-            DateTime(now.year, now.month, now.day)
-                .difference(
-                  DateTime(createdAt.year, createdAt.month, createdAt.day),
-                )
-                .inDays;
+        final saleDateAd = _resolveBusinessDate(
+          preferred: sale['sale_date_ad']?.toString(),
+          fallbackTimestamp: sale['created_at']?.toString(),
+        );
+        if (saleDateAd == null) continue;
+        final ageDays = _dayDifference(todayAd, saleDateAd);
         if (ageDays > oldestDueDays) oldestDueDays = ageDays;
         final key =
             ageDays <= 7
@@ -250,12 +249,11 @@ class MetricsRepository {
   Future<Map<String, dynamic>> _computeProductMetrics(
     DatabaseExecutor txn,
   ) async {
-    final now = DateTime.now();
-    final cutoff30 = now.subtract(const Duration(days: 30));
-    final cutoff7 = now.subtract(const Duration(days: 7));
+    final now = BusinessTime.nowUtc();
+    final todayAd = BusinessTime.businessDateAd(timestampUtc: now);
     final products = await txn.query('products');
     final saleItemRows = await txn.rawQuery('''
-      SELECT si.product_id, si.qty, si.line_total, si.unit_price, s.created_at
+      SELECT si.product_id, si.qty, si.line_total, si.unit_price, s.sale_date_ad, s.created_at
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
     ''');
@@ -263,9 +261,11 @@ class MetricsRepository {
     for (final row in saleItemRows) {
       final productId = row['product_id']?.toString();
       if (productId == null || productId.isEmpty) continue;
-      final createdAt =
-          DateTime.tryParse(row['created_at']?.toString() ?? '')?.toLocal();
-      if (createdAt == null) continue;
+      final saleDateAd = _resolveBusinessDate(
+        preferred: row['sale_date_ad']?.toString(),
+        fallbackTimestamp: row['created_at']?.toString(),
+      );
+      if (saleDateAd == null) continue;
       final agg = aggregates.putIfAbsent(
         productId,
         () => {
@@ -278,17 +278,18 @@ class MetricsRepository {
       );
       final qty = _toDouble(row['qty']);
       final lineTotal = _toDouble(row['line_total']);
-      if (!createdAt.isBefore(cutoff30)) {
+      final ageDays = _dayDifference(todayAd, saleDateAd);
+      if (ageDays <= 30) {
         agg['qty_sold_30d'] = (_toDouble(agg['qty_sold_30d'])) + qty;
         agg['revenue_30d'] = (_toDouble(agg['revenue_30d'])) + lineTotal;
         (agg['sale_items'] as List).add(Map<String, dynamic>.from(row));
       }
-      if (!createdAt.isBefore(cutoff7)) {
+      if (ageDays <= 7) {
         agg['qty_sold_7d'] = (_toDouble(agg['qty_sold_7d'])) + qty;
       }
       final prev = agg['last_sale_at']?.toString();
-      if (prev == null || createdAt.toIso8601String().compareTo(prev) > 0) {
-        agg['last_sale_at'] = createdAt.toIso8601String();
+      if (prev == null || saleDateAd.compareTo(prev) > 0) {
+        agg['last_sale_at'] = saleDateAd;
       }
     }
 
@@ -304,22 +305,11 @@ class MetricsRepository {
       final costPrice =
           p['cost_price'] == null ? null : _toDouble(p['cost_price']);
       final lastSaleAtRaw = agg['last_sale_at']?.toString();
-      final lastSaleAt =
-          lastSaleAtRaw == null
-              ? null
-              : DateTime.tryParse(lastSaleAtRaw)?.toLocal();
+      final lastSaleAt = lastSaleAtRaw;
       final deadStock =
           stockQty > 0 &&
           (lastSaleAt == null ||
-              DateTime(now.year, now.month, now.day)
-                      .difference(
-                        DateTime(
-                          lastSaleAt.year,
-                          lastSaleAt.month,
-                          lastSaleAt.day,
-                        ),
-                      )
-                      .inDays >
+              _dayDifference(todayAd, lastSaleAt) >
                   30);
       double? deadStockValue;
       if (deadStock && costPrice != null) {
@@ -448,7 +438,7 @@ class MetricsRepository {
       'high_risk_customers': highRisk,
       'open_alerts_count':
           0, // filled after alerts generation; local provisional
-      'computed_at': DateTime.now().toIso8601String(),
+      'computed_at': BusinessTime.nowUtcIso(),
       'reasons': reasons,
       'source': 'local_cache',
       'provisional': true,
@@ -466,7 +456,7 @@ class MetricsRepository {
       'payload_json': jsonEncode(payload),
       'computed_at':
           payload['computed_at']?.toString() ??
-          DateTime.now().toIso8601String(),
+          BusinessTime.nowUtcIso(),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -525,4 +515,25 @@ class MetricsRepository {
 
   int _toInt(Object? v) =>
       v is num ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? 0;
+
+  String? _resolveBusinessDate({
+    required String? preferred,
+    required String? fallbackTimestamp,
+  }) {
+    final clean = preferred?.trim();
+    if (clean != null && clean.isNotEmpty) return clean;
+    final parsed =
+        fallbackTimestamp == null
+            ? null
+            : DateTime.tryParse(fallbackTimestamp.trim());
+    if (parsed == null) return null;
+    return BusinessTime.businessDateAd(timestampUtc: parsed.toUtc());
+  }
+
+  int _dayDifference(String endDateAd, String startDateAd) {
+    final end = BusinessTime.parseAdDate(endDateAd);
+    final start = BusinessTime.parseAdDate(startDateAd);
+    if (end == null || start == null) return 0;
+    return end.difference(start).inDays;
+  }
 }

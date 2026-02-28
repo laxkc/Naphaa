@@ -23,6 +23,8 @@ class _BusinessSettingsScreenState
   String? _error;
   String _currency = 'NPR';
   String _businessType = 'Retail';
+  String _calendarMode = 'BS';
+  String _businessTimezone = 'Asia/Kathmandu';
 
   @override
   void initState() {
@@ -245,6 +247,91 @@ class _BusinessSettingsScreenState
                       );
                     }).toList(),
               ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                l10n.calendarModeLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                children: [
+                  ChoiceChip(
+                    label: Text(l10n.calendarBsLabel),
+                    selected: _calendarMode == 'BS',
+                    onSelected: (_) => setState(() => _calendarMode = 'BS'),
+                    showCheckmark: false,
+                    backgroundColor: AppColors.surface,
+                    selectedColor: AppColors.accent,
+                    labelStyle: TextStyle(
+                      color:
+                          _calendarMode == 'BS'
+                              ? Colors.white
+                              : AppColors.label,
+                      fontWeight:
+                          _calendarMode == 'BS'
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                    ),
+                    side: BorderSide(
+                      color:
+                          _calendarMode == 'BS'
+                              ? AppColors.accent
+                              : AppColors.border,
+                      width: 1,
+                    ),
+                  ),
+                  ChoiceChip(
+                    label: Text(l10n.calendarAdLabel),
+                    selected: _calendarMode == 'AD',
+                    onSelected: (_) => setState(() => _calendarMode = 'AD'),
+                    showCheckmark: false,
+                    backgroundColor: AppColors.surface,
+                    selectedColor: AppColors.accent,
+                    labelStyle: TextStyle(
+                      color:
+                          _calendarMode == 'AD'
+                              ? Colors.white
+                              : AppColors.label,
+                      fontWeight:
+                          _calendarMode == 'AD'
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                    ),
+                    side: BorderSide(
+                      color:
+                          _calendarMode == 'AD'
+                              ? AppColors.accent
+                              : AppColors.border,
+                      width: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                l10n.businessTimezoneLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule_outlined,
+                      size: 18,
+                      color: AppColors.muted,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        _businessTimezone,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 InlineBanner(type: BannerType.error, message: _error!),
@@ -301,20 +388,25 @@ class _BusinessSettingsScreenState
         phone: _phoneCtl.text.trim(),
         businessType: _businessType,
         currency: _currency,
+        calendarMode: _calendarMode,
+        businessTimezone: _businessTimezone,
       );
 
       // Keep local billing snapshots aligned with server-backed store settings.
-      await ref
-          .read(preferencesProvider)
-          .setBillingSettings(
-            businessName: _nameCtl.text.trim(),
-            businessAddress: _addressCtl.text.trim(),
-            businessPhone: _phoneCtl.text.trim(),
-            currencyCode: _currency,
-          );
+      await ref.read(preferencesProvider).setBillingSettings(
+        businessName: _nameCtl.text.trim(),
+        businessAddress: _addressCtl.text.trim(),
+        businessPhone: _phoneCtl.text.trim(),
+        currencyCode: _currency,
+        fiscalCalendar: _calendarMode,
+      );
+      await ref.read(preferencesProvider).setCalendarMode(_calendarMode);
+      await ref.read(preferencesProvider).setBusinessTimezone(_businessTimezone);
 
       ref.invalidate(profileProvider);
       ref.invalidate(businessMetricsProvider);
+      ref.invalidate(calendarAdapterProvider);
+      ref.invalidate(businessClockProvider);
       await Future.delayed(const Duration(milliseconds: 200));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -363,12 +455,20 @@ class _BusinessSettingsScreenState
         final fallbackBusinessType =
             storeFallback?['business_type']?.toString().trim();
         final fallbackCurrency = storeFallback?['currency']?.toString().trim();
+        final fallbackCalendarMode =
+            storeFallback?['calendar_mode']?.toString().trim().toUpperCase();
+        final fallbackBusinessTimezone =
+            storeFallback?['business_timezone']?.toString().trim();
 
         final profileName = profile['store_name']?.toString().trim();
         final profileAddress = profile['store_address']?.toString().trim();
         final profilePhone = profile['store_phone']?.toString().trim();
         final profileBusinessType = profile['business_type']?.toString().trim();
         final profileCurrency = profile['currency']?.toString().trim();
+        final profileCalendarMode =
+            profile['calendar_mode']?.toString().trim().toUpperCase();
+        final profileBusinessTimezone =
+            profile['business_timezone']?.toString().trim();
 
         _nameCtl.text =
             (profileName?.isNotEmpty ?? false)
@@ -398,6 +498,18 @@ class _BusinessSettingsScreenState
                 : ((fallbackCurrency?.isNotEmpty ?? false)
                     ? fallbackCurrency!
                     : _currency);
+        _calendarMode =
+            (profileCalendarMode == 'AD' || profileCalendarMode == 'BS')
+                ? profileCalendarMode!
+                : ((fallbackCalendarMode == 'AD' || fallbackCalendarMode == 'BS')
+                    ? fallbackCalendarMode!
+                    : _calendarMode);
+        _businessTimezone =
+            (profileBusinessTimezone?.isNotEmpty ?? false)
+                ? profileBusinessTimezone!
+                : ((fallbackBusinessTimezone?.isNotEmpty ?? false)
+                    ? fallbackBusinessTimezone!
+                    : _businessTimezone);
         if (_addressCtl.text.isEmpty) {
           _addressCtl.text =
               (billing['business_address']?.toString() ?? '').trim();
@@ -405,6 +517,8 @@ class _BusinessSettingsScreenState
         if (_phoneCtl.text.isEmpty) {
           _phoneCtl.text = (billing['business_phone']?.toString() ?? '').trim();
         }
+        ref.read(preferencesProvider).setCalendarMode(_calendarMode);
+        ref.read(preferencesProvider).setBusinessTimezone(_businessTimezone);
         _loaded = true;
       });
     } catch (_) {

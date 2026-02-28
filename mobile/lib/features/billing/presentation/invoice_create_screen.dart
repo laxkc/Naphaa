@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -23,6 +24,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
   final _discountCtrl = TextEditingController(text: '0');
   final List<_LineDraft> _lines = [const _LineDraft()];
   late final Future<Map<String, dynamic>> _billingSettingsFuture;
+  DateTime? _dueDateAd;
   bool _issuing = false;
   String? _error;
 
@@ -55,6 +57,14 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
 
   Widget _buildScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(
+              calendarMode: 'AD',
+              localeCode: Localizations.localeOf(context).languageCode,
+            );
     final money = NumberFormat('#,##0.00', 'en_IN');
     final discount = double.tryParse(_discountCtrl.text.trim()) ?? 0;
     return Scaffold(
@@ -95,6 +105,37 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                       labelText: l10n.invoiceDiscountLabel,
                     ),
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  InkWell(
+                    onTap: _issuing ? null : () => _pickDueDate(context),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: l10n.invoiceDueDateLabel,
+                        suffixIcon:
+                            _dueDateAd == null
+                                ? const Icon(Icons.calendar_month_outlined)
+                                : IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed:
+                                      _issuing
+                                          ? null
+                                          : () => setState(() => _dueDateAd = null),
+                                ),
+                      ),
+                      child: Text(
+                        _dueDateAd == null
+                            ? '-'
+                            : calendar.formatBusinessDate(_dueDateAd),
+                        style: TextStyle(
+                          color:
+                              _dueDateAd == null
+                                  ? AppColors.muted
+                                  : AppColors.label,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
@@ -295,6 +336,7 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
                   : _customerIdCtrl.text.trim(),
           items: lines,
           notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+          dueDateAd: _dueDateAd,
           invoiceDiscountAmount:
               double.tryParse(_discountCtrl.text.trim()) ?? 0,
         ),
@@ -320,6 +362,147 @@ class _InvoiceCreateScreenState extends ConsumerState<InvoiceCreateScreen> {
     } finally {
       if (mounted) setState(() => _issuing = false);
     }
+  }
+
+  Future<void> _pickDueDate(BuildContext context) async {
+    final calendarAsync = ref.read(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(
+              calendarMode: 'AD',
+              localeCode: Localizations.localeOf(context).languageCode,
+            );
+    if (calendar.isBsMode) {
+      await _pickBsDueDate(context, calendar);
+      return;
+    }
+
+    final now = DateTime.now();
+    final initial =
+        _dueDateAd ?? DateTime(now.year, now.month, now.day).add(const Duration(days: 7));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year - 1, 1, 1),
+      lastDate: DateTime(now.year + 5, 12, 31),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _dueDateAd = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  Future<void> _pickBsDueDate(
+    BuildContext context,
+    CalendarAdapter calendar,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final initialAd =
+        _dueDateAd ?? DateTime.now().add(const Duration(days: 7));
+    final initialBs = calendar.adToBsDate(initialAd);
+    final yearCtrl = TextEditingController(text: initialBs.year.toString());
+    final monthCtrl = TextEditingController(text: initialBs.month.toString());
+    final dayCtrl = TextEditingController(text: initialBs.day.toString());
+    String? dialogError;
+
+    final picked = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text(l10n.invoicePickBsDateTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: yearCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: l10n.yearLabel),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: TextField(
+                          controller: monthCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: l10n.monthLabel),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: TextField(
+                          controller: dayCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: l10n.dayLabel),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (dialogError != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        dialogError!,
+                        style: const TextStyle(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(
+                    MaterialLocalizations.of(dialogContext).cancelButtonLabel,
+                  ),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final year = int.tryParse(yearCtrl.text.trim());
+                    final month = int.tryParse(monthCtrl.text.trim());
+                    final day = int.tryParse(dayCtrl.text.trim());
+                    if (year == null || month == null || day == null) {
+                      setDialogState(() => dialogError = l10n.invalidBsDate);
+                      return;
+                    }
+                    final ad = calendar.bsToAdDate(
+                      year: year,
+                      month: month,
+                      day: day,
+                    );
+                    if (ad == null) {
+                      setDialogState(() => dialogError = l10n.invalidBsDate);
+                      return;
+                    }
+                    Navigator.of(dialogContext).pop(
+                      DateTime(ad.year, ad.month, ad.day),
+                    );
+                  },
+                  child: Text(
+                    MaterialLocalizations.of(dialogContext).okButtonLabel,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    yearCtrl.dispose();
+    monthCtrl.dispose();
+    dayCtrl.dispose();
+
+    if (picked == null || !mounted) return;
+    setState(() {
+      _dueDateAd = DateTime(picked.year, picked.month, picked.day);
+    });
   }
 }
 

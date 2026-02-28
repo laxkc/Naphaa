@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../../core/date/business_clock.dart';
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/utils/formatters.dart';
 import '../../customers/presentation/customer_form_screen.dart';
 import '../../customers/presentation/customers_screen.dart';
@@ -53,9 +54,20 @@ class DashboardScreen extends ConsumerWidget {
                 ? (credit > 0 ? 1.0 : 0.0)
                 : (credit / sales).clamp(0.0, 1.0);
         final status = _healthStatus(l10n, profit, creditRatio);
-        final today = DateFormat.yMMMd(
-          localeCode == 'ne' ? 'ne_NP' : 'en_US',
-        ).format(DateTime.now());
+        final clockAsync = ref.watch(businessClockProvider);
+        final clock =
+            clockAsync is AsyncData<BusinessClock>
+                ? clockAsync.value
+                : BusinessClock.fallback();
+        final calendarAsync = ref.watch(calendarAdapterProvider);
+        final calendar =
+            calendarAsync is AsyncData<CalendarAdapter>
+                ? calendarAsync.value
+                : CalendarAdapter(
+                  calendarMode: 'AD',
+                  localeCode: localeCode,
+                );
+        final today = calendar.formatBusinessDate(clock.currentBusinessDate());
 
         return RefreshIndicator(
           color: AppColors.primary,

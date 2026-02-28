@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import delete, select
@@ -183,9 +183,14 @@ class IntelligenceService:
         return rows
 
     @staticmethod
-    def _as_utc(dt: datetime | None) -> datetime:
+    def _as_utc(dt: datetime | str | None) -> datetime:
         if dt is None:
             return datetime.now(UTC)
+        if isinstance(dt, str):
+            parsed = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=UTC)
+            return parsed.astimezone(UTC)
         if dt.tzinfo is None:
             return dt.replace(tzinfo=UTC)
         return dt.astimezone(UTC)
@@ -195,6 +200,18 @@ class IntelligenceService:
         start_utc = IntelligenceService._as_utc(start)
         end_utc = IntelligenceService._as_utc(end)
         return max((end_utc.date() - start_utc.date()).days, 0)
+
+    @staticmethod
+    def _business_date(value: date | datetime | str | None) -> date:
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        return IntelligenceService._as_utc(value).date()
+
+    @staticmethod
+    def _days_between_dates(start: date | datetime | str | None, end: date | datetime | str | None) -> int:
+        start_date = IntelligenceService._business_date(start)
+        end_date = IntelligenceService._business_date(end)
+        return max((end_date - start_date).days, 0)
 
     @staticmethod
     def _bucket_add(totals: dict[str, Decimal], age_days: int, amount: Decimal) -> None:
@@ -225,12 +242,16 @@ class IntelligenceService:
                 Sale.sale_type == "CREDIT",
                 Sale.customer_id.is_not(None),
             )
-            .order_by(Sale.customer_id.asc(), Sale.created_at.asc())
+            .order_by(Sale.customer_id.asc(), Sale.sale_date_ad.asc(), Sale.created_at.asc())
         ).all()
         payments = db.scalars(
             select(CustomerPayment)
             .where(CustomerPayment.store_id == store_id)
-            .order_by(CustomerPayment.customer_id.asc(), CustomerPayment.created_at.asc())
+            .order_by(
+                CustomerPayment.customer_id.asc(),
+                CustomerPayment.payment_date_ad.asc(),
+                CustomerPayment.created_at.asc(),
+            )
         ).all()
 
         sales_by_customer: dict[str, list[Sale]] = {}
@@ -257,7 +278,7 @@ class IntelligenceService:
             payment_remaining = [
                 {
                     "amount": Decimal(p.amount or 0),
-                    "created_at": IntelligenceService._as_utc(p.created_at),
+                    "payment_date": p.payment_date_ad or IntelligenceService._as_utc(p.created_at).date(),
                 }
                 for p in customer_payments
             ]
@@ -281,8 +302,8 @@ class IntelligenceService:
                 avg_invoice_sum += sale_total
                 avg_invoice_count += 1
                 remaining = sale_total
-                sale_created_at = IntelligenceService._as_utc(sale.created_at)
-                last_payment_date: datetime | None = None
+                sale_date = sale.sale_date_ad or IntelligenceService._as_utc(sale.created_at).date()
+                last_payment_date: date | None = None
 
                 while remaining > 0 and payment_idx < len(payment_remaining):
                     bucket = payment_remaining[payment_idx]
@@ -292,18 +313,18 @@ class IntelligenceService:
                     consume = min(remaining, bucket["amount"])
                     remaining -= consume
                     bucket["amount"] -= consume
-                    last_payment_date = bucket["created_at"]
+                    last_payment_date = bucket["payment_date"]
                     if bucket["amount"] <= 0:
                         payment_idx += 1
 
                 if remaining > 0:
-                    age_days = IntelligenceService._days_between(sale_created_at, now)
+                    age_days = IntelligenceService._days_between_dates(sale_date, now.date())
                     IntelligenceService._bucket_add(buckets, age_days, remaining)
                     oldest_due_days = max(oldest_due_days, age_days)
                 else:
-                    paid_days = IntelligenceService._days_between(
-                        sale_created_at,
-                        last_payment_date or now,
+                    paid_days = IntelligenceService._days_between_dates(
+                        sale_date,
+                        last_payment_date or now.date(),
                     )
                     paid_sale_days.append(paid_days)
                     total_paid_sales_count += 1
@@ -326,9 +347,9 @@ class IntelligenceService:
                 sum(
                     1
                     for p in customer_payments
-                    if IntelligenceService._days_between(
-                        IntelligenceService._as_utc(p.created_at),
-                        now,
+                    if IntelligenceService._days_between_dates(
+                        p.payment_date_ad or p.created_at,
+                        now.date(),
                     )
                     <= 30
                 )
@@ -495,8 +516,8 @@ class IntelligenceService:
         # buckets: -4,-3,-2,-1,0 (weeks relative to current week)
         category_weekly: dict[str, dict[int, Decimal]] = {}
         for e in expenses:
-            e_dt = IntelligenceService._as_utc(e.created_at)
-            week_start = e_dt.date().toordinal() - e_dt.weekday()
+            expense_date = e.expense_date_ad or IntelligenceService._as_utc(e.created_at).date()
+            week_start = expense_date.toordinal() - expense_date.weekday()
             week_delta = (week_start - current_week_start) // 7
             if week_delta < -4 or week_delta > 0:
                 continue
@@ -567,7 +588,7 @@ class IntelligenceService:
                 Sale.store_id == store_id,
                 Sale.deleted_at.is_(None),
             )
-            .order_by(Sale.created_at.asc())
+            .order_by(Sale.sale_date_ad.asc(), Sale.created_at.asc())
         ).all()
         sale_map = {s.id: s for s in sales}
         sale_cutoff = now.date().toordinal() - max(window_days, 0)
@@ -591,14 +612,15 @@ class IntelligenceService:
             if pid not in product_map:
                 continue
             sale_dt = IntelligenceService._as_utc(sale.created_at)
+            sale_date = sale.sale_date_ad or sale_dt.date()
             prev = last_sale_at.get(pid)
             if prev is None or sale_dt > prev:
                 last_sale_at[pid] = sale_dt
             qty = Decimal(item.qty or 0)
             line_total = Decimal(item.line_total or 0)
-            if sale_dt.date().toordinal() >= sale_cutoff_7d:
+            if sale_date.toordinal() >= sale_cutoff_7d:
                 qty_sold_7d[pid] += qty
-            if sale_dt.date().toordinal() < sale_cutoff:
+            if sale_date.toordinal() < sale_cutoff:
                 continue
             qty_sold_30d[pid] += qty
             revenue_30d[pid] += line_total

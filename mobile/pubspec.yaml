@@ -54,6 +54,7 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.14.2
   share_plus: ^11.1.0
+  nepali_utils: ^3.0.8
 
 dev_dependencies:
   sentry_dart_plugin: ^3.2.1

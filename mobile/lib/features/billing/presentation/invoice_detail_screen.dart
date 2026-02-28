@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../l10n/app_localizations.dart';
@@ -44,6 +45,14 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
     final invoiceAsync = ref.watch(invoiceDetailProvider(widget.invoiceId));
     final itemsAsync = ref.watch(invoiceItemsProvider(widget.invoiceId));
     final paymentsAsync = ref.watch(invoicePaymentsProvider(widget.invoiceId));
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(
+              calendarMode: 'AD',
+              localeCode: Localizations.localeOf(context).languageCode,
+            );
     final money = NumberFormat('#,##0.00', 'en_IN');
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -112,20 +121,20 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                     _kv(
                       context,
                       l10n.invoiceIssueDateLabel,
-                      invoice.issueDate == null
+                      (invoice.issueDateAd ?? invoice.issueDate) == null
                           ? l10n.invoiceNotIssued
-                          : DateFormat(
-                            'yyyy-MM-dd HH:mm',
-                          ).format(invoice.issueDate!.toLocal()),
+                          : calendar.formatBusinessDate(
+                            invoice.issueDateAd ?? invoice.issueDate,
+                          ),
                     ),
                     _kv(
                       context,
                       l10n.invoiceDueDateLabel,
-                      invoice.dueDate == null
+                      (invoice.dueDateAd ?? invoice.dueDate) == null
                           ? '-'
-                          : DateFormat(
-                            'yyyy-MM-dd',
-                          ).format(invoice.dueDate!.toLocal()),
+                          : calendar.formatBusinessDate(
+                            invoice.dueDateAd ?? invoice.dueDate,
+                          ),
                     ),
                     _kv(
                       context,
@@ -296,9 +305,10 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
                                 leading: const Icon(Icons.payments_outlined),
                                 title: Text(paymentMethodLabel(context, p.method)),
                                 subtitle: Text(
-                                  DateFormat(
-                                    'yyyy-MM-dd HH:mm',
-                                  ).format(p.paidAt.toLocal()),
+                                  calendar.formatBusinessDate(
+                                    p.paidAt,
+                                    includeTime: true,
+                                  ),
                                 ),
                                 trailing: Text(
                                   '${l10n.nprLabel} ${money.format(p.amount)}',

@@ -1,9 +1,14 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
+from app.core.calendar import (
+    DEFAULT_BUSINESS_TIMEZONE,
+    DEFAULT_CALENDAR_MODE,
+    business_date_from_timestamp,
+)
 
 
 class Base(DeclarativeBase):
@@ -11,10 +16,10 @@ class Base(DeclarativeBase):
 
 
 engine_kwargs: dict[str, object] = {}
-if settings.database_url.startswith("sqlite"):
+if settings.effective_database_url.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 
-engine = create_engine(settings.database_url, future=True, **engine_kwargs)
+engine = create_engine(settings.effective_database_url, future=True, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -28,7 +33,7 @@ def get_db() -> Generator:
 
 def run_sqlite_compat_migrations() -> None:
     """Apply lightweight schema patches for local sqlite dev DBs."""
-    if not settings.database_url.startswith("sqlite"):
+    if not settings.effective_database_url.startswith("sqlite"):
         return
 
     with engine.begin() as conn:
@@ -64,6 +69,20 @@ def run_sqlite_compat_migrations() -> None:
             "stores",
             "business_type",
             "ALTER TABLE stores ADD COLUMN business_type VARCHAR(64)",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "stores",
+            "business_timezone",
+            f"ALTER TABLE stores ADD COLUMN business_timezone VARCHAR(64) DEFAULT '{DEFAULT_BUSINESS_TIMEZONE}'",
+        )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "stores",
+            "calendar_mode",
+            f"ALTER TABLE stores ADD COLUMN calendar_mode VARCHAR(8) DEFAULT '{DEFAULT_CALENDAR_MODE}'",
         )
         _sqlite_add_column_if_missing(
             conn,
@@ -153,6 +172,13 @@ def run_sqlite_compat_migrations() -> None:
             "payment_method",
             "ALTER TABLE sales ADD COLUMN payment_method VARCHAR(24)",
         )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "sales",
+            "sale_date_ad",
+            "ALTER TABLE sales ADD COLUMN sale_date_ad DATE",
+        )
         if "sales" in tables:
             conn.execute(
                 text(
@@ -205,6 +231,13 @@ def run_sqlite_compat_migrations() -> None:
             "method",
             "ALTER TABLE customer_payments ADD COLUMN method VARCHAR(24) DEFAULT 'CASH'",
         )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "customer_payments",
+            "payment_date_ad",
+            "ALTER TABLE customer_payments ADD COLUMN payment_date_ad DATE",
+        )
 
         if "sale_refunds" not in tables:
             conn.execute(
@@ -235,6 +268,13 @@ def run_sqlite_compat_migrations() -> None:
                     "ON sale_refunds(sale_id)"
                 )
             )
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "sale_refunds",
+            "refund_date_ad",
+            "ALTER TABLE sale_refunds ADD COLUMN refund_date_ad DATE",
+        )
 
         if "sale_refund_items" not in tables:
             conn.execute(
@@ -417,6 +457,14 @@ def run_sqlite_compat_migrations() -> None:
             ):
                 conn.execute(text(index_sql))
 
+        _sqlite_add_column_if_missing(
+            conn,
+            tables,
+            "expenses",
+            "expense_date_ad",
+            "ALTER TABLE expenses ADD COLUMN expense_date_ad DATE",
+        )
+
         if "customer_metrics" not in tables:
             conn.execute(
                 text(
@@ -489,3 +537,88 @@ def _sqlite_has_column(conn, table_name: str, column_name: str) -> bool:
 def _sqlite_add_column_if_missing(conn, tables: set[str], table: str, column: str, ddl: str) -> None:
     if table in tables and not _sqlite_has_column(conn, table, column):
         conn.execute(text(ddl))
+
+
+def run_calendar_backfill() -> None:
+    from app.models.customer_payment import CustomerPayment
+    from app.models.expense import Expense
+    from app.models.sale import Sale
+    from app.models.sale_refund import SaleRefund
+    from app.models.store import Store
+
+    db = SessionLocal()
+    try:
+        stores = db.execute(
+            select(Store.id, Store.business_timezone, Store.calendar_mode)
+        ).all()
+        store_tz = {
+            store_id: (
+                (business_timezone or "").strip() or DEFAULT_BUSINESS_TIMEZONE
+            )
+            for store_id, business_timezone, _ in stores
+        }
+
+        for store_id, business_timezone, calendar_mode in stores:
+            needs_store_update = False
+            if not (business_timezone or "").strip():
+                db.execute(
+                    text(
+                        "UPDATE stores SET business_timezone = :timezone WHERE id = :store_id"
+                    ),
+                    {
+                        "timezone": DEFAULT_BUSINESS_TIMEZONE,
+                        "store_id": store_id,
+                    },
+                )
+                store_tz[store_id] = DEFAULT_BUSINESS_TIMEZONE
+                needs_store_update = True
+            if not (calendar_mode or "").strip():
+                db.execute(
+                    text(
+                        "UPDATE stores SET calendar_mode = :calendar_mode WHERE id = :store_id"
+                    ),
+                    {
+                        "calendar_mode": DEFAULT_CALENDAR_MODE,
+                        "store_id": store_id,
+                    },
+                )
+                needs_store_update = True
+            if needs_store_update:
+                db.flush()
+
+        def backfill_rows(model, date_attr: str, created_attr: str, store_attr: str) -> int:
+            updated = 0
+            rows = db.scalars(
+                select(model).where(getattr(model, date_attr).is_(None))
+            ).all()
+            for row in rows:
+                created_at = getattr(row, created_attr, None)
+                if created_at is None:
+                    continue
+                timezone_name = store_tz.get(
+                    getattr(row, store_attr, None),
+                    DEFAULT_BUSINESS_TIMEZONE,
+                )
+                setattr(
+                    row,
+                    date_attr,
+                    business_date_from_timestamp(
+                        value=created_at,
+                        timezone_name=timezone_name,
+                    ),
+                )
+                updated += 1
+            return updated
+
+        backfill_rows(Sale, "sale_date_ad", "created_at", "store_id")
+        backfill_rows(Expense, "expense_date_ad", "created_at", "store_id")
+        backfill_rows(
+            CustomerPayment,
+            "payment_date_ad",
+            "created_at",
+            "store_id",
+        )
+        backfill_rows(SaleRefund, "refund_date_ad", "created_at", "store_id")
+        db.commit()
+    finally:
+        db.close()

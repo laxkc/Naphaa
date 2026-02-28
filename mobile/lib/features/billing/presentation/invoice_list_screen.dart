@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
@@ -28,6 +29,14 @@ class InvoiceListScreen extends ConsumerWidget {
 
   Widget _buildScaffold(BuildContext context, WidgetRef ref) {
     final invoicesAsync = ref.watch(invoicesListProvider);
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(
+              calendarMode: 'AD',
+              localeCode: Localizations.localeOf(context).languageCode,
+            );
     final money = NumberFormat('#,##0.00', 'en_IN');
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
@@ -174,10 +183,10 @@ class InvoiceListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      inv.issueDate != null
-                          ? DateFormat(
-                            'yyyy-MM-dd HH:mm',
-                          ).format(inv.issueDate!.toLocal())
+                      (inv.issueDateAd ?? inv.issueDate) != null
+                          ? calendar.formatBusinessDate(
+                            inv.issueDateAd ?? inv.issueDate,
+                          )
                           : l10n.invoiceListDraftNotIssued,
                       style: const TextStyle(
                         color: AppColors.muted,

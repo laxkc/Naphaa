@@ -786,6 +786,7 @@ def test_alerts_open_returns_credit_overdue_alerts(client, auth_headers, store_i
     sale_row = db_session.get(Sale, sale_id)
     assert sale_row is not None
     sale_row.created_at = datetime.now(UTC) - timedelta(days=21)
+    sale_row.sale_date_ad = sale_row.created_at.date()
     db_session.add(sale_row)
     db_session.commit()
 
@@ -870,6 +871,7 @@ def test_alerts_open_includes_expense_spike_alert(client, auth_headers, store_id
       row = db_session.get(Expense, expense_id)
       assert row is not None
       row.created_at = datetime.now(UTC) - timedelta(days=weeks_ago * 7)
+      row.expense_date_ad = row.created_at.date()
       db_session.add(row)
 
     current = client.post(
@@ -995,15 +997,22 @@ def test_metrics_business_respects_date_range_for_sales_and_expenses(
         srow = db_session.get(Sale, sale_id)
         assert srow is not None
         srow.created_at = old_day
+        srow.sale_date_ad = old_day.date()
         db_session.add(srow)
     for expense_id in [exp_old.json()["id"]]:
         erow = db_session.get(Expense, expense_id)
         assert erow is not None
         erow.created_at = old_day
+        erow.expense_date_ad = old_day.date()
         db_session.add(erow)
     db_session.commit()
 
-    today = datetime.now(UTC).date().isoformat()
+    current_sale = db_session.get(Sale, sale_new.json()["id"])
+    current_expense = db_session.get(Expense, exp_new.json()["id"])
+    assert current_sale is not None and current_sale.sale_date_ad is not None
+    assert current_expense is not None and current_expense.expense_date_ad is not None
+    assert current_sale.sale_date_ad == current_expense.expense_date_ad
+    today = current_sale.sale_date_ad.isoformat()
     resp = client.get(f"/api/v1/metrics/business?from={today}&to={today}", headers=auth_headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -1044,6 +1053,8 @@ def test_metrics_products_window_and_7d_boundary(client, auth_headers, store_id,
     assert s8 is not None and s7 is not None
     s8.created_at = datetime.now(UTC) - timedelta(days=8)
     s7.created_at = datetime.now(UTC) - timedelta(days=7)
+    s8.sale_date_ad = s8.created_at.date()
+    s7.sale_date_ad = s7.created_at.date()
     db_session.add(s8)
     db_session.add(s7)
     db_session.commit()

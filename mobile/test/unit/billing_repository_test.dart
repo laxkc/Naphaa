@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sme_digital/features/billing/data/billing_repository.dart';
 import 'package:sme_digital/features/billing/domain/invoice_models.dart';
 
@@ -29,6 +30,12 @@ Map<String, dynamic> _billingSettings({
 };
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('saveDraft stores invoice and line snapshots', () async {
     final db = await createTestDb('billing_draft');
     final repo = BillingRepository(
@@ -41,6 +48,7 @@ void main() {
         businessId: 'b1',
         customerId: 'c1',
         invoiceDiscountAmount: 10,
+        dueDateAd: null,
         items: [
           InvoiceDraftLineInput(
             productId: 'p1',
@@ -60,6 +68,7 @@ void main() {
     expect(invoices.length, 1);
     expect(invoices.first['status'], 'draft');
     expect(invoices.first['invoice_number'], isNull);
+    expect(invoices.first['due_date_ad'], isNull);
     expect((invoices.first['total'] as num).toDouble(), 170); // 180 - 10, no VAT
     expect(items.length, 1);
     expect(items.first['product_name_snapshot'], 'Sugar 1kg');
@@ -102,6 +111,7 @@ void main() {
     expect(invoice, isNotNull);
     expect(invoice!.status, InvoiceStatus.issued);
     expect(invoice.invoiceNumber, 'INV-2026-00001');
+    expect(invoice.issueDateAd, isNotNull);
     expect((productAfter['stock_qty'] as num).toDouble(), beforeStock - 2);
     expect(stockMoves.length, 1);
     final outbox = await database.query(
@@ -226,7 +236,14 @@ void main() {
       'invoice_number': 'INV-2026-00010',
       'status': 'issued',
       'issue_date': now.subtract(const Duration(days: 5)).toIso8601String(),
+      'issue_date_ad': DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 5)).toIso8601String().substring(0, 10),
       'due_date': oldDue,
+      'due_date_ad':
+          now.subtract(const Duration(days: 2)).toIso8601String().substring(0, 10),
       'currency_code': 'NPR',
       'fiscal_calendar_snapshot': 'AD',
       'language_snapshot': 'en',
@@ -250,6 +267,40 @@ void main() {
 
     expect(changed, 1);
     expect(invoice!.status, InvoiceStatus.overdue);
+
+    await db.reset();
+  });
+
+  test('saveDraft stores due_date_ad when selected', () async {
+    final db = await createTestDb('billing_due_date_ad');
+    final repo = BillingRepository(
+      db,
+      billingSettingsLoader: () async => _billingSettings(vatEnabled: false),
+    );
+    final dueDate = DateTime(2026, 3, 15);
+
+    final invoiceId = await repo.saveDraft(
+      InvoiceDraftInput(
+        businessId: 'b1',
+        dueDateAd: dueDate,
+        items: const [
+          InvoiceDraftLineInput(
+            productId: null,
+            productNameSnapshot: 'Service',
+            unitSnapshot: 'pcs',
+            quantity: 1,
+            unitPrice: 100,
+          ),
+        ],
+      ),
+    );
+
+    final invoice = await repo.getInvoiceById(invoiceId);
+    expect(invoice, isNotNull);
+    expect(invoice!.dueDateAd, isNotNull);
+    expect(invoice.dueDateAd!.year, 2026);
+    expect(invoice.dueDateAd!.month, 3);
+    expect(invoice.dueDateAd!.day, 15);
 
     await db.reset();
   });

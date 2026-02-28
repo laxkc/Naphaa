@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.calendar import DEFAULT_BUSINESS_TIMEZONE, DEFAULT_CALENDAR_MODE
 from app.core.database import get_db
 from app.core.errors import raise_api_error
 from app.core.rate_limit import auth_rate_limit
@@ -75,6 +76,8 @@ def register(
             name=business_name,
             locale_default=(payload.locale_default or "ne").lower(),
             currency=payload.currency or "NPR",
+            business_timezone=DEFAULT_BUSINESS_TIMEZONE,
+            calendar_mode=DEFAULT_CALENDAR_MODE,
             created_by=user.id,
             updated_by=user.id,
             device_id=device_id,
@@ -150,6 +153,8 @@ def auth_me(
         business_type=store.business_type if store else None,
         locale_default=store.locale_default if store else None,
         currency=store.currency if store else None,
+        business_timezone=store.business_timezone if store else None,
+        calendar_mode=store.calendar_mode if store else None,
     )
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -50,6 +50,7 @@ class SaleOut(BaseModel):
     payment_method: str | None = None
     customer_id: str | None
     total_amount: Decimal
+    sale_date_ad: date | None = None
     created_at: datetime
     updated_at: datetime
     items: list[SaleItemOut]
@@ -108,6 +109,7 @@ class SaleRefundOut(BaseModel):
     store_id: str
     sale_id: str
     amount: Decimal
+    refund_date_ad: date | None = None
     reason: str | None
     created_at: datetime
     items: list[SaleRefundItemOut]

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
+import 'package:sme_digital/core/date/calendar_adapter.dart';
 import 'package:sme_digital/core/storage/local_db.dart';
 import 'package:sme_digital/features/billing/data/invoice_numbering_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -23,7 +24,7 @@ void main() {
     final n1 = await service.nextInvoiceNumber(
       businessId: 'b1',
       prefix: 'INV',
-      issueDate: issueDate,
+      issueDateAd: issueDate,
       fiscalCalendar: 'AD',
     );
     await db.insert('invoices', {
@@ -52,7 +53,7 @@ void main() {
     final n2 = await service.nextInvoiceNumber(
       businessId: 'b1',
       prefix: 'INV',
-      issueDate: issueDate,
+      issueDateAd: issueDate,
       fiscalCalendar: 'AD',
     );
 
@@ -74,19 +75,19 @@ void main() {
     final b1y2026 = await service.nextInvoiceNumber(
       businessId: 'b1',
       prefix: 'KTM',
-      issueDate: DateTime(2026, 1, 1),
+      issueDateAd: DateTime(2026, 1, 1),
       fiscalCalendar: 'AD',
     );
     final b2y2026 = await service.nextInvoiceNumber(
       businessId: 'b2',
       prefix: 'INV',
-      issueDate: DateTime(2026, 1, 1),
+      issueDateAd: DateTime(2026, 1, 1),
       fiscalCalendar: 'AD',
     );
     final b1y2027 = await service.nextInvoiceNumber(
       businessId: 'b1',
       prefix: 'KTM',
-      issueDate: DateTime(2027, 1, 1),
+      issueDateAd: DateTime(2027, 1, 1),
       fiscalCalendar: 'AD',
     );
 
@@ -143,7 +144,7 @@ void main() {
     final next = await service.nextInvoiceNumber(
       businessId: 'b1',
       prefix: 'INV',
-      issueDate: issueDate,
+      issueDateAd: issueDate,
       fiscalCalendar: 'AD',
     );
 
@@ -160,5 +161,37 @@ void main() {
     await db.close();
     await deleteDatabase(path);
   });
-}
 
+  test('uses real BS year key when fiscal calendar is BS', () async {
+    const dbName = 'test_invoice_numbering_bs_year.db';
+    final path = join(await getDatabasesPath(), dbName);
+    await deleteDatabase(path);
+
+    final localDb = LocalDatabase(dbName: dbName);
+    final service = InvoiceNumberingService(
+      localDb,
+      adapter: const CalendarAdapter(calendarMode: 'BS', localeCode: 'en'),
+    );
+
+    final number = await service.nextInvoiceNumber(
+      businessId: 'b-bs',
+      prefix: 'INV',
+      issueDateAd: DateTime(2019, 8, 3),
+      fiscalCalendar: 'BS',
+    );
+
+    expect(number, 'INV-2076-00001');
+
+    final db = await localDb.database;
+    final seqRows = await db.query(
+      'invoice_sequence',
+      where: 'business_id = ?',
+      whereArgs: ['b-bs'],
+      limit: 1,
+    );
+    expect(seqRows.single['year_key'], '2076');
+
+    await db.close();
+    await deleteDatabase(path);
+  });
+}

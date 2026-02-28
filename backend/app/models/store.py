@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.calendar import DEFAULT_BUSINESS_TIMEZONE, DEFAULT_CALENDAR_MODE
 from app.core.database import Base
 
 
@@ -18,6 +19,8 @@ class Store(Base):
     business_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     locale_default: Mapped[str] = mapped_column(String(16), default="ne")
     currency: Mapped[str] = mapped_column(String(8), default="NPR")
+    business_timezone: Mapped[str] = mapped_column(String(64), default=DEFAULT_BUSINESS_TIMEZONE)
+    calendar_mode: Mapped[str] = mapped_column(String(8), default=DEFAULT_CALENDAR_MODE)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     updated_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     device_id: Mapped[str | None] = mapped_column(String(128), nullable=True)

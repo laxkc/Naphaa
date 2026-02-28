@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
@@ -66,7 +66,7 @@ def customer_metrics(
             risk_level=str(item["risk_level"]),
             aging=AgingBucketBreakdown(**item["aging"]),
             factors=CustomerRiskFactorsOut(**item["factors"]),
-            computed_at=item.get("computed_at"),
+            computed_at=IntelligenceService._as_utc(item.get("computed_at")),
         )
         for item in items
     ]
@@ -78,7 +78,7 @@ def customer_metrics(
         total_outstanding=Decimal(result["total_outstanding"]),
         total_overdue=Decimal(result["total_overdue"]),
         high_risk_count=int(result["high_risk_count"]),
-        computed_at=str(result["computed_at"]),
+        computed_at=IntelligenceService._as_utc(result["computed_at"]),
     )
 
 
@@ -112,19 +112,21 @@ def product_metrics(
                 qty_sold_30d=Decimal(item["qty_sold_30d"]),
                 revenue_30d=Decimal(item["revenue_30d"]),
                 profit_30d=Decimal(item["profit_30d"]) if item["profit_30d"] is not None else None,
-                last_sale_at=item.get("last_sale_at"),
+                last_sale_at=IntelligenceService._as_utc(item["last_sale_at"])
+                if item.get("last_sale_at")
+                else None,
                 dead_stock=bool(item["dead_stock"]),
                 dead_stock_value=Decimal(item["dead_stock_value"])
                 if item["dead_stock_value"] is not None
                 else None,
-                computed_at=str(item["computed_at"]),
+                computed_at=IntelligenceService._as_utc(item["computed_at"]),
             )
             for item in items
         ],
         total_products=int(result["total_products"]),
         dead_stock_count=int(result["dead_stock_count"]),
         dead_stock_value_total=Decimal(result["dead_stock_value_total"]),
-        computed_at=str(result["computed_at"]),
+        computed_at=IntelligenceService._as_utc(result["computed_at"]),
     )
 
 
@@ -135,10 +137,7 @@ def business_metrics(
     store: Store = Depends(get_current_store),
     db: Session = Depends(get_db),
 ) -> BusinessMetricsResponse:
-    dt_from = datetime.combine(from_date, time.min) if from_date else None
-    dt_to = datetime.combine(to_date, time.max) if to_date else None
-
-    summary = ReportService.summary(db, store.id, dt_from, dt_to)
+    summary = ReportService.summary(db, store.id, from_date, to_date)
     customer_metrics = IntelligenceService.compute_customer_metrics(db, store.id)
     product_metrics_result = IntelligenceService.compute_product_metrics(db, store.id)
     alerts_result = IntelligenceService.compute_and_cache_open_alerts(db, store.id)
@@ -193,24 +192,21 @@ def business_metrics(
         expected_incoming_soon += outstanding * weight
 
     now_utc = datetime.now(UTC)
-    current_week_start_ordinal = now_utc.date().toordinal() - now_utc.weekday()
+    today_ad = now_utc.date()
+    current_week_start_ordinal = today_ad.toordinal() - today_ad.weekday()
     recent_expenses = db.scalars(
         select(Expense).where(
             Expense.store_id == store.id,
             Expense.deleted_at.is_(None),
-            Expense.created_at >= now_utc - timedelta(days=35),
+            Expense.expense_date_ad >= today_ad - timedelta(days=35),
         )
     ).all()
     weekly_buckets = {i: Decimal("0") for i in range(-4, 1)}
     for e in recent_expenses:
-        e_dt = e.created_at
-        if e_dt is None:
+        expense_date = e.expense_date_ad
+        if expense_date is None:
             continue
-        if e_dt.tzinfo is None:
-            e_dt = e_dt.replace(tzinfo=UTC)
-        else:
-            e_dt = e_dt.astimezone(UTC)
-        week_start_ordinal = e_dt.date().toordinal() - e_dt.weekday()
+        week_start_ordinal = expense_date.toordinal() - expense_date.weekday()
         week_delta = (week_start_ordinal - current_week_start_ordinal) // 7
         if week_delta < -4 or week_delta > 0:
             continue
@@ -252,8 +248,8 @@ def business_metrics(
         reasons.append("No major risk signals detected")
 
     return BusinessMetricsResponse(
-        period_start=from_date.isoformat() if from_date else None,
-        period_end=to_date.isoformat() if to_date else None,
+        period_start=from_date,
+        period_end=to_date,
         sales_total=sales_total,
         expenses_total=expenses_total,
         profit_est=profit_est,
@@ -269,6 +265,6 @@ def business_metrics(
         dead_stock_count=dead_stock_count,
         high_risk_customers=high_risk_customers,
         open_alerts_count=open_alerts_count,
-        computed_at=str(alerts_result["computed_at"]),
+        computed_at=IntelligenceService._as_utc(alerts_result["computed_at"]),
         reasons=reasons,
     )

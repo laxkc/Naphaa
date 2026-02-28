@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.calendar import DEFAULT_BUSINESS_TIMEZONE, DEFAULT_CALENDAR_MODE
 from app.core.database import get_db
 from app.core.errors import raise_api_error
 from app.models.store import Store
@@ -34,6 +35,10 @@ def create_store(
         business_type=(payload.business_type or "").strip() or None,
         locale_default=locale_default,
         currency=payload.currency,
+        business_timezone=(payload.business_timezone or DEFAULT_BUSINESS_TIMEZONE).strip()
+        or DEFAULT_BUSINESS_TIMEZONE,
+        calendar_mode=(payload.calendar_mode or DEFAULT_CALENDAR_MODE).strip().upper()
+        or DEFAULT_CALENDAR_MODE,
         created_by=user.id,
         updated_by=user.id,
         device_id=device_id,
@@ -70,11 +75,28 @@ def update_store(
         raise_api_error(status.HTTP_404_NOT_FOUND, "STORE_NOT_FOUND", "Store not found")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
-        if field in {"name", "address", "phone", "business_type", "locale_default", "currency"}:
+        if field in {
+            "name",
+            "address",
+            "phone",
+            "business_type",
+            "locale_default",
+            "currency",
+            "business_timezone",
+            "calendar_mode",
+        }:
             if isinstance(value, str):
                 value = value.strip() or None
-                if field in {"name", "locale_default", "currency"} and value is None:
+                if field in {
+                    "name",
+                    "locale_default",
+                    "currency",
+                    "business_timezone",
+                    "calendar_mode",
+                } and value is None:
                     continue
+                if field == "calendar_mode" and value is not None:
+                    value = value.upper()
             setattr(store, field, value)
     store.updated_by = user.id
     store.device_id = device_id

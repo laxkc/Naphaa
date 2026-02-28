@@ -2,11 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app import models as _models  # noqa: F401 - ensure SQLAlchemy models are registered
 from app.api import alerts, auth, customers, devices, expenses, exports, metrics, products, reports, sales, stores, sync
 from app.core.config import settings
-from app.core.database import Base, engine, run_sqlite_compat_migrations
+from app.core.database import engine
 from app.core.logging import configure_logging
 
 configure_logging()
@@ -14,8 +15,8 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    run_sqlite_compat_migrations()
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
     yield
 
 

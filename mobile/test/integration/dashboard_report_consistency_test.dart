@@ -5,8 +5,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sme_digital/core/date/business_time.dart';
 import 'package:sme_digital/core/providers/app_providers.dart';
 import 'package:sme_digital/core/storage/local_db.dart';
+import 'package:sme_digital/core/network/sync_service.dart';
 import 'package:sme_digital/core/sync/sync_manager.dart';
 import 'package:sme_digital/core/sync/sync_queue.dart';
 import 'package:sme_digital/features/auth/domain/auth_state.dart';
@@ -35,6 +37,29 @@ class _FakeSyncManager extends SyncManager {
   Future<int> processPendingSync({String localeCode = 'ne'}) {
     return onProcess(localeCode);
   }
+
+  @override
+  Future<SyncRunResult> processPendingSyncDetailed({
+    String localeCode = 'ne',
+  }) async {
+    final count = await onProcess(localeCode);
+    return SyncRunResult(
+      pendingAtStart: count,
+      pushedEvents: count,
+      ackedEvents: count,
+      failedEvents: 0,
+      pulledEvents: 0,
+      appliedEvents: 0,
+    );
+  }
+
+  @override
+  Future<SyncLastRunMeta> processPendingSyncWithMeta({
+    String localeCode = 'ne',
+  }) async {
+    final result = await processPendingSyncDetailed(localeCode: localeCode);
+    return SyncLastRunMeta(result: result, durationMs: 0);
+  }
 }
 
 Future<void> _insertCustomer(
@@ -43,7 +68,7 @@ Future<void> _insertCustomer(
   required double balance,
 }) async {
   final db = await localDb.database;
-  final now = DateTime.now().toIso8601String();
+  final now = DateTime.now().toUtc().toIso8601String();
   await db.insert('customers', {
     'id': id,
     'name': 'Cust $id',
@@ -64,6 +89,7 @@ Future<void> _insertSale(
   required String saleType,
   String? customerId,
   required DateTime createdAt,
+  String? saleDateAd,
 }) async {
   final db = await localDb.database;
   await db.insert('sales', {
@@ -72,7 +98,10 @@ Future<void> _insertSale(
     'payment_method': saleType == 'CREDIT' ? 'CREDIT' : 'CASH',
     'customer_id': customerId,
     'total_amount': amount,
-    'created_at': createdAt.toIso8601String(),
+    'sale_date_ad':
+        saleDateAd ??
+        BusinessTime.businessDateAd(timestampUtc: createdAt.toUtc()),
+    'created_at': createdAt.toUtc().toIso8601String(),
   });
 }
 
@@ -81,6 +110,7 @@ Future<void> _insertExpense(
   required String id,
   required double amount,
   required DateTime createdAt,
+  String? expenseDateAd,
 }) async {
   final db = await localDb.database;
   await db.insert('expenses', {
@@ -88,7 +118,10 @@ Future<void> _insertExpense(
     'category': 'OTHER',
     'amount': amount,
     'note': 'Expense $id',
-    'created_at': createdAt.toIso8601String(),
+    'expense_date_ad':
+        expenseDateAd ??
+        BusinessTime.businessDateAd(timestampUtc: createdAt.toUtc()),
+    'created_at': createdAt.toUtc().toIso8601String(),
   });
 }
 
@@ -114,7 +147,10 @@ void main() {
       final localDb = await createTestDb('dashboard_summary_local_first');
       addTearDown(localDb.reset);
       final now = DateTime.now();
-      final yesterday = now.subtract(const Duration(days: 1));
+      final todayAd = BusinessTime.businessDateAd(timestampUtc: now.toUtc());
+      final yesterdayAd = BusinessTime.formatDateOnly(
+        BusinessTime.parseAdDate(todayAd)!.subtract(const Duration(days: 1)),
+      );
 
       await _insertCustomer(localDb, id: 'c1', balance: 75);
       await _insertSale(
@@ -123,25 +159,29 @@ void main() {
         amount: 120,
         saleType: 'CASH',
         createdAt: now.subtract(const Duration(hours: 1)),
+        saleDateAd: todayAd,
       );
       await _insertSale(
         localDb,
         id: 's-old',
         amount: 999,
         saleType: 'CASH',
-        createdAt: yesterday,
+        createdAt: now.subtract(const Duration(days: 1)),
+        saleDateAd: yesterdayAd,
       );
       await _insertExpense(
         localDb,
         id: 'e-today',
         amount: 20,
         createdAt: now.subtract(const Duration(minutes: 30)),
+        expenseDateAd: todayAd,
       );
       await _insertExpense(
         localDb,
         id: 'e-old',
         amount: 777,
-        createdAt: yesterday,
+        createdAt: now.subtract(const Duration(days: 1)),
+        expenseDateAd: yesterdayAd,
       );
 
       final container = _baseContainer(localDb);
@@ -160,6 +200,10 @@ void main() {
       final now = DateTime.now();
       final dayStart = DateTime(now.year, now.month, now.day);
       final yesterdayLate = dayStart.subtract(const Duration(minutes: 1));
+      final todayAd = BusinessTime.formatDateOnly(dayStart);
+      final yesterdayAd = BusinessTime.formatDateOnly(
+        dayStart.subtract(const Duration(days: 1)),
+      );
 
       await _insertSale(
         localDb,
@@ -167,6 +211,7 @@ void main() {
         amount: 100,
         saleType: 'CASH',
         createdAt: dayStart.add(const Duration(hours: 1)),
+        saleDateAd: todayAd,
       );
       await _insertSale(
         localDb,
@@ -174,6 +219,7 @@ void main() {
         amount: 50,
         saleType: 'CREDIT',
         createdAt: dayStart.add(const Duration(hours: 2)),
+        saleDateAd: todayAd,
       );
       await _insertSale(
         localDb,
@@ -181,6 +227,7 @@ void main() {
         amount: 999,
         saleType: 'CASH',
         createdAt: yesterdayLate,
+        saleDateAd: yesterdayAd,
       );
 
       final container = _baseContainer(localDb);
@@ -208,6 +255,10 @@ void main() {
 
       final inRangeLocal = dayStart.add(const Duration(hours: 2, minutes: 15));
       final outOfRangeLocal = dayStart.subtract(const Duration(minutes: 5));
+      final inRangeAd = BusinessTime.formatDateOnly(dayStart);
+      final outOfRangeAd = BusinessTime.formatDateOnly(
+        dayStart.subtract(const Duration(days: 1)),
+      );
 
       await _insertSale(
         localDb,
@@ -215,6 +266,7 @@ void main() {
         amount: 80,
         saleType: 'CASH',
         createdAt: inRangeLocal.toUtc(),
+        saleDateAd: inRangeAd,
       );
       await _insertSale(
         localDb,
@@ -222,18 +274,21 @@ void main() {
         amount: 999,
         saleType: 'CASH',
         createdAt: outOfRangeLocal.toUtc(),
+        saleDateAd: outOfRangeAd,
       );
       await _insertExpense(
         localDb,
         id: 'tz-exp-in',
         amount: 15,
         createdAt: inRangeLocal.toUtc(),
+        expenseDateAd: inRangeAd,
       );
       await _insertExpense(
         localDb,
         id: 'tz-exp-out',
         amount: 777,
         createdAt: outOfRangeLocal.toUtc(),
+        expenseDateAd: outOfRangeAd,
       );
 
       final container = _baseContainer(localDb);
@@ -250,13 +305,64 @@ void main() {
       final expenses = await container.read(expensesListProvider.future);
       final filteredExpenseTotal = expenses
           .where((e) {
-            final createdAt = e.createdAt.toLocal();
-            if (createdAt.isBefore(params.fromDate.toLocal())) return false;
-            if (createdAt.isAfter(params.toDate.toLocal())) return false;
-            return true;
+            final expenseDateAd =
+                e.expenseDateAd ??
+                BusinessTime.formatDateOnly(e.createdAt.toUtc());
+            return expenseDateAd.compareTo(
+                      BusinessTime.formatDateOnly(params.fromDate),
+                    ) >=
+                    0 &&
+                expenseDateAd.compareTo(
+                      BusinessTime.formatDateOnly(
+                        params.toDate.subtract(const Duration(milliseconds: 1)),
+                      ),
+                    ) <=
+                    0;
           })
           .fold<double>(0, (sum, e) => sum + e.amount);
       expect(filteredExpenseTotal, 15.0);
+    });
+
+    test('expense business-date filtering stays stable even when timestamps drift', () async {
+      final localDb = await createTestDb('expense_business_date_filtering');
+      addTearDown(localDb.reset);
+      final now = DateTime.now();
+      final dayStart = DateTime(now.year, now.month, now.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+
+      await _insertExpense(
+        localDb,
+        id: 'e-business-in',
+        amount: 33,
+        createdAt: dayStart.subtract(const Duration(days: 2)),
+        expenseDateAd: BusinessTime.formatDateOnly(dayStart),
+      );
+      await _insertExpense(
+        localDb,
+        id: 'e-business-out',
+        amount: 77,
+        createdAt: dayStart.add(const Duration(hours: 2)),
+        expenseDateAd: BusinessTime.formatDateOnly(
+          dayStart.subtract(const Duration(days: 3)),
+        ),
+      );
+
+      final expenses = await _baseContainer(localDb).read(expensesListProvider.future);
+      final filteredExpenseTotal = expenses
+          .where((e) {
+            final expenseDateAd =
+                e.expenseDateAd ??
+                BusinessTime.formatDateOnly(e.createdAt.toUtc());
+            return expenseDateAd.compareTo(BusinessTime.formatDateOnly(dayStart)) >= 0 &&
+                expenseDateAd.compareTo(
+                      BusinessTime.formatDateOnly(
+                        dayEnd.subtract(const Duration(milliseconds: 1)),
+                      ),
+                    ) <=
+                    0;
+          })
+          .fold<double>(0, (sum, e) => sum + e.amount);
+      expect(filteredExpenseTotal, 33.0);
     });
 
     test('sync-triggered invalidation refreshes dashboard and report values', () async {
@@ -282,6 +388,7 @@ void main() {
         queue: SyncQueueService(localDb),
         onProcess: (_) async {
           final now = DateTime.now();
+          final todayAd = BusinessTime.businessDateAd(timestampUtc: now.toUtc());
           await _insertCustomer(localDb, id: 'c-sync', balance: 40);
           await _insertSale(
             localDb,
@@ -290,12 +397,14 @@ void main() {
             saleType: 'CREDIT',
             customerId: 'c-sync',
             createdAt: now,
+            saleDateAd: todayAd,
           );
           await _insertExpense(
             localDb,
             id: 'e-sync',
             amount: 25,
             createdAt: now,
+            expenseDateAd: todayAd,
           );
           await db.update(
             'sync_queue',
@@ -334,10 +443,13 @@ void main() {
       expect(before.todayExpenses, 0);
       expect(before.creditOutstanding, 0);
       final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
+      final reportDay =
+          BusinessTime.parseAdDate(
+            BusinessTime.businessDateAd(timestampUtc: now.toUtc()),
+          )!;
       final reportParams = ReportParams(
-        fromDate: startOfDay,
-        toDate: startOfDay.add(const Duration(days: 1)).subtract(
+        fromDate: reportDay,
+        toDate: reportDay.add(const Duration(days: 1)).subtract(
           const Duration(milliseconds: 1),
         ),
       );

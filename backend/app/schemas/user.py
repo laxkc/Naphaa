@@ -79,3 +79,5 @@ class AuthProfileOut(BaseModel):
     business_type: str | None = None
     locale_default: str | None = None
     currency: str | None = None
+    business_timezone: str | None = None
+    calendar_mode: str | None = None

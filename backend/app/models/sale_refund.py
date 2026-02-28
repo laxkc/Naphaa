@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,6 +17,7 @@ class SaleRefund(Base):
     store_id: Mapped[str] = mapped_column(String(36), index=True)
     sale_id: Mapped[str] = mapped_column(String(36), ForeignKey("sales.id"), index=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    refund_date_ad: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     device_id: Mapped[str | None] = mapped_column(String(128), nullable=True)

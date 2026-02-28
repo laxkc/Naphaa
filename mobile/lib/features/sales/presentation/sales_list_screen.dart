@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 import 'package:sme_digital/core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/date/business_clock.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/sale.dart';
 import 'create_sale_screen.dart';
@@ -23,20 +24,22 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   final _fmt = DateFormat('MMM d, h:mm a');
   final _currFmt = NumberFormat('#,##0.00');
 
-  SalesListParams get _queryParams {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final tomorrowStart = todayStart.add(const Duration(days: 1));
+  SalesListParams _queryParams(BusinessClock clock) {
+    final todayRange = clock.todayRange();
     switch (_filter) {
       case _DateFilter.today:
-        return SalesListParams(fromDate: todayStart, toDate: tomorrowStart);
-      case _DateFilter.week:
-        final weekStart = todayStart.subtract(Duration(days: now.weekday - 1));
-        return SalesListParams(fromDate: weekStart, toDate: tomorrowStart);
-      case _DateFilter.month:
         return SalesListParams(
-          fromDate: DateTime(now.year, now.month, 1),
-          toDate: tomorrowStart,
+          fromDate: todayRange.fromDate,
+          toDate: todayRange.toDate,
+        );
+      case _DateFilter.week:
+        final range = clock.currentWeekRange();
+        return SalesListParams(fromDate: range.fromDate, toDate: range.toDate);
+      case _DateFilter.month:
+        final range = clock.currentMonthRange();
+        return SalesListParams(
+          fromDate: range.fromDate,
+          toDate: range.toDate,
         );
       case _DateFilter.all:
         return const SalesListParams();
@@ -45,7 +48,12 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final queryParams = _queryParams;
+    final clockAsync = ref.watch(businessClockProvider);
+    final clock =
+        clockAsync is AsyncData<BusinessClock>
+            ? clockAsync.value
+            : BusinessClock.fallback();
+    final queryParams = _queryParams(clock);
     final salesAsync = ref.watch(salesListProvider(queryParams));
     final l10n = AppLocalizations.of(context)!;
 

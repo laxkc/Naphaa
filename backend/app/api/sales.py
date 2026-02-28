@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date
 
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy import func, or_, select
@@ -51,9 +51,9 @@ def list_sales(
 ) -> SaleListResponse:
     filters = [Sale.store_id == store.id]
     if from_date is not None:
-        filters.append(Sale.created_at >= datetime.combine(from_date, time.min))
+        filters.append(Sale.sale_date_ad >= from_date)
     if to_date is not None:
-        filters.append(Sale.created_at <= datetime.combine(to_date, time.max))
+        filters.append(Sale.sale_date_ad <= to_date)
     query = select(Sale).where(*filters)
     if search and search.strip():
         term = f"%{search.strip()}%"
@@ -72,7 +72,7 @@ def list_sales(
     items = db.scalars(
         query
         .options(selectinload(Sale.items), selectinload(Sale.payments))
-        .order_by(Sale.created_at.desc())
+        .order_by(Sale.sale_date_ad.desc(), Sale.created_at.desc())
         .offset(offset)
         .limit(page_size)
     ).all()

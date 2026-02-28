@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -30,7 +31,7 @@ class CustomerMetricOut(BaseModel):
     risk_level: str
     aging: AgingBucketBreakdown
     factors: CustomerRiskFactorsOut
-    computed_at: str | None = None
+    computed_at: datetime | None = None
 
 
 class CustomerMetricsResponse(BaseModel):
@@ -39,7 +40,7 @@ class CustomerMetricsResponse(BaseModel):
     total_outstanding: Decimal
     total_overdue: Decimal
     high_risk_count: int
-    computed_at: str
+    computed_at: datetime
 
 
 class ProductMetricOut(BaseModel):
@@ -51,10 +52,10 @@ class ProductMetricOut(BaseModel):
     qty_sold_30d: Decimal
     revenue_30d: Decimal
     profit_30d: Decimal | None = None
-    last_sale_at: str | None = None
+    last_sale_at: datetime | None = None
     dead_stock: bool
     dead_stock_value: Decimal | None = None
-    computed_at: str
+    computed_at: datetime
 
 
 class ProductMetricsResponse(BaseModel):
@@ -62,12 +63,12 @@ class ProductMetricsResponse(BaseModel):
     total_products: int
     dead_stock_count: int
     dead_stock_value_total: Decimal
-    computed_at: str
+    computed_at: datetime
 
 
 class BusinessMetricsResponse(BaseModel):
-    period_start: str | None = None
-    period_end: str | None = None
+    period_start: date | None = None
+    period_end: date | None = None
     sales_total: Decimal
     expenses_total: Decimal
     profit_est: Decimal
@@ -83,5 +84,5 @@ class BusinessMetricsResponse(BaseModel):
     dead_stock_count: int
     high_risk_customers: int
     open_alerts_count: int
-    computed_at: str
+    computed_at: datetime
     reasons: list[str] = []

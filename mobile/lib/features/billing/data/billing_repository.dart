@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/date/business_time.dart';
 import '../../../core/storage/local_db.dart';
 import '../../../core/storage/preferences.dart';
 import '../../../core/utils/uuid_id.dart';
@@ -30,8 +31,12 @@ class BillingRepository {
 
     final db = await _db.database;
     final invoiceId = newUuidV4();
-    final now = DateTime.now();
+    final now = BusinessTime.nowUtc();
     final nowIso = now.toIso8601String();
+    final dueDateAd =
+        input.dueDateAd == null
+            ? null
+            : BusinessTime.formatDateOnly(input.dueDateAd!);
     final settings = await _loadBillingSettings();
     final totals = _calculateTotals(
       input.items,
@@ -46,7 +51,12 @@ class BillingRepository {
         'customer_id': input.customerId,
         'status': invoiceStatusToDb(InvoiceStatus.draft),
         'issue_date': null,
-        'due_date': input.dueDate?.toIso8601String(),
+        'due_date':
+            dueDateAd == null
+                ? null
+                : BusinessTime.parseAdDate(dueDateAd)?.toUtc().toIso8601String(),
+        'issue_date_ad': null,
+        'due_date_ad': dueDateAd,
         'currency_code': settings['currency_code'],
         'fiscal_calendar_snapshot': settings['fiscal_calendar'],
         'language_snapshot': settings['language'],
@@ -105,8 +115,15 @@ class BillingRepository {
     String? paymentMethodSummary,
   }) async {
     final db = await _db.database;
-    final now = DateTime.now();
+    final now = BusinessTime.nowUtc();
     final nowIso = now.toIso8601String();
+    final timezone = await _prefs.getBusinessTimezone();
+    final issueDateAd = BusinessTime.businessDateAd(
+      timestampUtc: now,
+      timezone: timezone,
+    );
+    final issueBusinessDate =
+        BusinessTime.parseAdDate(issueDateAd) ?? DateTime(now.year, now.month, now.day);
 
     await db.transaction((txn) async {
       final invoice = await _getInvoiceRow(txn, invoiceId);
@@ -189,7 +206,7 @@ class BillingRepository {
         txn,
         businessId: businessId,
         prefix: prefix,
-        issueDate: now,
+        issueDateAd: issueBusinessDate,
         fiscalCalendar: fiscalCalendar,
       );
 
@@ -205,6 +222,7 @@ class BillingRepository {
           'invoice_number': invoiceNumber,
           'status': invoiceStatusToDb(nextStatus),
           'issue_date': nowIso,
+          'issue_date_ad': issueDateAd,
           'payment_method_summary':
               paymentMethodSummary ?? invoice['payment_method_summary'],
           'balance_due': balanceDue,
@@ -236,7 +254,9 @@ class BillingRepository {
           'customer_id': issuedInvoice['customer_id'],
           'status': issuedInvoice['status'],
           'issue_date': issuedInvoice['issue_date'],
+          'issue_date_ad': issuedInvoice['issue_date_ad'],
           'due_date': issuedInvoice['due_date'],
+          'due_date_ad': issuedInvoice['due_date_ad'],
           'currency_code': issuedInvoice['currency_code'],
           'fiscal_calendar_snapshot': issuedInvoice['fiscal_calendar_snapshot'],
           'language_snapshot': issuedInvoice['language_snapshot'],
@@ -281,7 +301,8 @@ class BillingRepository {
     if (input.amount <= 0)
       throw StateError('Payment amount must be greater than zero');
     final db = await _db.database;
-    final paidAt = (input.paidAt ?? DateTime.now()).toIso8601String();
+    final paidAtDt = (input.paidAt ?? BusinessTime.nowUtc()).toUtc();
+    final paidAt = paidAtDt.toIso8601String();
 
     await db.transaction((txn) async {
       final invoice = await _getInvoiceRow(txn, invoiceId);
@@ -310,7 +331,7 @@ class BillingRepository {
         'paid_at': paidAt,
         'note': input.note,
       });
-      final updatedAt = DateTime.now().toIso8601String();
+      final updatedAt = BusinessTime.nowUtcIso();
       await txn.update(
         'invoices',
         {
@@ -354,26 +375,29 @@ class BillingRepository {
 
   Future<int> markOverdueInvoices({DateTime? now}) async {
     final db = await _db.database;
-    final current = (now ?? DateTime.now()).toLocal();
+    final timezone = await _prefs.getBusinessTimezone();
+    final currentAd = BusinessTime.businessDateAd(
+      timestampUtc: (now ?? BusinessTime.nowUtc()).toUtc(),
+      timezone: timezone,
+    );
     final rows = await db.query(
       'invoices',
-      columns: ['id', 'status', 'due_date', 'balance_due'],
-      where: "status IN ('issued', 'overdue') AND due_date IS NOT NULL",
+      columns: ['id', 'status', 'due_date_ad', 'balance_due'],
+      where:
+          "status IN ('issued', 'overdue') AND due_date_ad IS NOT NULL AND trim(due_date_ad) != ''",
     );
     var updated = 0;
     for (final row in rows) {
-      final dueRaw = row['due_date']?.toString();
+      final dueRaw = row['due_date_ad']?.toString();
       if (dueRaw == null || dueRaw.isEmpty) continue;
-      final due = DateTime.tryParse(dueRaw)?.toLocal();
-      if (due == null) continue;
       final balance = (row['balance_due'] as num?)?.toDouble() ?? 0;
       if (balance <= 0) continue;
-      if (due.isBefore(current)) {
+      if (dueRaw.compareTo(currentAd) < 0) {
         await db.update(
           'invoices',
           {
             'status': invoiceStatusToDb(InvoiceStatus.overdue),
-            'updated_at': DateTime.now().toIso8601String(),
+            'updated_at': BusinessTime.nowUtcIso(),
           },
           where: 'id = ?',
           whereArgs: [row['id']],
@@ -439,7 +463,7 @@ class BillingRepository {
       'invoices',
       where: clauses.isEmpty ? null : clauses.join(' AND '),
       whereArgs: clauses.isEmpty ? null : args,
-      orderBy: 'COALESCE(issue_date, created_at) DESC, created_at DESC',
+      orderBy: 'COALESCE(issue_date_ad, substr(created_at, 1, 10)) DESC, created_at DESC',
     );
     return rows.map(InvoiceRecord.fromMap).toList();
   }
@@ -479,7 +503,7 @@ class BillingRepository {
       {
         'pdf_path': pdfPath,
         'pdf_status': pdfStatus,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': BusinessTime.nowUtcIso(),
       },
       where: 'id = ?',
       whereArgs: [invoiceId],

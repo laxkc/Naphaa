@@ -155,6 +155,32 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                           AppListTile(
                             leading: const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 18,
+                              color: AppColors.muted,
+                            ),
+                            title: l10n.calendarModeLabel,
+                            subtitle:
+                                (p.calendarMode ?? 'BS').toUpperCase() == 'AD'
+                                    ? l10n.calendarAdLabel
+                                    : l10n.calendarBsLabel,
+                            onTap: null,
+                          ),
+                          AppListTile(
+                            leading: const Icon(
+                              Icons.schedule_outlined,
+                              size: 18,
+                              color: AppColors.muted,
+                            ),
+                            title: l10n.businessTimezoneLabel,
+                            subtitle:
+                                p.businessTimezone?.trim().isNotEmpty == true
+                                    ? p.businessTimezone!
+                                    : 'Asia/Kathmandu',
+                            onTap: null,
+                          ),
+                          AppListTile(
+                            leading: const Icon(
                               Icons.badge_outlined,
                               size: 18,
                               color: AppColors.muted,
@@ -223,6 +249,8 @@ class ProfileData {
     this.businessType,
     this.localeDefault,
     this.currency,
+    this.calendarMode,
+    this.businessTimezone,
     this.role,
   });
   final String? phone;
@@ -232,5 +260,7 @@ class ProfileData {
   final String? businessType;
   final String? localeDefault;
   final String? currency;
+  final String? calendarMode;
+  final String? businessTimezone;
   final String? role;
 }

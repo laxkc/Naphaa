@@ -10,6 +10,8 @@ class AppPreferences {
   static const _phoneKey = 'user_phone';
   static const _roleKey = 'user_role';
   static const _storeIdKey = 'active_store_id';
+  static const _businessTimezoneKey = 'business_timezone';
+  static const _calendarModeKey = 'calendar_mode';
   static const _alertReadIdsPrefix = 'alert_read_ids_';
 
   Future<String> getLocaleCode() async {
@@ -104,6 +106,26 @@ class AppPreferences {
   Future<void> clearActiveStoreId() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storeIdKey);
+  }
+
+  Future<String> getBusinessTimezone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_businessTimezoneKey) ?? 'Asia/Kathmandu';
+  }
+
+  Future<void> setBusinessTimezone(String timezone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_businessTimezoneKey, timezone);
+  }
+
+  Future<String> getCalendarMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_calendarModeKey) ?? 'BS';
+  }
+
+  Future<void> setCalendarMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_calendarModeKey, mode);
   }
 
   Future<bool> getOnboardingComplete() async {
@@ -204,7 +226,8 @@ class AppPreferences {
     return {
       'language': prefs.getString('billing_language') ?? await getLocaleCode(),
       'currency_code': prefs.getString('billing_currency_code') ?? 'NPR',
-      'fiscal_calendar': prefs.getString('billing_fiscal_calendar') ?? 'AD',
+      'fiscal_calendar':
+          prefs.getString('billing_fiscal_calendar') ?? await getCalendarMode(),
       'vat_enabled':
           prefs.getBool('billing_vat_enabled') ?? (tax['enabled'] as bool),
       'vat_rate':

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -14,7 +14,7 @@ from app.schemas.report import CashbookReport, SummaryReport, TopProductItem, To
 
 class ReportService:
     @staticmethod
-    def summary(db: Session, store_id: str, date_from: datetime | None, date_to: datetime | None) -> SummaryReport:
+    def summary(db: Session, store_id: str, date_from: date | None, date_to: date | None) -> SummaryReport:
         sale_query = select(func.coalesce(func.sum(Sale.total_amount), 0)).where(
             Sale.store_id == store_id
         )
@@ -23,11 +23,11 @@ class ReportService:
         )
 
         if date_from is not None:
-            sale_query = sale_query.where(Sale.created_at >= date_from)
-            expense_query = expense_query.where(Expense.created_at >= date_from)
+            sale_query = sale_query.where(Sale.sale_date_ad >= date_from)
+            expense_query = expense_query.where(Expense.expense_date_ad >= date_from)
         if date_to is not None:
-            sale_query = sale_query.where(Sale.created_at <= date_to)
-            expense_query = expense_query.where(Expense.created_at <= date_to)
+            sale_query = sale_query.where(Sale.sale_date_ad <= date_to)
+            expense_query = expense_query.where(Expense.expense_date_ad <= date_to)
 
         total_sales = Decimal(db.scalar(sale_query) or 0)
         total_expenses = Decimal(db.scalar(expense_query) or 0)

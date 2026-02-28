@@ -2,15 +2,21 @@ import 'dart:convert';
 
 import '../../../core/storage/local_db.dart';
 import '../../../core/storage/preferences.dart';
+import '../../../core/date/business_time.dart';
 import '../../../core/utils/uuid_id.dart';
 import '../../reports/data/metrics_repository.dart';
 import '../domain/customer.dart';
 
 class CustomersRepository {
-  CustomersRepository(this._db, {MetricsRepository? metricsRepository})
-    : _metricsRepository = metricsRepository;
+  CustomersRepository(
+    this._db, {
+    AppPreferences? preferences,
+    MetricsRepository? metricsRepository,
+  }) : _prefs = preferences ?? AppPreferences(),
+       _metricsRepository = metricsRepository;
 
   final LocalDatabase _db;
+  final AppPreferences _prefs;
   final MetricsRepository? _metricsRepository;
 
   Future<List<Customer>> listCustomers() async {
@@ -28,8 +34,8 @@ class CustomersRepository {
 
   Future<String> addCustomer({required String name, String? phone}) async {
     final db = await _db.database;
-    final activeStoreId = await AppPreferences().getActiveStoreId();
-    final now = DateTime.now().toIso8601String();
+    final activeStoreId = await _prefs.getActiveStoreId();
+    final now = BusinessTime.nowUtcIso();
     final id = newUuidV4();
 
     await db.transaction((txn) async {
@@ -111,8 +117,8 @@ class CustomersRepository {
 
   Future<void> updateCustomer(Customer customer) async {
     final db = await _db.database;
-    final activeStoreId = await AppPreferences().getActiveStoreId();
-    final now = DateTime.now().toIso8601String();
+    final activeStoreId = await _prefs.getActiveStoreId();
+    final now = BusinessTime.nowUtcIso();
     await db.transaction((txn) async {
       await txn.update(
         'customers',
@@ -151,8 +157,8 @@ class CustomersRepository {
 
   Future<void> softDeleteCustomer(String id) async {
     final db = await _db.database;
-    final activeStoreId = await AppPreferences().getActiveStoreId();
-    final now = DateTime.now().toIso8601String();
+    final activeStoreId = await _prefs.getActiveStoreId();
+    final now = BusinessTime.nowUtcIso();
     await db.transaction((txn) async {
       await txn.update(
         'customers',
@@ -189,9 +195,12 @@ class CustomersRepository {
     String? note,
   }) async {
     final db = await _db.database;
-    final activeStoreId = await AppPreferences().getActiveStoreId();
-    final now = DateTime.now().toIso8601String();
+    final activeStoreId = await _prefs.getActiveStoreId();
+    final now = BusinessTime.nowUtcIso();
     if (amount <= 0) throw StateError('Amount must be greater than zero');
+    final paymentDateAd = BusinessTime.businessDateAd(
+      timezone: await _prefs.getBusinessTimezone(),
+    );
 
     await db.transaction((txn) async {
       final rows = await txn.query(
@@ -213,6 +222,7 @@ class CustomersRepository {
         'method': method.toUpperCase(),
         'amount': amount,
         'note': note?.trim().isEmpty ?? true ? null : note?.trim(),
+        'payment_date_ad': paymentDateAd,
         'created_at': now,
       });
 
@@ -235,6 +245,7 @@ class CustomersRepository {
           'method': method.toUpperCase(),
           'amount': amount,
           'note': note,
+          'payment_date_ad': paymentDateAd,
           'created_at': now,
         }),
         'created_at': now,

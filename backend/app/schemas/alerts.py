@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -11,12 +13,11 @@ class AlertOut(BaseModel):
     body: str
     action_type: str | None = None
     action_payload: dict | None = None
-    created_at: str
-    resolved_at: str | None = None
+    created_at: datetime
+    resolved_at: datetime | None = None
 
 
 class AlertsResponse(BaseModel):
     items: list[AlertOut]
     total: int
-    computed_at: str
-
+    computed_at: datetime
