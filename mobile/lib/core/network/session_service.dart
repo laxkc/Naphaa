@@ -110,17 +110,18 @@ class SessionService {
   }
 
   Future<void> logout() async {
+    final refresh = await _tokens.getRefreshToken();
+    _ready = false;
+    _dio.options.headers.remove('Authorization');
+    await _tokens.clear();
+
     try {
-      final refresh = await _tokens.getRefreshToken();
       if (refresh != null && refresh.isNotEmpty) {
         await _gateway.logout(refreshToken: refresh);
       }
     } on DioException {
       // Logout should still clear local auth state if backend is unavailable.
     }
-    _ready = false;
-    _dio.options.headers.remove('Authorization');
-    await _tokens.clear();
   }
 
   Future<String?> fetchCurrentUserRole({required String localeCode}) async {

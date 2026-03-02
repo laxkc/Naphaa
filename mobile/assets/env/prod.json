@@ -1,6 +1,6 @@
 {
   "ENV": "prod",
-  "BASE_URL": "https://api.naphaa.com/api/v1",
+  "BASE_URL": "https://naphaa-d8azh5ddccdpfjgn.canadacentral-01.azurewebsites.net/api/v1",
   "CONNECT_TIMEOUT_SECONDS": 10,
   "RECEIVE_TIMEOUT_SECONDS": 15
 }

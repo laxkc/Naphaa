@@ -89,14 +89,10 @@ final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final env = ref.watch(environmentConfigProvider);
-  // const baseUrl =
-  //     'https://ad8e-2605-b100-32a-f95e-b8d8-22d0-7be3-99d.ngrok-free.app/api/v1';
-  // ignore: avoid_print
-  // print('[ApiClient] baseUrl → $baseUrl');
+  const baseUrl = "http://localhost:8080/api/v1";
   return ApiClient(
-    // TEMP (internal testing): hardcoded ngrok backend URL.
-    // baseUrl: baseUrl,
-    baseUrl: env.baseUrl,
+    // baseUrl: env.baseUrl,
+    baseUrl: baseUrl,
     connectTimeoutSeconds: env.connectTimeoutSeconds,
     receiveTimeoutSeconds: env.receiveTimeoutSeconds,
   );
@@ -218,12 +214,12 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    state = AuthState();
     await _session.logout();
     await _clearLocalBusinessStateForAccountSwitch();
     await _prefs.clearUserPhone();
     await _prefs.clearUserRole();
     await _prefs.clearActiveStoreId();
-    state = AuthState();
   }
 
   void setRole(String role) {

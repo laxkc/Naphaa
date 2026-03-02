@@ -10,6 +10,10 @@
   box-sizing: border-box;
 }
 
+img {
+  border-radius: 0;
+}
+
 /* Lock the whole viewport — no page-level scroll */
 html,
 body {

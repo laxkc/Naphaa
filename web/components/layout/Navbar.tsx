@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Menu, X } from "lucide-react";
@@ -29,8 +30,26 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center">
 
         {/* ── Left: Logo ─────────────────────────────── */}
-        <Link href={`/${locale}`} className="flex items-center shrink-0">
-          <span className="text-xl font-bold text-primary tracking-tight">
+        <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
+          {/* Mobile: 24px */}
+          <Image
+            src="/logos/logo.svg"
+            alt={appConfig.name}
+            width={24}
+            height={24}
+            className="md:hidden"
+            priority
+          />
+          {/* Desktop: 32px */}
+          <Image
+            src="/logos/logo.svg"
+            alt={appConfig.name}
+            width={32}
+            height={32}
+            className="hidden md:block"
+            priority
+          />
+          <span className="text-lg font-semibold tracking-tight text-primary">
             {appConfig.name}
           </span>
         </Link>
