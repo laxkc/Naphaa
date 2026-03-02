@@ -58,7 +58,7 @@ export default function StoreButtons({
   const isDark = theme === "dark";
 
   const baseClass =
-    "inline-flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-150 active:scale-[0.97] select-none";
+    "inline-flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-150 active:scale-[0.97] select-none min-w-[220px]";
 
   const darkClass = "bg-[#0a0a0a] hover:bg-[#1a1a1a] border border-white/10";
   const lightClass = "bg-white/15 hover:bg-white/25 border border-white/20";
@@ -69,7 +69,7 @@ export default function StoreButtons({
   const storeColor  = isDark ? "text-white"    : "text-white";
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3">
 
       {/* Google Play */}
       <a href={playStoreUrl} className={btnClass} aria-label="Get it on Google Play">

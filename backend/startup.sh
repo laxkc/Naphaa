@@ -8,7 +8,13 @@ fi
 
 cd "$(dirname "$0")"
 
-exec gunicorn \
+if [[ -x ".venv/bin/gunicorn" ]]; then
+  GUNICORN_BIN=".venv/bin/gunicorn"
+else
+  GUNICORN_BIN="gunicorn"
+fi
+
+exec "$GUNICORN_BIN" \
   --bind "0.0.0.0:${PORT:-${APP_PORT:-8080}}" \
   --workers 2 \
   --timeout 120 \

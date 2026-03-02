@@ -1,27 +1,219 @@
 {
   "nav": {
     "home":       "Home",
-    "features":   "Features",
+    "features":   "Why Naphaa",
     "howItWorks": "How it Works",
     "pricing":    "Pricing",
     "language":   "EN / नेपाली"
   },
-  "socialProof": {
-    "quote":       "Tracks my credit customers so I don't forget who owes me.",
-    "attribution": "Ramesh Thapa, Grocery Shop · Kathmandu",
-    "stats": [
-      { "value": "500+",    "label": "Active shops" },
-      { "value": "Offline", "label": "Works without internet" },
-      { "value": "Free",    "label": "Forever on basic plan" }
+  "hero": {
+    "badge":      "Built for Nepali shop owners",
+    "h1Tagline":  "Know Your Shop. Control Your Profit.",
+    "desc":       "Naphaa helps Nepali shop owners see their real daily earnings, track stock clearly, and run their business with confidence from one simple app.",
+    "cta1":       "Start Free Today",
+    "cta2":       "Watch 60-Second Demo",
+    "trustLine":  "✓ Free forever  ✓ Works offline  ✓ Nepali & English",
+    "download":   "Download the app",
+    "focusLabel": "Daily clarity",
+    "focusText":  "See what you earned today without digging through reports.",
+    "simpleLabel": "Simple by default",
+    "simpleText":  "Use it from your phone without training or complicated setup.",
+    "offlineLabel": "Ready offline",
+    "offlineText":  "Keep your shop moving even when the internet is slow."
+  },
+  "whoItsFor": {
+    "label": "Who This Is For",
+    "heading": "Made for Real Shops in Nepal",
+    "desc": "If you run a grocery store, clothing shop, pharmacy, or small retail business and want to understand your profit without complicated systems, Naphaa is for you.",
+    "shopTypesHeading": "Good fit for shops like:",
+    "shopTypes": ["Grocery store", "Clothing shop", "Pharmacy", "Small retail shop"],
+    "items": [
+      "You want simple daily profit visibility",
+      "You want to stop stock confusion",
+      "You want less stress at closing time",
+      "You want control, not complexity"
     ]
   },
+  "difference": {
+    "label":      "Why Naphaa Feels Different",
+    "heading":    "Not Another Complicated System",
+    "subtext":    "Naphaa is built around the way real shops work every day, not around software jargon.",
+    "items": {
+      "profit":     { "title": "Built Around Profit, Not Accounting", "desc": "You see what matters most first: what you earned today." },
+      "phoneFirst": { "title": "Designed for Phone-First Shops", "desc": "No desktop setup. No special training. Just open the app and use it." },
+      "simple":     { "title": "Simple by Default", "desc": "No crowded dashboard. Only the things you need to run the shop with confidence." },
+      "offline":    { "title": "Works Even When Internet Doesn't", "desc": "Your shop should not stop because the network is weak." }
+    }
+  },
+  "outcomes": {
+    "label": "What You Can Do",
+    "heading": "Practical Control, Every Day",
+    "subtext": "Naphaa should feel useful in the first few minutes, not after weeks of setup.",
+    "items": {
+      "sale": "Record a sale in seconds",
+      "profit": "See which product makes money",
+      "credit": "Track who still owes you",
+      "stock": "Know when stock is low",
+      "performance": "Check daily performance instantly"
+    }
+  },
+  "demo": {
+    "label": "60-Second Demo",
+    "heading": "See the story you will tell in one short video.",
+    "desc": "This space is ready for your demo. The goal is simple: show a shop owner how quickly Naphaa feels useful and how calm the daily routine becomes.",
+    "points": [
+      "Open with a real shop problem, not a software intro",
+      "Show one fast sale, one stock check, and one daily profit view",
+      "End with confidence, simplicity, and a clear next step"
+    ],
+    "placeholderTitle": "Demo video placeholder",
+    "placeholderDesc": "Drop your 60-second walkthrough here later. The layout is already in place.",
+    "note": "When you are ready, replace this placeholder area with an embedded video, hosted recording, or poster image linked to the final demo."
+  },
+  "trust": {
+    "label": "Trust",
+    "heading": "Your Data. Your Shop. Your Control.",
+    "subtext": "Trust comes from simple promises that matter when you are running a shop every day.",
+    "items": [
+      "Secure backups",
+      "Easy phone switch",
+      "No hidden charges",
+      "Clear pricing",
+      "Local understanding"
+    ],
+    "footnote": "Naphaa is designed to reduce stress, not add another system to manage."
+  },
+  "howItWorks": {
+    "label":    "How it Works",
+    "heading":  "Get Started in 3 Simple Steps",
+    "subtext":  "No jargon. No special setup. Just install, add a few products, and start using it.",
+    "steps": {
+      "one": {
+        "number": "01",
+        "title":  "Download Naphaa",
+        "desc":   "Install the app and open it.",
+        "tag":    "Step 1",
+        "detail": "Start free and get moving in minutes."
+      },
+      "two": {
+        "number": "02",
+        "title":  "Add your products",
+        "desc":   "Start with a few items. You can add more anytime.",
+        "tag":    "Step 2",
+        "detail": "No need to set up everything before you begin."
+      },
+      "three": {
+        "number": "03",
+        "title":  "Start recording sales",
+        "desc":   "See results immediately as you use it.",
+        "tag":    "Step 3",
+        "detail": "Know what is happening in your shop right away."
+      }
+    }
+  },
+  "differentiation": {
+    "label":   "Why Naphaa?",
+    "heading": "Designed for real shop routines.",
+    "items": [
+      {
+        "vs":   "vs complicated systems",
+        "text": "Naphaa is easier to start because it focuses on the few things shop owners need every day."
+      },
+      {
+        "vs":   "vs paper records",
+        "text": "Unlike notebooks, your data is safe, searchable, and never lost."
+      },
+      {
+        "vs":   "vs other apps",
+        "text": "Unlike other apps, Naphaa works even when internet is out."
+      }
+    ]
+  },
+  "pricing": {
+    "label":    "Pricing",
+    "heading":  "Start Free. Upgrade When You Grow.",
+    "subtext":  "Keep pricing simple and friendly. Start with the basics, then move up when the shop needs more.",
+    "free": {
+      "badge":      "Free",
+      "title":      "Basic shop management",
+      "priceLine":  "Rs. 0 / month",
+      "desc":       "A calm starting point for daily shop control.",
+      "microcopy":  "Start free and keep your daily routine simple.",
+      "cta":        "Start Free Today",
+      "features": [
+        "Record sales with less stress",
+        "Track stock clearly",
+        "Follow customer dues",
+        "See daily performance",
+        "Use it in Nepali or English"
+      ]
+    },
+    "pro": {
+      "badge":      "Coming Soon",
+      "title":      "Advanced insights and customer rewards",
+      "desc":       "For growing shops that want deeper visibility and stronger customer relationships.",
+      "notifyPlaceholder": "your@email.com",
+      "notifyBtn":  "Notify me",
+      "notifyDone": "✓ We'll notify you at launch!",
+      "features": [
+        "Deeper profit visibility",
+        "Stronger customer retention tools",
+        "More control as your shop grows"
+      ]
+    },
+    "download": "Download the app"
+  },
+  "faq": {
+    "label":   "Questions",
+    "heading": "Real Questions From Shop Owners",
+    "subtext": "The goal is to remove hesitation, not add more confusion.",
+    "items": [
+      {
+        "q": "Is my data safe?",
+        "a": "Yes. Your shop data stays protected, and backup options are built to make phone changes less risky."
+      },
+      {
+        "q": "What if I change phone?",
+        "a": "You should be able to move to a new phone without losing confidence in your records."
+      },
+      {
+        "q": "Does it work without internet?",
+        "a": "Yes. Naphaa is designed so your shop can keep running even when your connection is weak."
+      },
+      {
+        "q": "Is it difficult to learn?",
+        "a": "No. Naphaa is meant to feel simple in the first few minutes, even if you are not technical."
+      },
+      {
+        "q": "Can I cancel anytime?",
+        "a": "Yes. You are not locked into a complicated commitment."
+      }
+    ]
+  },
+  "featuresPage": {
+    "label": "Why Naphaa",
+    "heading": "A calmer way to run your shop every day.",
+    "desc": "This page is not a feature dump. It is the practical reason Naphaa feels easier to trust: clearer profit visibility, simpler daily control, and less stress for the person running the shop."
+  },
+  "pricingPage": {
+    "label": "Pricing",
+    "heading": "Simple pricing for shops that want clarity, not complexity.",
+    "desc": "Start free, build confidence in your daily routine, and upgrade only when your shop genuinely needs more insight."
+  },
+  "howItWorksPage": {
+    "label": "How It Works",
+    "heading": "A simple start matters more than a complicated setup.",
+    "desc": "Naphaa should make sense fast. Install it, add a few products, and start seeing what is happening in your shop without a long onboarding process."
+  },
   "cta": {
-    "badge":   "Join 500+ shops already using",
-    "heading": "Ready to digitize your shop?",
-    "desc":    "Download free today. No credit card, no commitment."
+    "badge":   "Built for shop owner peace of mind",
+    "heading": "Run Your Shop With Confidence.",
+    "desc":    "Start free, stay clear on profit, and keep your shop under control every day.",
+    "btn1":    "Download Now",
+    "btn2":    "Start Free Now"
   },
   "footer": {
-    "tagline": "The digital ledger for your shop. Fast. Offline. Trusted.",
+    "tagline": "Clear daily control for your shop. Simple. Offline. Trusted.",
     "sections": { "features": "Features", "company": "Company", "language": "Language" },
     "featureLinks": ["Sales Tracking", "Inventory", "Credit Ledger", "Reports", "PDF Invoices"],
     "companyLinks": [
@@ -33,93 +225,13 @@
     "copy":  "All rights reserved.",
     "made":  "Made with ♥ for small businesses in Nepal"
   },
-  "hero": {
-    "badge":      "Run your shop without fear.",
-    "h1Brand":    "Naphaa",
-    "h1Tagline":  "The Most Reliable Business System for Nepal Shops.",
-    "desc":       "Record sales in seconds. Track who owes you money. Know your profit — even when the internet is out.",
-    "cta2":       "See how it works →",
-    "trust1":     "✓  100% Free to start",
-    "trust2":     "✓  Works offline",
-    "trust3":     "✓  Nepali & English",
-    "download":   "Download the app"
-  },
-  "features": {
-    "label":      "Features",
-    "heading":    "Everything your shop needs.",
-    "subheading": "Nothing it doesn't.",
-    "items": {
-      "sales":     { "title": "Lightning-fast sales",       "desc": "Log a cash or credit sale in under 10 seconds. No training needed."                     },
-      "inventory": { "title": "Inventory alerts",           "desc": "Auto low-stock detection — know before you run out."                                      },
-      "credit":    { "title": "Customer credit ledger",     "desc": "Track who owes you, how much, and for how long. No forgotten debts."                      },
-      "reports":   { "title": "Profit & cashflow reports",  "desc": "Daily, weekly, and monthly business health — sales, expenses, profit."                    },
-      "offline":   { "title": "Fully offline",              "desc": "Works with zero internet. Auto-syncs the moment connectivity is restored."                 },
-      "invoices":  { "title": "PDF invoices",               "desc": "Generate and send professional invoices to your customers in one tap."                    }
-    }
-  },
-  "howItWorks": {
-    "label":    "How it Works",
-    "heading":  "Up and running in 3 steps",
-    "subtext":  "No IT department. No setup fee. Just download and go.",
-    "steps": {
-      "one": {
-        "number": "01",
-        "title":  "Create your store",
-        "desc":   "Sign up free. Set your currency, business type, and VAT in under 2 minutes.",
-        "tag":    "NPR · USD · INR — Grocery, Pharmacy, Electronics & more",
-        "detail": "No credit card. No setup fee."
-      },
-      "two": {
-        "number": "02",
-        "title":  "Add your products",
-        "desc":   "Enter names, sell price, cost price, and starting stock. Works on any Android phone.",
-        "tag":    "100 products on Free · Unlimited on Pro",
-        "detail": "Import or add one by one."
-      },
-      "three": {
-        "number": "03",
-        "title":  "Start selling",
-        "desc":   "Record cash and credit sales in seconds. Dashboard updates in real time — even offline.",
-        "tag":    "Offline-first · Auto-syncs when connected",
-        "detail": "Sales, expenses, profit — all in one view."
-      }
-    }
-  },
-  "pricing": {
-    "label":    "Pricing",
-    "heading":  "Simple pricing. Start free.",
-    "subtext":  "No credit card required. Upgrade whenever you're ready.",
-    "free": {
-      "badge":  "✓ Most popular",
-      "price":  "Rs. 0",
-      "period": "/ month",
-      "desc":   "Access core features at no cost, forever.",
-      "cta":    "Download Free",
-      "features": [
-        "Unlimited cash & credit sales",
-        "Up to 100 products",
-        "Customer credit tracking",
-        "Basic reports — sales & credit",
-        "Offline-first local storage",
-        "Nepali & English support"
-      ]
-    },
-    "pro": {
-      "badge":      "🚀 Coming Soon",
-      "title":      "Pro",
-      "desc":       "Advanced features for growing businesses.",
-      "notifyPlaceholder": "your@email.com",
-      "notifyBtn":  "Notify me",
-      "notifyDone": "✓ We'll notify you at launch!",
-      "features": [
-        "Everything in Free",
-        "Cloud sync — multi-device",
-        "PDF invoice generation",
-        "Advanced analytics & exports",
-        "Unlimited products",
-        "Priority support"
-      ]
-    },
-    "download": "Download the app"
+  "socialProof": {
+    "quote":       "Tracks my credit customers so I don't forget who owes me.",
+    "attribution": "Ramesh Thapa, Grocery Shop · Kathmandu",
+    "stats": [
+      { "value": "500+",    "label": "Active shops" },
+      { "value": "Offline", "label": "Works without internet" },
+      { "value": "Free",    "label": "Forever on basic plan" }
+    ]
   }
 }

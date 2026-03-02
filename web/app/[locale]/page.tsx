@@ -1,18 +1,26 @@
-import Hero        from "@/components/sections/Hero";
-import SocialProof from "@/components/sections/SocialProof";
-import Features    from "@/components/sections/Features";
-import HowItWorks  from "@/components/sections/HowItWorks";
-import Pricing     from "@/components/sections/Pricing";
-import CallToAction from "@/components/sections/CallToAction";
+import Hero            from "@/components/sections/Hero";
+import Demo            from "@/components/sections/Demo";
+import Problem         from "@/components/sections/Problem";
+import Features        from "@/components/sections/Features";
+import Outcomes        from "@/components/sections/Outcomes";
+import Trust           from "@/components/sections/Trust";
+import HowItWorks      from "@/components/sections/HowItWorks";
+import Pricing         from "@/components/sections/Pricing";
+import FAQ             from "@/components/sections/FAQ";
+import CallToAction    from "@/components/sections/CallToAction";
 
 export default function Home() {
   return (
     <>
       <Hero />
-      <SocialProof />
+      <Demo />
+      <Problem />
       <Features />
+      <Outcomes />
+      <Trust />
       <HowItWorks />
       <Pricing />
+      <FAQ />
       <CallToAction />
     </>
   );

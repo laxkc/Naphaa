@@ -3,16 +3,15 @@
 import { useTranslations } from "next-intl";
 import StoreButtons from "@/components/ui/StoreButtons";
 import { Badge } from "@/components/ui/badge";
-import { appConfig } from "@/lib/config";
 
 export default function CallToAction() {
   const t = useTranslations("cta");
 
   return (
-    <section className="py-20 bg-bg">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <section id="download" className="section-shell bg-background">
+      <div className="section-container">
         <div
-          className="relative rounded-3xl px-8 py-16 text-center overflow-hidden bg-gradient-to-br from-primary to-primary-hover"
+          className="relative rounded-[32px] px-6 sm:px-8 lg:px-12 py-14 sm:py-18 text-center overflow-hidden bg-gradient-to-br from-primary to-primary-hover"
         >
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none bg-white/5" />
@@ -22,13 +21,13 @@ export default function CallToAction() {
             <Badge
               className="gap-2 px-4 py-1.5 rounded-full mb-6 border-0 text-xs font-semibold bg-white/15 text-white/85"
             >
-              🚀 {t("badge")} {appConfig.name}
+              {t("badge")}
             </Badge>
 
-            <h2 className="text-[28px] font-semibold text-white leading-[34px] tracking-tight mb-4">
+            <h2 className="text-[30px] sm:text-[40px] font-semibold text-primary-foreground leading-[1.08] tracking-tight mb-4">
               {t("heading")}
             </h2>
-            <p className="text-sm mb-9 max-w-xs mx-auto leading-5 text-white/65">
+            <p className="text-sm sm:text-base mb-9 max-w-xl mx-auto leading-7 text-primary-foreground/70">
               {t("desc")}
             </p>
 

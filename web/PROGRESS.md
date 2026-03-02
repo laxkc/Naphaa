@@ -2,7 +2,7 @@
 
 **Stack:** Next.js 16 · Tailwind CSS v4 · TypeScript · React 19
 **Deploy target:** Vercel
-**Last updated:** 2026-02-26
+**Last updated:** 2026-03-02
 
 ---
 
@@ -167,6 +167,58 @@
   - [x] accessibility/focus state check (focus/hover states verified in shared UI + layouts)
   - [x] visual consistency check (all sections, code-level style cleanup)
   - [x] `npm run lint` pass
+
+---
+
+## Phase 12 — Positioning Redesign
+> Reposition Naphaa away from competitor language and rebuild the marketing narrative around clarity, control, and confidence for Nepali shop owners.
+
+- [~] Strategy and narrative reset
+  - [x] ban competitor-style phrases across new copy direction
+    - avoid: `all-in-one`
+    - avoid: `accounting made easy`
+    - avoid: `digital khata`
+    - avoid: `POS solution`
+    - avoid: `cloud accounting`
+    - avoid: `business management software`
+  - [x] lock new positioning pillars
+    - control
+    - profit clarity
+    - simplicity
+    - confidence
+    - peace of mind
+  - [~] refactor homepage into the new story
+    - [x] Hero — `Know Your Shop. Control Your Profit.`
+    - [x] Who This Is For
+    - [x] What Makes Naphaa Different
+    - [x] What You Can Do
+    - [x] Trust
+    - [x] How It Works
+    - [x] Pricing
+    - [x] FAQ
+    - [x] Final CTA
+- [~] Homepage redesign implementation
+  - [~] reduce generic SaaS card-grid feel
+  - [~] increase spacing and section rhythm
+  - [~] make mobile mockup support the story, not dominate it
+  - [x] simplify CTA system to `Start Free Today` + `Watch 60-Second Demo`
+  - [~] ensure homepage language reads like shop-owner conversation, not software marketing
+- [ ] Supporting pages alignment
+  - [x] `/features` → outcomes / philosophy aligned to homepage
+  - [x] `/pricing` → lighter, calmer, growth-oriented
+  - [x] `/how-it-works` → plain-language onboarding story
+- [~] Copy and localization
+  - [~] English copy pass complete
+  - [~] Nepali copy aligned with final English positioning
+  - [x] banned phrase audit across all message files and pages
+- [ ] Interaction and conversion cleanup
+  - [x] define real destination for `Start Free Today`
+  - [x] define placeholder destination for `Watch 60-Second Demo`
+  - [ ] decide whether pricing `Notify me` stays and connect it to a real flow if kept
+- [ ] Final QA
+  - [ ] homepage visual consistency pass
+  - [ ] mobile spacing and readability pass
+  - [x] lint pass after first homepage redesign pass
 
 ---
 

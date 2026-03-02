@@ -1,195 +1,256 @@
 /*
  * ─────────────────────────────────────────────────────────────
- * theme.css — Single source of truth for all design tokens
- *
- * USAGE HIERARCHY — 60 / 25 / 10 / 5
- *   60%  Neutral (bg, surface, white)
- *   25%  Primary navy  — nav, headings, CTAs
- *   10%  Accent coral  — icons, highlights, chips
- *    5%  Semantic       — success / warning / error
+ * Naphaa Design System — Production Theme
+ * Canonical Tokens: shadcn-style variables
+ * Brand: Navy + Coral + Teal
  * ─────────────────────────────────────────────────────────────
  */
 
-/* ── Tailwind v4 theme tokens ────────────────────────────── */
-@theme inline {
+ @theme inline {
 
-  /* Brand */
-  --color-primary:        #0b3954;
-  --color-primary-hover:  #082c42;
-  --color-accent:         #ff5a5f;
+  /* ─────────────────────────────
+   * FONT
+   * ───────────────────────────── */
+  --font-sans: var(--font-inter);
 
-  /* Background */
-  --color-bg:             #F4F8FB;   /* page / section canvas */
-  --color-surface:        #ffffff;   /* cards, navbar, panels */
-  --color-surface-alt:    #EEF2F7;   /* hover rows, subtle fills */
+  /* ─────────────────────────────
+   * SPACING (8pt grid)
+   * ───────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
 
-  /* Border */
-  --color-border:         #e3eaf0;
-  --color-border-strong:  #5f7384;
+  /* Component sizing */
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+  --navbar-height: 64px;
+  --container-max: 1200px;
 
-  /* Text */
-  --color-label:          #0b3954;
-  --color-label-sub:      #5f7384;
-  --color-muted:          #5f7384;
-  --color-inverse:        #ffffff;
-
-  /* Semantic */
-  --color-success:        #087e8b;
-  --color-success-bg:     #E6F6F7;   /* soft teal tint */
-  --color-danger:         #c81d25;
-  --color-danger-bg:      #FDE8E8;   /* soft red tint */
-
-  /* Interactive */
-  --color-hover-overlay:  #e3eaf0;
-  --color-focus:          #ff5a5f;
-
-  /* Typography scale */
-  --text-display:        28px;
-  --text-page-title:     22px;
-  --text-section-title:  18px;
-  --text-card-title:     16px;
-  --text-body:           14px;
-  --text-small:          12px;
-  --text-button:         14px;
-  --text-total:          18px;
-
-  /* Spacing — 8pt grid */
-  --space-xs:   4px;
-  --space-sm:   8px;
-  --space-md:   16px;
-  --space-lg:   24px;
-  --space-xl:   32px;
-  --space-xxl:  48px;
-
-  /* Radius */
-  --radius-sm:   6px;
-  --radius-md:   8px;
-  --radius-lg:   12px;
-  --radius-xl:   16px;
+  /* ─────────────────────────────
+   * RADIUS
+   * ───────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 9999px;
 
-  /* Shadow */
-  --shadow-card: 0px 2px 6px rgba(0, 0, 0, 0.05);
+  /* ─────────────────────────────
+   * SHADOW
+   * ───────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
 
-  /* Font */
-  --font-sans: var(--font-inter), var(--font-nepali), sans-serif;
+  /* ─────────────────────────────
+   * TYPOGRAPHY SCALE
+   * ───────────────────────────── */
+  --text-display: 32px;
+  --text-h1: 24px;
+  --text-h2: 20px;
+  --text-h3: 18px;
+  --text-body: 14px;
+  --text-small: 12px;
 
-  /* shadcn/Radix bridge tokens */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --line-tight: 1.2;
+  --line-normal: 1.5;
+  --line-loose: 1.7;
+
+  /* ─────────────────────────────
+   * SHADCN/RADIX BRIDGE
+   * Maps CSS variables → Tailwind utilities
+   * e.g. border-border, bg-background, text-foreground
+   * ───────────────────────────── */
   --color-background:                  var(--background);
   --color-foreground:                  var(--foreground);
   --color-card:                        var(--card);
   --color-card-foreground:             var(--card-foreground);
-  --color-popover:                     var(--popover);
-  --color-popover-foreground:          var(--popover-foreground);
-  --color-primary-foreground:          var(--primary-foreground);
+  --color-muted:                       var(--muted);
+  --color-muted-foreground:            var(--muted-foreground);
+  --color-border:                      var(--border);
+  --color-border-strong:               var(--border-strong);
+  --color-input:                       var(--input);
+  --color-surface:                     var(--surface);
+  --color-label:                       var(--label);
+  --color-label-sub:                   var(--label-sub);
+  --color-bg:                          var(--bg);
   --color-secondary:                   var(--secondary);
   --color-secondary-foreground:        var(--secondary-foreground);
-  --color-muted-foreground:            var(--muted-foreground);
+  --color-primary:                     var(--primary);
+  --color-primary-hover:               var(--primary-hover);
+  --color-primary-active:              var(--primary-active);
+  --color-primary-foreground:          var(--primary-foreground);
+  --color-accent:                      var(--accent);
+  --color-accent-hover:                var(--accent-hover);
+  --color-accent-active:               var(--accent-active);
   --color-accent-foreground:           var(--accent-foreground);
   --color-destructive:                 var(--destructive);
-  --color-input:                       var(--input);
+  --color-destructive-hover:           var(--destructive-hover);
+  --color-destructive-bg:              var(--destructive-bg);
   --color-ring:                        var(--ring);
+  --color-success:                     var(--success);
+  --color-success-bg:                  var(--success-bg);
+  --color-warning:                     var(--warning);
+  --color-warning-bg:                  var(--warning-bg);
+  --color-disabled-bg:                 var(--disabled-bg);
+  --color-disabled-text:               var(--disabled-text);
+  --color-disabled-border:             var(--disabled-border);
+  --color-sidebar:                     var(--sidebar);
+  --color-sidebar-foreground:          var(--sidebar-foreground);
+  --color-sidebar-primary:             var(--sidebar-primary);
+  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
+  --color-sidebar-border:              var(--sidebar-border);
   --color-chart-1:                     var(--chart-1);
   --color-chart-2:                     var(--chart-2);
   --color-chart-3:                     var(--chart-3);
   --color-chart-4:                     var(--chart-4);
   --color-chart-5:                     var(--chart-5);
-  --color-sidebar:                     var(--sidebar);
-  --color-sidebar-foreground:          var(--sidebar-foreground);
-  --color-sidebar-primary:             var(--sidebar-primary);
-  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
-  --color-sidebar-accent:              var(--sidebar-accent);
-  --color-sidebar-accent-foreground:   var(--sidebar-accent-foreground);
-  --color-sidebar-border:              var(--sidebar-border);
-  --color-sidebar-ring:                var(--sidebar-ring);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-2xl: calc(var(--radius, 0.625rem) + 8px);
+  --radius-3xl: calc(var(--radius, 0.625rem) + 12px);
+  --radius-4xl: calc(var(--radius, 0.625rem) + 16px);
 }
 
-/* ── Light mode CSS variables (shadcn/Radix) ─────────────── */
+/* ─────────────────────────────────────────────
+ * LIGHT MODE (Canonical Tokens)
+ * ───────────────────────────────────────────── */
 :root {
   --radius: 0.625rem;
 
-  /* Neutral */
-  --background:           #F4F8FB;
-  --foreground:           #0b3954;
-  --card:                 #ffffff;
-  --card-foreground:      #0b3954;
-  --popover:              #ffffff;
-  --popover-foreground:   #0b3954;
-  --muted:                #EEF2F7;
-  --muted-foreground:     #5f7384;
-  --border:               #e3eaf0;
-  --input:                #e3eaf0;
+  /* Brand */
+  --primary: #0b3954;
+  --primary-hover: #082c42;
+  --primary-active: #061f30;
+  --primary-foreground: #ffffff;
 
-  /* Primary */
-  --primary:              #0b3954;
-  --primary-foreground:   #ffffff;
-
-  /* Secondary — hover overlay */
-  --secondary:            #e3eaf0;
-  --secondary-foreground: #0b3954;
-
-  /* Accent — coral */
-  --accent:               #ff5a5f;
-  --accent-foreground:    #ffffff;
+  --accent: #ff5a5f;
+  --accent-hover: #e04c51;
+  --accent-active: #c53f44;
+  --accent-foreground: #ffffff;
 
   /* Semantic */
-  --destructive:          #c81d25;
+  --success: #087e8b;
+  --success-bg: #e6f6f7;
+  --warning: #f4a261;
+  --warning-bg: #fff4e5;
+  --destructive: #c81d25;
+  --destructive-hover: #a6171e;
+  --destructive-bg: #fde8e8;
 
-  /* Focus ring */
-  --ring:                 #ff5a5f;
+  /* Semantic aliases — used across components */
+  --surface:              var(--card);
+  --label:                var(--foreground);
+  --label-sub:            var(--muted-foreground);
+  --bg:                   var(--background);
+  --secondary:            #eef2f7;
+  --secondary-foreground: #0b3954;
+
+  /* Neutral */
+  --background: #f4f8fb;
+  --foreground: #0b3954;
+
+  --card: #ffffff;
+  --card-foreground: #0b3954;
+
+  --muted: #eef2f7;
+  --muted-foreground: #3d5166;
+
+  --border: #e3eaf0;
+  --border-strong: #cbd5e1;
+
+  --input: #e3eaf0;
+
+  /* States */
+  --disabled-bg: #eef2f7;
+  --disabled-text: #94a3b8;
+  --disabled-border: #e3eaf0;
+
+  --ring: #ff5a5f;
+  --ring-offset: #ffffff;
+
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b3954;
+  --sidebar-primary: #0b3954;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-border: #e3eaf0;
 
   /* Charts */
   --chart-1: #0b3954;
   --chart-2: #ff5a5f;
   --chart-3: #087e8b;
   --chart-4: #5f7384;
-  --chart-5: #e3eaf0;
-
-  /* Sidebar */
-  --sidebar:                    #ffffff;
-  --sidebar-foreground:         #0b3954;
-  --sidebar-primary:            #0b3954;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent:             #e3eaf0;
-  --sidebar-accent-foreground:  #0b3954;
-  --sidebar-border:             #e3eaf0;
-  --sidebar-ring:               #ff5a5f;
+  --chart-5: #cbd5e1;
 }
 
-/* ── Dark mode overrides ─────────────────────────────────── */
+/* ─────────────────────────────────────────────
+ * DARK MODE (Brand-Consistent)
+ * ───────────────────────────────────────────── */
 .dark {
-  --background:           oklch(0.145 0 0);
-  --foreground:           oklch(0.985 0 0);
-  --card:                 oklch(0.205 0 0);
-  --card-foreground:      oklch(0.985 0 0);
-  --popover:              oklch(0.205 0 0);
-  --popover-foreground:   oklch(0.985 0 0);
-  --primary:              oklch(0.922 0 0);
-  --primary-foreground:   oklch(0.205 0 0);
-  --secondary:            oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted:                oklch(0.269 0 0);
-  --muted-foreground:     oklch(0.708 0 0);
-  --accent:               oklch(0.269 0 0);
-  --accent-foreground:    oklch(0.985 0 0);
-  --destructive:          oklch(0.704 0.191 22.216);
-  --border:               oklch(1 0 0 / 10%);
-  --input:                oklch(1 0 0 / 15%);
-  --ring:                 oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17  162.48);
-  --chart-3: oklch(0.769 0.188  70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246  16.439);
-  --sidebar:                    oklch(0.205 0 0);
-  --sidebar-foreground:         oklch(0.985 0 0);
-  --sidebar-primary:            oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent:             oklch(0.269 0 0);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border:             oklch(1 0 0 / 10%);
-  --sidebar-ring:               oklch(0.556 0 0);
+
+  --secondary:            #1d2f3d;
+  --secondary-foreground: #e6edf3;
+
+  --background: #0f1e2a;
+  --foreground: #e6edf3;
+
+  --card: #162532;
+  --card-foreground: #e6edf3;
+
+  --muted: #1d2f3d;
+  --muted-foreground: #a8baca;
+
+  --border: #243746;
+  --border-strong: #2f4658;
+
+  --input: #243746;
+
+  /* Brand stays coral/navy adjusted */
+  --primary: #1b4d6b;
+  --primary-hover: #255e82;
+  --primary-active: #2f6f97;
+  --primary-foreground: #ffffff;
+
+  --accent: #ff6b6f;
+  --accent-hover: #ff7d80;
+  --accent-active: #ff8f91;
+  --accent-foreground: #0f1e2a;
+
+  --success: #2aa3b1;
+  --success-bg: rgba(42,163,177,0.15);
+
+  --warning: #f4a261;
+  --warning-bg: rgba(244,162,97,0.15);
+
+  --destructive: #ff6b6b;
+  --destructive-hover: #ff8585;
+  --destructive-bg: rgba(255,107,107,0.15);
+
+  --disabled-bg: #1d2f3d;
+  --disabled-text: #64748b;
+  --disabled-border: #243746;
+
+  --ring: #ff6b6f;
+  --ring-offset: #0f1e2a;
+
+  --sidebar: #162532;
+  --sidebar-foreground: #e6edf3;
+  --sidebar-primary: #255e82;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-border: #243746;
+
+  --chart-1: #4da3d9;
+  --chart-2: #ff6b6f;
+  --chart-3: #2aa3b1;
+  --chart-4: #94a3b8;
+  --chart-5: #3a4f5f;
 }

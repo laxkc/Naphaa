@@ -31,8 +31,8 @@ export default function LocaleToggle({
               onClick={() => { saveLocale(code); onSwitch?.(); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
                 active
-                  ? "bg-primary text-inverse"
-                  : "text-label-sub hover:bg-hover-overlay"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               <span className="text-[10px] font-bold uppercase tracking-wide leading-none">

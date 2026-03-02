@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -11,27 +11,88 @@ import LocaleToggle from "@/components/ui/LocaleToggle";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [hash, setHash] = useState("");
   const pathname        = usePathname();
   const locale          = useLocale();
   const t               = useTranslations("nav");
+  const homeHref        = `/${locale}`;
 
   const navLinks = [
-    { label: t("home"),       href: `/${locale}`              },
-    { label: t("features"),   href: `/${locale}/features`     },
-    { label: t("howItWorks"), href: `/${locale}/how-it-works` },
-    { label: t("pricing"),    href: `/${locale}/pricing`      },
+    {
+      label: t("home"),
+      href: homeHref,
+      targetHash: "",
+      routeMatches: [homeHref],
+    },
+    {
+      label: t("features"),
+      href: `${homeHref}#features`,
+      targetHash: "#features",
+      routeMatches: [`${locale ? `/${locale}/features` : ""}`],
+    },
+    {
+      label: t("howItWorks"),
+      href: `${homeHref}#how-it-works`,
+      targetHash: "#how-it-works",
+      routeMatches: [`${locale ? `/${locale}/how-it-works` : ""}`],
+    },
+    {
+      label: t("pricing"),
+      href: `${homeHref}#pricing`,
+      targetHash: "#pricing",
+      routeMatches: [`${locale ? `/${locale}/pricing` : ""}`],
+    },
   ];
 
-  const isActive = (href: string) =>
-    href === `/${locale}` ? pathname === `/${locale}` : pathname.startsWith(href);
+  useEffect(() => {
+    const syncHash = () => setHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+
+  useEffect(() => {
+    if (pathname !== homeHref) return;
+
+    const sectionIds = ["features", "how-it-works", "pricing"] as const;
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+
+    if (sections.length === 0) return;
+
+    const updateActiveSection = () => {
+      const navbarOffset = 96;
+      const current = sections.findLast((section) => section.getBoundingClientRect().top - navbarOffset <= 0);
+      const nextHash = current ? `#${current.id}` : "";
+
+      setHash((prev) => (prev === nextHash ? prev : nextHash));
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, [pathname, homeHref]);
+
+  const isActive = (targetHash: string, routeMatches: string[]) => {
+    if (pathname === homeHref) {
+      if (!targetHash) return hash === "" || hash === "#";
+      return hash === targetHash;
+    }
+
+    return routeMatches.includes(pathname);
+  };
 
   return (
-    <header className="shrink-0 z-50 bg-surface border-b border-border">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center">
+    <header className="sticky top-0 shrink-0 z-50 border-b border-border/80 bg-surface/88 backdrop-blur-md shadow-[0_1px_0_rgba(11,57,84,0.04)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
 
-        {/* ── Left: Logo ─────────────────────────────── */}
-        <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
-          {/* Mobile: 24px */}
+        <Link href={homeHref} className="flex items-center gap-2.5 shrink-0">
           <Image
             src="/logos/logo.svg"
             alt={appConfig.name}
@@ -40,7 +101,6 @@ export default function Navbar() {
             className="md:hidden"
             priority
           />
-          {/* Desktop: 32px */}
           <Image
             src="/logos/logo.svg"
             alt={appConfig.name}
@@ -54,16 +114,16 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* ── Center: Nav links ───────────────────────── */}
         <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
-          {navLinks.map(({ label, href }) => (
+          {navLinks.map(({ label, href, targetHash, routeMatches }) => (
             <Link
               key={href}
               href={href}
-              className={`px-3.5 py-1.5 text-sm rounded-lg transition-colors ${
-                isActive(href)
-                  ? "text-primary font-semibold bg-hover-overlay"
-                  : "text-label-sub hover:text-primary hover:bg-hover-overlay"
+              scroll
+              className={`px-3.5 py-2 text-sm rounded-xl transition-all ${
+                isActive(targetHash, routeMatches)
+                  ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
               }`}
             >
               {label}
@@ -71,14 +131,12 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* ── Right: Language ─────────────────────────── */}
         <div className="hidden md:flex items-center gap-2 ml-auto">
           <LocaleToggle pathname={pathname} locale={locale} />
         </div>
 
-        {/* ── Mobile: Hamburger ───────────────────────── */}
         <button
-          className="md:hidden ml-auto p-2 rounded-lg text-label hover:bg-hover-overlay transition-colors"
+          className="md:hidden ml-auto p-2 rounded-xl text-foreground hover:bg-muted/80 transition-colors"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -86,19 +144,19 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* ── Mobile drawer ───────────────────────────── */}
       {open && (
-        <div className="md:hidden bg-surface border-t border-border px-4 pb-5">
-          <nav className="flex flex-col gap-0.5 pt-3">
-            {navLinks.map(({ label, href }) => (
+        <div className="md:hidden bg-surface/96 backdrop-blur-md border-t border-border px-4 py-3">
+          <nav className="flex flex-col gap-1">
+            {navLinks.map(({ label, href, targetHash, routeMatches }) => (
               <Link
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                className={`py-2.5 px-3 text-sm rounded-lg transition-colors ${
-                  isActive(href)
-                    ? "text-primary font-semibold bg-hover-overlay"
-                    : "text-label-sub hover:text-primary hover:bg-hover-overlay"
+                scroll
+                className={`py-3 px-3.5 text-sm rounded-xl transition-all ${
+                  isActive(targetHash, routeMatches)
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 }`}
               >
                 {label}
@@ -106,7 +164,7 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="mt-3 pt-3 border-t border-border">
             <LocaleToggle pathname={pathname} locale={locale} onSwitch={() => setOpen(false)} />
           </div>
         </div>

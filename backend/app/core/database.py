@@ -18,6 +18,10 @@ class Base(DeclarativeBase):
 engine_kwargs: dict[str, object] = {}
 if settings.effective_database_url.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["connect_args"] = {
+        "connect_timeout": settings.db_connect_timeout_seconds,
+    }
 
 engine = create_engine(settings.effective_database_url, future=True, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

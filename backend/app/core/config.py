@@ -1,6 +1,9 @@
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -8,6 +11,8 @@ class Settings(BaseSettings):
     api_v1_prefix: str
     app_port: int
     debug: bool
+    startup_db_check: bool = True
+    db_connect_timeout_seconds: int = 10
 
     database_url: str | None = None
     db_host: str
@@ -30,7 +35,10 @@ class Settings(BaseSettings):
     default_calendar_mode: str
 
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.development"),
+        env_file=(
+            str(BACKEND_ROOT / ".env"),
+            str(BACKEND_ROOT / ".env.development"),
+        ),
         case_sensitive=False,
     )
 

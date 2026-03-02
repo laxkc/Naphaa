@@ -24,12 +24,12 @@ const notoDevanagari = Noto_Sans_Devanagari({
 
 export const metadata: Metadata = {
   title:       `${appConfig.name}`,
-  description: "Record sales in seconds. Track who owes you money. Know your profit — even when the internet is out. Free digital ledger for small shops in Nepal.",
-  keywords:    ["digital ledger", "Nepal shops", "sales tracker", "credit ledger", "offline POS", "small business Nepal", "Naphaa"],
+  description: "Know your shop, control your profit, and run with confidence. Naphaa helps Nepali shop owners track sales, stock, and customer dues from one simple app.",
+  keywords:    ["Nepal shops", "profit tracker", "sales tracker", "stock tracking", "customer dues", "small business Nepal", "Naphaa"],
   metadataBase: new URL(appConfig.url),
   openGraph: {
     title:       `${appConfig.name} - The Most Reliable Business System for Nepal Shops`,
-    description: "Record sales in seconds. Track who owes you money. Know your profit — even when the internet is out.",
+    description: "Know your shop, control your profit, and run with confidence with one simple app built for Nepali shop owners.",
     type:        "website",
     siteName:    appConfig.name,
     url:         appConfig.url,
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   twitter: {
     card:        "summary_large_image",
     title:       `${appConfig.name} - The Most Reliable Business System for Nepal Shops`,
-    description: "Record sales in seconds. Track who owes you money. Know your profit — even when the internet is out.",
+    description: "Know your shop, control your profit, and run with confidence with one simple app built for Nepali shop owners.",
   },
   alternates: {
     canonical: appConfig.url,
@@ -66,12 +66,12 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className="h-full">
-      <body className={`${inter.variable} ${notoDevanagari.variable} font-sans antialiased h-full flex flex-col overflow-hidden`}>        <NextIntlClientProvider messages={messages}>
+      <body className={`${inter.variable} ${notoDevanagari.variable} font-sans antialiased min-h-full flex flex-col`}>        <NextIntlClientProvider messages={messages}>
 
           <LocaleSync locale={locale} />
           <Navbar />
 
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1">
             {children}
             <Footer />
           </main>

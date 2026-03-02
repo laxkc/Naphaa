@@ -15,8 +15,9 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
+    if settings.startup_db_check:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
     yield
 
 
