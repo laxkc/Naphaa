@@ -11,7 +11,7 @@ export default function CallToAction() {
     <section id="download" className="section-shell bg-background">
       <div className="section-container">
         <div
-          className="relative rounded-[32px] px-6 sm:px-8 lg:px-12 py-14 sm:py-18 text-center overflow-hidden bg-gradient-to-br from-primary to-primary-hover"
+          className="relative rounded-[28px] sm:rounded-[32px] px-5 sm:px-8 lg:px-12 py-12 sm:py-16 lg:py-18 text-center overflow-hidden bg-gradient-to-br from-primary to-primary-hover"
         >
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full pointer-events-none bg-white/5" />
@@ -24,7 +24,7 @@ export default function CallToAction() {
               {t("badge")}
             </Badge>
 
-            <h2 className="text-[30px] sm:text-[40px] font-semibold text-primary-foreground leading-[1.08] tracking-tight mb-4">
+            <h2 className="text-[28px] sm:text-[36px] lg:text-[40px] font-semibold text-primary-foreground leading-[1.08] tracking-tight mb-4">
               {t("heading")}
             </h2>
             <p className="text-sm sm:text-base mb-9 max-w-xl mx-auto leading-7 text-primary-foreground/70">

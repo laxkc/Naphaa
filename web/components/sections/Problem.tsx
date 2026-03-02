@@ -20,12 +20,12 @@ export default function Problem() {
           </p>
         </div>
 
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6 lg:gap-8 items-start">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-5 sm:gap-6 lg:gap-8 items-start">
           <div className="surface-panel bg-background p-6 sm:p-8">
             <div className="text-sm font-semibold text-foreground mb-5">
               {t("shopTypesHeading")}
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5 sm:gap-3">
               {(t.raw("shopTypes") as string[]).map((shopType) => (
                 <span
                   key={shopType}

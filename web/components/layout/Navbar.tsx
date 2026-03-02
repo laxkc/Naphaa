@@ -36,12 +36,6 @@ export default function Navbar() {
       targetHash: "#how-it-works",
       routeMatches: [`${locale ? `/${locale}/how-it-works` : ""}`],
     },
-    {
-      label: t("pricing"),
-      href: `${homeHref}#pricing`,
-      targetHash: "#pricing",
-      routeMatches: [`${locale ? `/${locale}/pricing` : ""}`],
-    },
   ];
 
   useEffect(() => {
@@ -54,7 +48,7 @@ export default function Navbar() {
   useEffect(() => {
     if (pathname !== homeHref) return;
 
-    const sectionIds = ["features", "how-it-works", "pricing"] as const;
+    const sectionIds = ["features", "how-it-works"] as const;
     const sections = sectionIds
       .map((id) => document.getElementById(id))
       .filter((section): section is HTMLElement => Boolean(section));
@@ -90,7 +84,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 shrink-0 z-50 border-b border-border/80 bg-surface/88 backdrop-blur-md shadow-[0_1px_0_rgba(11,57,84,0.04)]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-15 sm:h-16 flex items-center gap-3 sm:gap-4">
 
         <Link href={homeHref} className="flex items-center gap-2.5 shrink-0">
           <Image
@@ -109,18 +103,18 @@ export default function Navbar() {
             className="hidden md:block"
             priority
           />
-          <span className="text-lg font-semibold tracking-tight text-primary">
+          <span className="text-base sm:text-lg font-semibold tracking-tight text-primary">
             {appConfig.name}
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+        <nav className="hidden md:flex items-center gap-1 flex-1 justify-center min-w-0">
           {navLinks.map(({ label, href, targetHash, routeMatches }) => (
             <Link
               key={href}
               href={href}
               scroll
-              className={`px-3.5 py-2 text-sm rounded-xl transition-all ${
+              className={`px-3 py-2 lg:px-3.5 text-sm rounded-xl transition-all whitespace-nowrap ${
                 isActive(targetHash, routeMatches)
                   ? "bg-primary text-primary-foreground font-semibold shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
@@ -136,7 +130,7 @@ export default function Navbar() {
         </div>
 
         <button
-          className="md:hidden ml-auto p-2 rounded-xl text-foreground hover:bg-muted/80 transition-colors"
+          className="md:hidden ml-auto p-2 rounded-xl text-foreground hover:bg-muted/80 transition-colors shrink-0"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -145,7 +139,7 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden bg-surface/96 backdrop-blur-md border-t border-border px-4 py-3">
+        <div className="md:hidden bg-surface/96 backdrop-blur-md border-t border-border px-4 py-3 shadow-sm">
           <nav className="flex flex-col gap-1">
             {navLinks.map(({ label, href, targetHash, routeMatches }) => (
               <Link

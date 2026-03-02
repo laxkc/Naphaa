@@ -59,16 +59,18 @@
   },
   "demo": {
     "label": "60-Second Demo",
-    "heading": "See the story you will tell in one short video.",
-    "desc": "This space is ready for your demo. The goal is simple: show a shop owner how quickly Naphaa feels useful and how calm the daily routine becomes.",
+    "heading": "See how Naphaa feels in a real shop.",
+    "desc": "Watch a quick walkthrough of recording a sale, checking stock, and seeing daily profit in seconds.",
     "points": [
-      "Open with a real shop problem, not a software intro",
-      "Show one fast sale, one stock check, and one daily profit view",
-      "End with confidence, simplicity, and a clear next step"
+      "Watch a sale get recorded in a few taps",
+      "See stock and customer dues without confusion",
+      "Understand daily performance before the day ends"
     ],
-    "placeholderTitle": "Demo video placeholder",
-    "placeholderDesc": "Drop your 60-second walkthrough here later. The layout is already in place.",
-    "note": "When you are ready, replace this placeholder area with an embedded video, hosted recording, or poster image linked to the final demo."
+    "primaryCta": "Watch on YouTube",
+    "secondaryCta": "See Pricing",
+    "videoTitle": "Naphaa 60-Second Demo",
+    "noteTitle": "What you will see",
+    "note": "A fast product walkthrough focused on real shop actions, not complicated software screens."
   },
   "trust": {
     "label": "Trust",

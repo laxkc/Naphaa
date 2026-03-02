@@ -5,7 +5,6 @@ import Features        from "@/components/sections/Features";
 import Outcomes        from "@/components/sections/Outcomes";
 import Trust           from "@/components/sections/Trust";
 import HowItWorks      from "@/components/sections/HowItWorks";
-import Pricing         from "@/components/sections/Pricing";
 import FAQ             from "@/components/sections/FAQ";
 import CallToAction    from "@/components/sections/CallToAction";
 
@@ -19,7 +18,7 @@ export default function Home() {
       <Outcomes />
       <Trust />
       <HowItWorks />
-      <Pricing />
+      {/* <Pricing /> */}
       <FAQ />
       <CallToAction />
     </>

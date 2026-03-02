@@ -1,8 +1,10 @@
 "use client";
 
-import { PlayCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import SectionLabel from "@/components/ui/SectionLabel";
+
+const DEMO_URL = "https://youtu.be/UF8uR6Z6KLc?si=zsdxoe3KvaFDiarj";
+const DEMO_EMBED_URL = "https://www.youtube-nocookie.com/embed/UF8uR6Z6KLc?rel=0";
 
 export default function Demo() {
   const t = useTranslations("demo");
@@ -25,7 +27,7 @@ export default function Demo() {
               {t("desc")}
             </p>
 
-            <div className="mt-7 flex flex-col gap-3 text-sm text-foreground">
+            <div className="mt-6 sm:mt-7 flex flex-col gap-3 text-sm text-foreground">
               {(t.raw("points") as string[]).map((point, index) => (
                 <div key={point} className={`surface-panel px-4 py-3.5 bg-background ring-1 ${pointTints[index] ?? "ring-primary/12 bg-background"}`}>
                   <span className={`${index === 1 ? "text-success" : index === 2 ? "text-warning" : "text-primary"} font-semibold mr-2`}>•</span>
@@ -33,24 +35,41 @@ export default function Demo() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <a
+                href={DEMO_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-5 py-3 hover:bg-primary/90 transition-colors"
+              >
+                {t("primaryCta")}
+              </a>
+              <a
+                href="#pricing"
+                className="inline-flex items-center justify-center rounded-xl border border-border bg-background text-sm font-medium text-foreground px-5 py-3 hover:bg-muted/60 transition-colors"
+              >
+                {t("secondaryCta")}
+              </a>
+            </div>
           </div>
 
-          <div className="surface-panel rounded-[28px] bg-background p-4 sm:p-5 ring-1 ring-ring/20">
-            <div className="relative aspect-video rounded-[22px] overflow-hidden bg-gradient-to-br from-primary to-primary-hover ring-2 ring-white/12">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_32%)]" />
-              <div className="relative h-full w-full flex flex-col items-center justify-center text-center px-6">
-                <PlayCircle className="w-14 h-14 text-white/90 mb-4 drop-shadow-sm" />
-                <div className="text-white text-lg font-semibold tracking-tight">
-                  {t("placeholderTitle")}
-                </div>
-                <p className="text-white/70 text-sm mt-2 max-w-sm leading-6">
-                  {t("placeholderDesc")}
-                </p>
-              </div>
+          <div className="surface-panel rounded-[24px] sm:rounded-[28px] bg-background p-3.5 sm:p-5 ring-1 ring-ring/20">
+            <div className="relative aspect-video rounded-[22px] overflow-hidden bg-black ring-1 ring-border">
+              <iframe
+                className="absolute inset-0 h-full w-full"
+                src={DEMO_EMBED_URL}
+                title={t("videoTitle")}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
             </div>
 
             <div className="mt-4 rounded-2xl bg-card border border-border px-4 py-4 text-sm text-muted-foreground leading-6 ring-1 ring-success/12">
-              {t("note")}
+              <div className="font-medium text-foreground mb-1">{t("noteTitle")}</div>
+              <div>{t("note")}</div>
             </div>
           </div>
         </div>

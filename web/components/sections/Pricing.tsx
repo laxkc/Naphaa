@@ -34,9 +34,9 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-7 max-w-4xl mx-auto">
           <Card className="bg-background rounded-3xl p-0 gap-0 ring-2 ring-success/28 border-0 shadow-sm">
-            <CardContent className="p-7 sm:p-8 flex flex-col h-full">
+            <CardContent className="p-6 sm:p-8 flex flex-col h-full">
               <Badge className="bg-success/10 text-success border-0 gap-1.5 mb-5 self-start">
                 {t("free.badge")}
               </Badge>
@@ -66,7 +66,7 @@ export default function Pricing() {
             className="rounded-3xl p-0 gap-0 border-0 shadow-sm relative overflow-hidden bg-gradient-to-br from-primary to-primary-hover"
           >
             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/5" />
-            <CardContent className="p-7 sm:p-8 relative flex flex-col h-full">
+            <CardContent className="p-6 sm:p-8 relative flex flex-col h-full">
               <Badge
                 className="border-0 gap-1.5 mb-5 self-start bg-warning/20 text-white"
               >

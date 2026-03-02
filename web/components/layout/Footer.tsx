@@ -28,18 +28,18 @@ export default function Footer() {
 
   return (
     <footer className="bg-surface border-t border-border">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-7 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-7 flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4">
 
         <div className="flex items-center gap-2.5">
           <Image src="/logos/logo.svg" alt={appConfig.name} width={22} height={22} />
           <span className="text-sm font-semibold tracking-tight text-primary">{appConfig.name}</span>
         </div>
 
-        <p className="text-xs sm:text-sm text-muted-foreground text-center">
+        <p className="text-xs sm:text-sm text-muted-foreground text-center max-w-xs sm:max-w-none">
           © {year} {appConfig.name}. {t("copy")}
         </p>
 
-        <p className="text-xs sm:text-sm text-muted-foreground text-center">{t("made")}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground text-center max-w-xs sm:max-w-none">{t("made")}</p>
 
       </div>
     </footer>

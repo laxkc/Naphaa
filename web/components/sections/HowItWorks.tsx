@@ -22,7 +22,7 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7 sm:gap-10 relative">
           <div className="hidden md:block absolute top-10 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-border z-0" />
 
           {stepKeys.map((key) => (
@@ -49,7 +49,7 @@ export default function HowItWorks() {
               }`}>
                 {t(`steps.${key}.tag`)}
               </Badge>
-              <p className="text-xs text-muted-foreground mt-3 leading-6 max-w-[18rem]">
+              <p className="text-xs text-muted-foreground mt-3 leading-6 max-w-full md:max-w-[18rem]">
                 {t(`steps.${key}.detail`)}
               </p>
             </div>

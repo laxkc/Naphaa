@@ -39,38 +39,38 @@ export default function Hero() {
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4" />
       <div className="absolute left-0 bottom-0 w-[360px] h-[360px] bg-accent/6 rounded-full blur-3xl pointer-events-none translate-y-1/3 -translate-x-1/4" />
 
-      <div className="relative section-container py-16 sm:py-20 lg:py-28">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-14 lg:gap-18 items-center">
+      <div className="relative section-container py-14 sm:py-18 lg:py-28">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-10 sm:gap-12 lg:gap-18 items-center">
           <div className="flex flex-col">
             <Badge className="gap-2 rounded-full px-4 py-1.5 mb-6 sm:mb-7 bg-primary/10 text-primary border-0 text-xs font-semibold self-start">
               <span>🇳🇵</span>
               <span>{t("badge")}</span>
             </Badge>
 
-            <h1 className="text-[42px] sm:text-[54px] lg:text-[62px] leading-[0.98] font-bold text-foreground tracking-tight mb-5 sm:mb-6 max-w-2xl">
+            <h1 className="text-[34px] sm:text-[46px] lg:text-[62px] leading-[0.98] font-bold text-foreground tracking-tight mb-5 sm:mb-6 max-w-2xl">
               {t("h1Tagline")}
             </h1>
 
-            <p className="text-base sm:text-lg text-muted-foreground leading-8 mb-8 sm:mb-9 max-w-xl">
+            <p className="text-[15px] sm:text-lg text-muted-foreground leading-7 sm:leading-8 mb-8 sm:mb-9 max-w-xl">
               {t("desc")}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-start gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
               <a
                 href="#download"
-                className="inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3.5 hover:bg-primary/90 transition-colors min-w-[196px]"
+                className="inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3.5 hover:bg-primary/90 transition-colors w-full sm:w-auto sm:min-w-[196px]"
               >
                 {t("cta1")}
               </a>
               <a
                 href="#demo"
-                className="inline-flex items-center justify-center rounded-xl border border-border bg-white/60 text-sm font-medium text-foreground px-6 py-3.5 hover:bg-card transition-colors min-w-[196px]"
+                className="inline-flex items-center justify-center rounded-xl border border-border bg-white/60 text-sm font-medium text-foreground px-6 py-3.5 hover:bg-card transition-colors w-full sm:w-auto sm:min-w-[196px]"
               >
                 {t("cta2")}
               </a>
             </div>
 
-            <div className="mb-8 sm:mb-10 flex flex-wrap gap-2.5">
+            <div className="mb-8 sm:mb-10 flex flex-wrap gap-2">
               <span className="inline-flex items-center rounded-full bg-success/10 text-success px-3 py-1.5 text-xs sm:text-sm font-medium">
                 ✓ Free forever
               </span>
@@ -82,7 +82,7 @@ export default function Hero() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-w-3xl">
               <div className="surface-panel px-4 py-4 sm:px-5 sm:py-5 ring-1 ring-primary/12">
                 <div className="text-xs uppercase tracking-[0.14em] text-primary font-semibold mb-1">
                   {t("focusLabel")}

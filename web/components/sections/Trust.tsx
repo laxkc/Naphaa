@@ -27,11 +27,11 @@ export default function Trust() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-5">
           {items.map((item) => (
             <div
               key={item}
-              className={`rounded-2xl px-4 py-5 sm:px-5 sm:py-6 text-sm text-primary-foreground/88 text-center leading-6 ${itemTints[items.indexOf(item)] ?? "bg-white/10"}`}
+              className={`rounded-2xl px-4 py-4.5 sm:px-5 sm:py-6 text-sm text-primary-foreground/88 text-center leading-6 ${itemTints[items.indexOf(item)] ?? "bg-white/10"}`}
             >
               {item}
             </div>

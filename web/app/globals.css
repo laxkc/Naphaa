@@ -62,19 +62,19 @@ section[id] {
 
 @layer components {
   .section-shell {
-    @apply py-20 sm:py-24;
+    @apply py-16 sm:py-20 lg:py-24;
   }
 
   .section-shell-tight {
-    @apply py-16 sm:py-20;
+    @apply py-14 sm:py-18 lg:py-20;
   }
 
   .section-container {
-    @apply max-w-6xl mx-auto px-4 sm:px-6;
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
   .section-header {
-    @apply text-center mb-12 sm:mb-16;
+    @apply text-center mb-10 sm:mb-14 lg:mb-16;
   }
 
   .section-header-left {
@@ -82,11 +82,11 @@ section[id] {
   }
 
   .section-title {
-    @apply text-[26px] sm:text-[34px] font-semibold leading-[1.08] tracking-tight text-foreground;
+    @apply text-[24px] sm:text-[30px] lg:text-[34px] font-semibold leading-[1.08] tracking-tight text-foreground;
   }
 
   .section-title-inverse {
-    @apply text-[26px] sm:text-[34px] font-semibold leading-[1.08] tracking-tight text-primary-foreground;
+    @apply text-[24px] sm:text-[30px] lg:text-[34px] font-semibold leading-[1.08] tracking-tight text-primary-foreground;
   }
 
   .section-copy {
@@ -102,7 +102,7 @@ section[id] {
   }
 
   .page-intro-inner {
-    @apply max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20;
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16 lg:py-20;
   }
 
   .page-intro-content {

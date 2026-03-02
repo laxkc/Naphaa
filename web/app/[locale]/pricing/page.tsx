@@ -13,12 +13,12 @@ export default function PricingPage() {
     <div className="bg-surface page-enter">
       <section className="page-intro">
         <div className="page-intro-inner">
-          <div className="page-intro-content">
+          <div className="page-intro-content mx-auto md:mx-0 text-center md:text-left">
             <SectionLabel>{t("label")}</SectionLabel>
             <h1 className="section-title">
               {t("heading")}
             </h1>
-            <p className="section-copy mt-4 max-w-2xl">
+            <p className="section-copy mt-4 max-w-2xl mx-auto md:mx-0">
               {t("desc")}
             </p>
           </div>

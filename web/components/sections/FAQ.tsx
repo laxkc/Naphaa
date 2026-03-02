@@ -26,7 +26,7 @@ export default function FAQ() {
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto flex flex-col gap-3.5">
+        <div className="max-w-3xl mx-auto flex flex-col gap-3">
           {items.map(({ q, a }, i) => (
             <div
               key={q}
@@ -36,7 +36,7 @@ export default function FAQ() {
             >
               <button
                 onClick={() => toggle(i)}
-                className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4.5 sm:py-5 text-left"
                 aria-expanded={open === i}
               >
                 <span className={`text-sm sm:text-base font-semibold leading-6 ${
@@ -57,7 +57,7 @@ export default function FAQ() {
               </button>
 
               {open === i && (
-                <div className="px-6 pb-6">
+                <div className="px-5 sm:px-6 pb-5 sm:pb-6">
                   <p className="text-sm text-muted-foreground leading-7">{a}</p>
                 </div>
               )}

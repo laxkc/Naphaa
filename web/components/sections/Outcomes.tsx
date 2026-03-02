@@ -28,7 +28,7 @@ export default function Outcomes() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-5">
           {outcomeKeys.map((key) => (
             <div
               key={key}
