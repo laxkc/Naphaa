@@ -13,10 +13,16 @@ class AppPreferences {
   static const _businessTimezoneKey = 'business_timezone';
   static const _calendarModeKey = 'calendar_mode';
   static const _alertReadIdsPrefix = 'alert_read_ids_';
+  static const _setupPromptDismissedPrefix = 'setup_prompt_dismissed_';
 
   Future<String> getLocaleCode() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_localeKey) ?? 'ne';
+  }
+
+  Future<bool> hasLocalePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(_localeKey);
   }
 
   Future<void> setLocaleCode(String code) async {
@@ -126,16 +132,6 @@ class AppPreferences {
   Future<void> setCalendarMode(String mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_calendarModeKey, mode);
-  }
-
-  Future<bool> getOnboardingComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('onboarding_complete') ?? false;
-  }
-
-  Future<void> setOnboardingComplete() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_complete', true);
   }
 
   Future<void> setTaxSettings({
@@ -282,5 +278,32 @@ class AppPreferences {
   Future<void> clearReadAlertIds({String? storeId}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_alertReadIdsKey(storeId));
+  }
+
+  String _dismissedSetupPromptKey(String promptId, String? storeId) =>
+      '$_setupPromptDismissedPrefix${(storeId == null || storeId.isEmpty) ? 'global' : storeId}_$promptId';
+
+  Future<bool> isSetupPromptDismissed(
+    String promptId, {
+    String? storeId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_dismissedSetupPromptKey(promptId, storeId)) ?? false;
+  }
+
+  Future<void> dismissSetupPrompt(
+    String promptId, {
+    String? storeId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_dismissedSetupPromptKey(promptId, storeId), true);
+  }
+
+  Future<void> restoreSetupPrompt(
+    String promptId, {
+    String? storeId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_dismissedSetupPromptKey(promptId, storeId));
   }
 }

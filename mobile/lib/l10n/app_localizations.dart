@@ -491,6 +491,18 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// No description provided for @languageSelectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your language'**
+  String get languageSelectionTitle;
+
+  /// No description provided for @languageSelectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start in the language you are most comfortable with. You can change it later in settings.'**
+  String get languageSelectionSubtitle;
+
   /// No description provided for @expensesFeatureComingSoon.
   ///
   /// In en, this message translates to:
@@ -653,6 +665,24 @@ abstract class AppLocalizations {
   /// **'Dashboard overview'**
   String get dashboardOverview;
 
+  /// No description provided for @dashboardFirstRunTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Naphaa'**
+  String get dashboardFirstRunTitle;
+
+  /// No description provided for @dashboardFirstRunSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your store is ready. Add products, record sales, and set up business details from the shortcuts below.'**
+  String get dashboardFirstRunSubtitle;
+
+  /// No description provided for @dashboardLowStockEmptyNoProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Add products first. Low-stock tracking starts after your inventory is created.'**
+  String get dashboardLowStockEmptyNoProducts;
+
   /// No description provided for @failedToLoadDashboard.
   ///
   /// In en, this message translates to:
@@ -778,6 +808,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'QUICK ACTIONS'**
   String get quickActionsTitle;
+
+  /// No description provided for @setupSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SETUP'**
+  String get setupSectionTitle;
+
+  /// No description provided for @setupPromptBusinessProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete business profile'**
+  String get setupPromptBusinessProfileTitle;
+
+  /// No description provided for @setupPromptBusinessProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your store name, phone, and address so invoices and reports look professional.'**
+  String get setupPromptBusinessProfileSubtitle;
+
+  /// No description provided for @setupPromptBusinessProfileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup Business'**
+  String get setupPromptBusinessProfileAction;
+
+  /// No description provided for @setupPromptTaxSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable tax settings'**
+  String get setupPromptTaxSettingsTitle;
+
+  /// No description provided for @setupPromptTaxSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on VAT and save your PAN/VAT details before you start issuing tax invoices.'**
+  String get setupPromptTaxSettingsSubtitle;
+
+  /// No description provided for @setupPromptTaxSettingsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure Tax'**
+  String get setupPromptTaxSettingsAction;
+
+  /// No description provided for @setupPromptFirstProductTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first product'**
+  String get setupPromptFirstProductTitle;
+
+  /// No description provided for @setupPromptFirstProductSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create products first so sales, stock, and low-stock alerts work correctly.'**
+  String get setupPromptFirstProductSubtitle;
+
+  /// No description provided for @setupPromptFirstProductAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Product'**
+  String get setupPromptFirstProductAction;
+
+  /// No description provided for @setupPromptFirstCustomerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first customer'**
+  String get setupPromptFirstCustomerTitle;
+
+  /// No description provided for @setupPromptFirstCustomerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save customer details now if you plan to track credit sales and collections.'**
+  String get setupPromptFirstCustomerSubtitle;
+
+  /// No description provided for @setupPromptFirstCustomerAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Customer'**
+  String get setupPromptFirstCustomerAction;
+
+  /// No description provided for @setupPromptInvoicePrefixTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your invoice prefix'**
+  String get setupPromptInvoicePrefixTitle;
+
+  /// No description provided for @setupPromptInvoicePrefixSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize invoice numbering before you start issuing bills to customers.'**
+  String get setupPromptInvoicePrefixSubtitle;
+
+  /// No description provided for @setupPromptInvoicePrefixAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Invoices'**
+  String get setupPromptInvoicePrefixAction;
 
   /// No description provided for @recordPay.
   ///
@@ -1300,6 +1426,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please contact support to reset your password.'**
   String get forgotPasswordHint;
+
+  /// No description provided for @authOtpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with your phone number'**
+  String get authOtpTitle;
+
+  /// No description provided for @authOtpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your mobile number. We will send a one-time code to sign in or create your account automatically.'**
+  String get authOtpSubtitle;
+
+  /// No description provided for @authSendOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Send OTP'**
+  String get authSendOtp;
+
+  /// No description provided for @authVerifyOtpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your OTP'**
+  String get authVerifyOtpTitle;
+
+  /// No description provided for @authOtpCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time code'**
+  String get authOtpCodeLabel;
+
+  /// No description provided for @authVerifyOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify and continue'**
+  String get authVerifyOtp;
+
+  /// No description provided for @authResendOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend OTP'**
+  String get authResendOtp;
+
+  /// No description provided for @authChangePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Change phone'**
+  String get authChangePhone;
+
+  /// No description provided for @authOtpInvalidCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid code'**
+  String get authOtpInvalidCode;
+
+  /// No description provided for @authOtpAutoCreateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'New phone numbers create an account automatically with default business settings. Existing numbers sign in directly.'**
+  String get authOtpAutoCreateBody;
+
+  /// No description provided for @authOtpSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a code to {phone}'**
+  String authOtpSentTo(Object phone);
+
+  /// No description provided for @authOtpDebugCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug OTP: {code}'**
+  String authOtpDebugCode(Object code);
 
   /// No description provided for @offlineMode.
   ///
@@ -2632,6 +2830,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Business Settings'**
   String get businessSettings;
+
+  /// No description provided for @billingSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing Settings'**
+  String get billingSettingsTitle;
+
+  /// No description provided for @billingSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice prefix, language, tax mode, and default notes'**
+  String get billingSettingsSubtitle;
+
+  /// No description provided for @settingsBillingSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice prefix, terms, footer'**
+  String get settingsBillingSettingsSubtitle;
+
+  /// No description provided for @billingSettingsInvoicePrefixLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Prefix'**
+  String get billingSettingsInvoicePrefixLabel;
+
+  /// No description provided for @billingSettingsInvoicePrefixRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice prefix is required'**
+  String get billingSettingsInvoicePrefixRequired;
+
+  /// No description provided for @billingSettingsTaxModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tax Mode'**
+  String get billingSettingsTaxModeLabel;
+
+  /// No description provided for @billingSettingsTaxModeExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclusive'**
+  String get billingSettingsTaxModeExclusive;
+
+  /// No description provided for @billingSettingsTaxModeInclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inclusive'**
+  String get billingSettingsTaxModeInclusive;
+
+  /// No description provided for @billingSettingsTermsDefaultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Terms'**
+  String get billingSettingsTermsDefaultLabel;
+
+  /// No description provided for @billingSettingsTermsDefaultHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment due within 7 days'**
+  String get billingSettingsTermsDefaultHint;
+
+  /// No description provided for @billingSettingsFooterDefaultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Footer'**
+  String get billingSettingsFooterDefaultLabel;
+
+  /// No description provided for @billingSettingsFooterDefaultHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your business'**
+  String get billingSettingsFooterDefaultHint;
+
+  /// No description provided for @billingSettingsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing settings saved'**
+  String get billingSettingsSaved;
+
+  /// No description provided for @billingSettingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save billing settings. Try again.'**
+  String get billingSettingsSaveFailed;
 
   /// No description provided for @taxSettingsTitle.
   ///

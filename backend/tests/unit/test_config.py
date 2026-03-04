@@ -6,6 +6,7 @@ from app.core.config import Settings
 def test_effective_database_url_is_built_from_env_fields(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "Naphaa API")
     monkeypatch.setenv("API_V1_PREFIX", "/api/v1")
+    monkeypatch.setenv("APP_PORT", "8000")
     monkeypatch.setenv("DEBUG", "true")
     monkeypatch.setenv("DB_HOST", "example.postgres.database.azure.com")
     monkeypatch.setenv("DB_PORT", "5432")
@@ -37,6 +38,7 @@ def test_effective_database_url_is_built_from_env_fields(monkeypatch) -> None:
 def test_database_url_override_takes_precedence(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "Naphaa API")
     monkeypatch.setenv("API_V1_PREFIX", "/api/v1")
+    monkeypatch.setenv("APP_PORT", "8000")
     monkeypatch.setenv("DEBUG", "true")
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://override")
     monkeypatch.setenv("DB_HOST", "unused-host")
@@ -65,6 +67,7 @@ def test_database_url_override_takes_precedence(monkeypatch) -> None:
 def test_missing_required_db_settings_fail_fast(monkeypatch) -> None:
     monkeypatch.setenv("APP_NAME", "Naphaa API")
     monkeypatch.setenv("API_V1_PREFIX", "/api/v1")
+    monkeypatch.setenv("APP_PORT", "8000")
     monkeypatch.setenv("DEBUG", "true")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("DB_HOST", raising=False)

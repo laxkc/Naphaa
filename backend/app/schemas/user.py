@@ -26,6 +26,27 @@ class UserLogin(BaseModel):
         return value.strip()
 
 
+class OtpRequestIn(BaseModel):
+    phone: str = Field(min_length=10, max_length=15)
+    locale_default: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        return value.strip()
+
+
+class OtpVerifyIn(BaseModel):
+    phone: str = Field(min_length=10, max_length=15)
+    otp: str = Field(min_length=4, max_length=8)
+    locale_default: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        return value.strip()
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
@@ -57,6 +78,13 @@ class ResetPasswordRequest(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+class OtpRequestOut(BaseModel):
+    message: str
+    expires_in_seconds: int
+    is_new_user: bool
+    otp_debug_code: str | None = None
 
 
 class UserOut(BaseModel):

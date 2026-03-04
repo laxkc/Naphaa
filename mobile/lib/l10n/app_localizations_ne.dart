@@ -213,6 +213,12 @@ class AppLocalizationsNe extends AppLocalizations {
   String get language => 'भाषा';
 
   @override
+  String get languageSelectionTitle => 'आफ्नो भाषा छान्नुहोस्';
+
+  @override
+  String get languageSelectionSubtitle => 'आफूलाई सहज लाग्ने भाषाबाट सुरु गर्नुहोस्। पछि सेटिङबाट परिवर्तन गर्न सकिन्छ।';
+
+  @override
   String get expensesFeatureComingSoon => 'खर्च प्रविष्टि स्क्रिन चाँडै';
 
   @override
@@ -294,6 +300,15 @@ class AppLocalizationsNe extends AppLocalizations {
   String get dashboardOverview => 'ड्यासबोर्ड सारांश';
 
   @override
+  String get dashboardFirstRunTitle => 'Naphaa मा स्वागत छ';
+
+  @override
+  String get dashboardFirstRunSubtitle => 'तपाईंको पसल तयार छ। तलका सर्टकटबाट सामान थप्नुहोस्, बिक्री रेकर्ड गर्नुहोस्, र व्यवसाय विवरण सेटअप गर्नुहोस्।';
+
+  @override
+  String get dashboardLowStockEmptyNoProducts => 'पहिले सामान थप्नुहोस्। इन्भेन्टरी बनेपछि मात्र लो-स्टक ट्र्याकिङ सुरु हुन्छ।';
+
+  @override
   String get failedToLoadDashboard => 'ड्यासबोर्ड लोड गर्न सकिएन';
 
   @override
@@ -361,6 +376,54 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get quickActionsTitle => 'छिटो कार्यहरू';
+
+  @override
+  String get setupSectionTitle => 'सेटअप';
+
+  @override
+  String get setupPromptBusinessProfileTitle => 'व्यवसाय प्रोफाइल पूरा गर्नुहोस्';
+
+  @override
+  String get setupPromptBusinessProfileSubtitle => 'इनभ्वाइस र रिपोर्टहरू व्यावसायिक देखिन पसलको नाम, फोन र ठेगाना थप्नुहोस्।';
+
+  @override
+  String get setupPromptBusinessProfileAction => 'व्यवसाय सेटअप';
+
+  @override
+  String get setupPromptTaxSettingsTitle => 'कर सेटिङ सक्षम गर्नुहोस्';
+
+  @override
+  String get setupPromptTaxSettingsSubtitle => 'कर इनभ्वाइस जारी गर्नु अघि VAT खोल्नुहोस् र PAN/VAT विवरण सुरक्षित गर्नुहोस्।';
+
+  @override
+  String get setupPromptTaxSettingsAction => 'कर कन्फिगर गर्नुहोस्';
+
+  @override
+  String get setupPromptFirstProductTitle => 'पहिलो सामान थप्नुहोस्';
+
+  @override
+  String get setupPromptFirstProductSubtitle => 'बिक्री, स्टक र लो-स्टक अलर्ट सही चलाउन पहिले सामान सिर्जना गर्नुहोस्।';
+
+  @override
+  String get setupPromptFirstProductAction => 'सामान थप्नुहोस्';
+
+  @override
+  String get setupPromptFirstCustomerTitle => 'पहिलो ग्राहक थप्नुहोस्';
+
+  @override
+  String get setupPromptFirstCustomerSubtitle => 'उधारो बिक्री र असुली ट्र्याक गर्ने भए ग्राहक विवरण अहिले नै सुरक्षित गर्नुहोस्।';
+
+  @override
+  String get setupPromptFirstCustomerAction => 'ग्राहक थप्नुहोस्';
+
+  @override
+  String get setupPromptInvoicePrefixTitle => 'इनभ्वाइस प्रिफिक्स सेट गर्नुहोस्';
+
+  @override
+  String get setupPromptInvoicePrefixSubtitle => 'ग्राहकलाई बिल जारी गर्नु अघि इनभ्वाइस नम्बरिङ आफ्नै ढंगले सेट गर्नुहोस्।';
+
+  @override
+  String get setupPromptInvoicePrefixAction => 'इनभ्वाइस खोल्नुहोस्';
 
   @override
   String get recordPay => 'भुक्तानी रेकर्ड';
@@ -634,6 +697,46 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get forgotPasswordHint => 'पासवर्ड रिसेटका लागि सहयोग टोलीलाई सम्पर्क गर्नुहोस्।';
+
+  @override
+  String get authOtpTitle => 'फोन नम्बरबाट सुरु गर्नुहोस्';
+
+  @override
+  String get authOtpSubtitle => 'आफ्नो मोबाइल नम्बर लेख्नुहोस्। साइन इन गर्न वा खाता स्वतः बनाउन एकपटक प्रयोग हुने कोड पठाइन्छ।';
+
+  @override
+  String get authSendOtp => 'OTP पठाउनुहोस्';
+
+  @override
+  String get authVerifyOtpTitle => 'OTP प्रमाणित गर्नुहोस्';
+
+  @override
+  String get authOtpCodeLabel => 'एकपटक प्रयोग हुने कोड';
+
+  @override
+  String get authVerifyOtp => 'प्रमाणित गरेर अघि बढ्नुहोस्';
+
+  @override
+  String get authResendOtp => 'OTP फेरि पठाउनुहोस्';
+
+  @override
+  String get authChangePhone => 'फोन नम्बर बदल्नुहोस्';
+
+  @override
+  String get authOtpInvalidCode => 'मान्य कोड लेख्नुहोस्';
+
+  @override
+  String get authOtpAutoCreateBody => 'नयाँ फोन नम्बरले डिफल्ट व्यवसाय सेटिङसहित खाता स्वतः बनाउँछ। पहिलेको नम्बरले सिधै साइन इन गर्छ।';
+
+  @override
+  String authOtpSentTo(Object phone) {
+    return '$phone मा कोड पठाइएको छ';
+  }
+
+  @override
+  String authOtpDebugCode(Object code) {
+    return 'डिबग OTP: $code';
+  }
 
   @override
   String get offlineMode => 'अफलाइन मोड';
@@ -1344,6 +1447,48 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get businessSettings => 'व्यवसाय सेटिङ';
+
+  @override
+  String get billingSettingsTitle => 'बिलिङ सेटिङ';
+
+  @override
+  String get billingSettingsSubtitle => 'इनभ्वाइस प्रिफिक्स, भाषा, कर मोड, र पूर्वनिर्धारित टिप्पणीहरू';
+
+  @override
+  String get settingsBillingSettingsSubtitle => 'इनभ्वाइस प्रिफिक्स, सर्त, फुटर';
+
+  @override
+  String get billingSettingsInvoicePrefixLabel => 'इनभ्वाइस प्रिफिक्स';
+
+  @override
+  String get billingSettingsInvoicePrefixRequired => 'इनभ्वाइस प्रिफिक्स आवश्यक छ';
+
+  @override
+  String get billingSettingsTaxModeLabel => 'कर मोड';
+
+  @override
+  String get billingSettingsTaxModeExclusive => 'कर छुट्टै';
+
+  @override
+  String get billingSettingsTaxModeInclusive => 'कर समावेश';
+
+  @override
+  String get billingSettingsTermsDefaultLabel => 'पूर्वनिर्धारित सर्तहरू';
+
+  @override
+  String get billingSettingsTermsDefaultHint => 'भुक्तानी ७ दिनभित्र गर्नुहोस्';
+
+  @override
+  String get billingSettingsFooterDefaultLabel => 'पूर्वनिर्धारित फुटर';
+
+  @override
+  String get billingSettingsFooterDefaultHint => 'तपाईंको व्यापारका लागि धन्यवाद';
+
+  @override
+  String get billingSettingsSaved => 'बिलिङ सेटिङ सेभ भयो';
+
+  @override
+  String get billingSettingsSaveFailed => 'बिलिङ सेटिङ सेभ गर्न सकिएन। फेरि प्रयास गर्नुहोस्।';
 
   @override
   String get taxSettingsTitle => 'कर सेटिङ';

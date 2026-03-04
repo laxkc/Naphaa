@@ -428,6 +428,30 @@ def run_sqlite_compat_migrations() -> None:
                 )
             )
 
+        if "otp_challenges" not in tables:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE otp_challenges (
+                        id VARCHAR(36) PRIMARY KEY,
+                        phone VARCHAR(32) NOT NULL,
+                        otp_hash VARCHAR NOT NULL,
+                        locale_default VARCHAR(16) DEFAULT 'ne',
+                        expires_at DATETIME NOT NULL,
+                        consumed_at DATETIME,
+                        verify_attempts INTEGER DEFAULT 0,
+                        is_new_user_hint BOOLEAN DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            for index_sql in (
+                "CREATE INDEX IF NOT EXISTS ix_otp_challenges_phone ON otp_challenges(phone)",
+                "CREATE INDEX IF NOT EXISTS ix_otp_challenges_expires_at ON otp_challenges(expires_at)",
+            ):
+                conn.execute(text(index_sql))
+
         if "ledger_entries" not in tables:
             conn.execute(
                 text(

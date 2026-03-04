@@ -5,6 +5,7 @@ from app.models.customer_metric import CustomerMetric
 from app.models.device import Device
 from app.models.expense import Expense
 from app.models.ledger_entry import LedgerEntry
+from app.models.otp_challenge import OtpChallenge
 from app.models.product import Product
 from app.models.sale import Sale, SaleItem
 from app.models.sale_payment import SalePayment
@@ -30,6 +31,7 @@ __all__ = [
     "SaleRefundItem",
     "Expense",
     "LedgerEntry",
+    "OtpChallenge",
     "SyncEvent",
     "CustomerPayment",
     "CustomerMetric",

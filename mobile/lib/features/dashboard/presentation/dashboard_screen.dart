@@ -20,6 +20,9 @@ import '../../reports/domain/alert_item.dart';
 import '../../billing/presentation/invoice_list_screen.dart';
 import '../../sales/presentation/create_sale_screen.dart';
 import '../../sales/presentation/sales_list_screen.dart';
+import '../../settings/presentation/billing_settings_screen.dart';
+import '../../settings/presentation/business_settings_screen.dart';
+import '../../settings/presentation/tax_settings_screen.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -29,7 +32,10 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(dashboardSummaryProvider);
     final lowStock = ref.watch(lowStockProductsProvider);
+    final products = ref.watch(productsListProvider);
     final alerts = ref.watch(alertsUnreadFeedProvider);
+    final setupPrompts = ref.watch(setupPromptsProvider);
+    final firstRunSnapshot = ref.watch(firstRunSnapshotProvider);
     final localeCode = ref.watch(localeControllerProvider).languageCode;
     final l10n = AppLocalizations.of(context)!;
 
@@ -100,9 +106,14 @@ class DashboardScreen extends ConsumerWidget {
                   l10n: l10n,
                 ),
                 const SizedBox(height: AppSpacing.md),
+                _FirstRunCard(snapshot: firstRunSnapshot),
+                if (firstRunSnapshot.asData?.value.isEmptyBusiness == true)
+                  const SizedBox(height: AppSpacing.md),
 
                 // ── quick actions ──────────────────────────────────────────
                 const _QuickActions(),
+                const SizedBox(height: AppSpacing.md),
+                _SetupPromptsCard(prompts: setupPrompts),
                 const SizedBox(height: AppSpacing.md),
 
                 // ── cashflow health card ───────────────────────────────────
@@ -114,7 +125,7 @@ class DashboardScreen extends ConsumerWidget {
                   localeCode: localeCode,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _LowStockCard(lowStock: lowStock),
+                _LowStockCard(lowStock: lowStock, products: products),
               ],
             ),
           ),
@@ -680,9 +691,10 @@ class _DashboardSkeleton extends StatelessWidget {
 }
 
 class _LowStockCard extends StatelessWidget {
-  const _LowStockCard({required this.lowStock});
+  const _LowStockCard({required this.lowStock, required this.products});
 
   final AsyncValue<List<Product>> lowStock;
+  final AsyncValue<List<Product>> products;
 
   @override
   Widget build(BuildContext context) {
@@ -712,7 +724,7 @@ class _LowStockCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          lowStock.when(
+          products.when(
             loading:
                 () => Text(
                   l10n.checkingStock,
@@ -727,65 +739,109 @@ class _LowStockCard extends StatelessWidget {
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.error),
                 ),
-            data: (items) {
-              if (items.isEmpty) {
-                return Text(
-                  l10n.allProductsAboveThreshold,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+            data: (allProducts) {
+              if (allProducts.isEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.dashboardLowStockEmptyNoProducts,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProductFormScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(l10n.addProduct),
+                    ),
+                  ],
                 );
               }
-              final top = items.take(4).toList();
-              return Column(
-                children: [
-                  for (final p in top)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            margin: const EdgeInsets.only(right: AppSpacing.sm),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.warning,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              p.name.toString(),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.label,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.warningBg,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
-                              ),
-                            ),
-                            child: Text(
-                              l10n.stockLeftCount(p.stockQty.toStringAsFixed(0)),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.warning,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+              return lowStock.when(
+                loading:
+                    () => Text(
+                      l10n.checkingStock,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
                     ),
-                ],
+                error:
+                    (_, __) => Text(
+                      l10n.unableLoadLowStockData,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.error),
+                    ),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return Text(
+                      l10n.allProductsAboveThreshold,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                    );
+                  }
+                  final top = items.take(4).toList();
+                  return Column(
+                    children: [
+                      for (final p in top)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                margin: const EdgeInsets.only(right: AppSpacing.sm),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.warning,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  p.name.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.label,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.warningBg,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
+                                  ),
+                                ),
+                                child: Text(
+                                  l10n.stockLeftCount(
+                                    p.stockQty.toStringAsFixed(0),
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.warning,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
               );
             },
           ),
@@ -799,6 +855,213 @@ class _HealthStatus {
   const _HealthStatus(this.label, this.color);
   final String label;
   final Color color;
+}
+
+class _FirstRunCard extends StatelessWidget {
+  const _FirstRunCard({required this.snapshot});
+
+  final AsyncValue<FirstRunSnapshot> snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return snapshot.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (value) {
+        if (!value.isEmptyBusiness) return const SizedBox.shrink();
+        return AppCard(
+          color: AppColors.surfaceAlt,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.dashboardFirstRunTitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                l10n.dashboardFirstRunSubtitle,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.muted,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SetupPromptsCard extends ConsumerWidget {
+  const _SetupPromptsCard({required this.prompts});
+
+  final AsyncValue<List<SetupPrompt>> prompts;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return prompts.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.setupSectionTitle,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.muted,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ...items.map(
+              (prompt) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: AppCard(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: const Icon(
+                          Icons.tips_and_updates_outlined,
+                          size: 20,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _promptTitle(l10n, prompt.id),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _promptSubtitle(l10n, prompt.id),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.muted, height: 1.4),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                FilledButton.tonal(
+                                  onPressed: () => _openPrompt(context, prompt.id),
+                                  child: Text(_promptActionLabel(l10n, prompt.id)),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    final storeId = await ref
+                                        .read(preferencesProvider)
+                                        .getActiveStoreId();
+                                    await ref
+                                        .read(preferencesProvider)
+                                        .dismissSetupPrompt(
+                                          prompt.id,
+                                          storeId: storeId,
+                                        );
+                                    ref.invalidate(setupPromptsProvider);
+                                  },
+                                  child: Text(l10n.clearLabel),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _promptTitle(AppLocalizations l10n, String id) {
+    return switch (id) {
+      'business_profile' => l10n.setupPromptBusinessProfileTitle,
+      'tax_settings' => l10n.setupPromptTaxSettingsTitle,
+      'first_product' => l10n.setupPromptFirstProductTitle,
+      'first_customer' => l10n.setupPromptFirstCustomerTitle,
+      'invoice_prefix' => l10n.setupPromptInvoicePrefixTitle,
+      _ => l10n.setupSectionTitle,
+    };
+  }
+
+  String _promptSubtitle(AppLocalizations l10n, String id) {
+    return switch (id) {
+      'business_profile' => l10n.setupPromptBusinessProfileSubtitle,
+      'tax_settings' => l10n.setupPromptTaxSettingsSubtitle,
+      'first_product' => l10n.setupPromptFirstProductSubtitle,
+      'first_customer' => l10n.setupPromptFirstCustomerSubtitle,
+      'invoice_prefix' => l10n.setupPromptInvoicePrefixSubtitle,
+      _ => '',
+    };
+  }
+
+  String _promptActionLabel(AppLocalizations l10n, String id) {
+    return switch (id) {
+      'business_profile' => l10n.setupPromptBusinessProfileAction,
+      'tax_settings' => l10n.setupPromptTaxSettingsAction,
+      'first_product' => l10n.setupPromptFirstProductAction,
+      'first_customer' => l10n.setupPromptFirstCustomerAction,
+      'invoice_prefix' => l10n.setupPromptInvoicePrefixAction,
+      _ => l10n.openLabel,
+    };
+  }
+
+  void _openPrompt(BuildContext context, String id) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      switch (id) {
+        case 'business_profile':
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BusinessSettingsScreen()),
+          );
+          break;
+        case 'tax_settings':
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TaxSettingsScreen()),
+          );
+          break;
+        case 'first_product':
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductFormScreen()),
+          );
+          break;
+        case 'first_customer':
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerFormScreen()),
+          );
+          break;
+        case 'invoice_prefix':
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BillingSettingsScreen()),
+          );
+          break;
+      }
+    });
+  }
 }
 
 // ─── quick actions ────────────────────────────────────────────────────────────
@@ -896,6 +1159,16 @@ class _QuickActions extends ConsumerWidget {
                 color: AppColors.primaryLight,
                 onTap:
                     () => _pushAfterFrame(context, const CustomerFormScreen()),
+              ),
+              _QuickActionItem(
+                icon: Icons.store_outlined,
+                label: l10n.setupPromptBusinessProfileAction,
+                color: AppColors.primaryDark,
+                onTap:
+                    () => _pushAfterFrame(
+                      context,
+                      const BusinessSettingsScreen(),
+                    ),
               ),
               _QuickActionItem(
                 icon: Icons.receipt_long_outlined,

@@ -32,14 +32,37 @@ class BackendGateway {
     required String phone,
     required String password,
   }) async {
-    // ignore: avoid_print
-    print('[BackendGateway] login → ${_dio.options.baseUrl}/auth/login');
     final res = await _dio.post(
       '/auth/login',
       data: {'phone': phone, 'password': password},
     );
-    // ignore: avoid_print
-    print('[BackendGateway] login response status → ${res.statusCode}');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> requestOtp({
+    required String phone,
+    required String localeDefault,
+  }) async {
+    final res = await _dio.post(
+      '/auth/otp/request',
+      data: {'phone': phone, 'locale_default': localeDefault},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Map<String, dynamic>> verifyOtp({
+    required String phone,
+    required String otp,
+    required String localeDefault,
+  }) async {
+    final res = await _dio.post(
+      '/auth/otp/verify',
+      data: {
+        'phone': phone,
+        'otp': otp,
+        'locale_default': localeDefault,
+      },
+    );
     return Map<String, dynamic>.from(res.data as Map);
   }
 

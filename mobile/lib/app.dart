@@ -6,7 +6,8 @@ import 'package:sme_digital/config/app_config.dart';
 
 import 'core/providers/app_providers.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/presentation/landing_page.dart';
+import 'features/auth/presentation/auth_screen.dart';
+import 'features/auth/presentation/language_selection_screen.dart';
 import 'shared/widgets/app_shell.dart';
 
 class SmeDigitalApp extends ConsumerWidget {
@@ -17,6 +18,7 @@ class SmeDigitalApp extends ConsumerWidget {
     final locale = ref.watch(localeControllerProvider);
     final auth = ref.watch(authControllerProvider);
     final startup = ref.watch(appStartupProvider);
+    final hasLanguageSelection = ref.watch(hasLanguageSelectionProvider);
     ref.watch(syncCoordinatorProvider.notifier);
 
     return MaterialApp(
@@ -31,17 +33,27 @@ class SmeDigitalApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home:
-          auth.authenticated
-              ? startup.when(
-                data: (_) => const AppShell(),
-                loading:
-                    () => const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    ),
-                error: (_, __) => const AppShell(),
-              )
-              : const LandingPage(),
+      home: hasLanguageSelection.when(
+        loading:
+            () => const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+        error: (_, __) => const LanguageSelectionScreen(),
+        data:
+            (hasLanguage) =>
+                !hasLanguage
+                    ? const LanguageSelectionScreen()
+                    : auth.authenticated
+                    ? startup.when(
+                      data: (_) => const AppShell(),
+                      loading:
+                          () => const Scaffold(
+                            body: Center(child: CircularProgressIndicator()),
+                          ),
+                      error: (_, __) => const AuthScreen(),
+                    )
+                    : const AuthScreen(),
+      ),
     );
   }
 }

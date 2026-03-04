@@ -6,6 +6,7 @@ import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../profile/presentation/profile_screen.dart';
+import 'billing_settings_screen.dart';
 import 'business_settings_screen.dart';
 import 'tax_settings_screen.dart';
 import 'user_management_screen.dart';
@@ -58,6 +59,24 @@ class SettingsScreen extends ConsumerWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) => const BusinessSettingsScreen(),
+                        ),
+                      )
+                      : null,
+            ),
+            AppListTile(
+              leading: const Icon(
+                Icons.receipt_long_outlined,
+                size: 20,
+                color: AppColors.muted,
+              ),
+              title: l10n.billingSettingsTitle,
+              subtitle: l10n.settingsBillingSettingsSubtitle,
+              onTap:
+                  effectiveCanManageSettings
+                      ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BillingSettingsScreen(),
                         ),
                       )
                       : null,

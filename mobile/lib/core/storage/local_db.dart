@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -806,6 +807,10 @@ class LocalDatabase {
   }
 
   Future<void> seedIfEmpty() async {
+    assert(
+      kDebugMode,
+      'seedIfEmpty() is a debug-only helper and must not run in production.',
+    );
     final db = await database;
     final rows =
         Sqflite.firstIntValue(
@@ -864,6 +869,10 @@ class LocalDatabase {
   }
 
   Future<void> injectRealisticTestData({int salesCount = 100}) async {
+    assert(
+      kDebugMode,
+      'injectRealisticTestData() is a debug-only helper and must not run in production.',
+    );
     final db = await database;
     final rng = Random(42);
     final now = BusinessTime.nowUtc();

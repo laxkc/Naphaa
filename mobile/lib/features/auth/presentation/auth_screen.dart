@@ -8,166 +8,140 @@ import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/app_shell.dart';
 import '../../../shared/widgets/ui_kit.dart';
-import '../../onboarding/presentation/onboarding_screen.dart';
 import '../domain/auth_state.dart';
-import 'forgot_password_page.dart';
-
-// ─── palette ──────────────────────────────────────────────────────────────────
-const _primary   = AppColors.primary;
-const _bg        = AppColors.bg;
-const _surface   = Colors.white;
-const _label     = AppColors.label;
-const _muted     = AppColors.muted;
-const _border    = AppColors.border;
-const _errText   = AppColors.error;
-
-// ─── root ─────────────────────────────────────────────────────────────────────
 
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key, this.initialShowRegister = false});
-  final bool initialShowRegister;
+  const AuthScreen({super.key});
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  late bool _isSignup = widget.initialShowRegister;
+  final _phoneFormKey = GlobalKey<FormState>();
+  final _otpFormKey = GlobalKey<FormState>();
+  final _phoneCtl = TextEditingController();
+  final _otpCtl = TextEditingController();
   bool _isRoutingAfterAuth = false;
-
-  final _loginKey  = GlobalKey<FormState>();
-  final _signupKey = GlobalKey<FormState>();
-  final _bizCtl    = TextEditingController();
-  final _phoneCtl  = TextEditingController();
-  final _passCtl   = TextEditingController();
 
   @override
   void dispose() {
-    _bizCtl.dispose();
     _phoneCtl.dispose();
-    _passCtl.dispose();
+    _otpCtl.dispose();
     super.dispose();
   }
 
-  // validators ────────────────────────────────────────────────────────────────
-  String? _vBiz(String? v, AppLocalizations l) {
-    final s = (v ?? '').trim();
-    if (s.isEmpty) return l.fieldRequired;
-    if (s.length < 3) return l.businessNameTooShort;
+  String? _validatePhone(String? value, AppLocalizations l10n) {
+    final phone = (value ?? '').trim();
+    if (phone.isEmpty) return l10n.fieldRequired;
+    if (!phone.startsWith('9') || phone.length != 10) return l10n.invalidPhone;
     return null;
   }
 
-  String? _vPhone(String? v, AppLocalizations l) {
-    final s = (v ?? '').trim();
-    if (s.isEmpty) return l.fieldRequired;
-    if (!s.startsWith('9') || s.length != 10) return l.invalidPhone;
+  String? _validateOtp(String? value, AppLocalizations l10n) {
+    final otp = (value ?? '').trim();
+    if (otp.isEmpty) return l10n.fieldRequired;
+    if (otp.length < 4 || otp.length > 8) {
+      return l10n.authOtpInvalidCode;
+    }
     return null;
   }
 
-  String? _vPass(String? v, AppLocalizations l) {
-    final s = (v ?? '').trim();
-    if (s.isEmpty) return l.fieldRequired;
-    if (s.length < 8) return l.passwordMinLength;
-    return null;
-  }
-
-  // actions ───────────────────────────────────────────────────────────────────
-  Future<void> _login(AppLocalizations l) async {
-    if (!(_loginKey.currentState?.validate() ?? false)) return;
-    await ref.read(authControllerProvider.notifier).login(
+  Future<void> _submitPhone() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!(_phoneFormKey.currentState?.validate() ?? false)) return;
+    await ref.read(authControllerProvider.notifier).requestOtp(
           phone: _phoneCtl.text.trim(),
-          password: _passCtl.text.trim(),
         );
+    if (!mounted) return;
+    final next = ref.read(authControllerProvider);
+    if (next.error == null && next.otpRequested) {
+      _otpCtl.clear();
+      FocusScope.of(context).requestFocus(FocusNode());
+    } else if (next.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(next.error ?? l10n.somethingWentWrong)),
+      );
+    }
   }
 
-  Future<void> _signup(AppLocalizations l) async {
-    if (!(_signupKey.currentState?.validate() ?? false)) return;
-    await ref.read(authControllerProvider.notifier).signup(
-          businessName: _bizCtl.text.trim(),
+  Future<void> _submitOtp() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!(_otpFormKey.currentState?.validate() ?? false)) return;
+    await ref.read(authControllerProvider.notifier).verifyOtp(
           phone: _phoneCtl.text.trim(),
-          password: _passCtl.text.trim(),
+          otp: _otpCtl.text.trim(),
         );
-  }
-
-  void _forgotPassword(BuildContext ctx, AppLocalizations l) {
-    Navigator.of(ctx).push(
-      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
-    );
+    if (!mounted) return;
+    final next = ref.read(authControllerProvider);
+    if (next.error != null && !next.authenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(next.error ?? l10n.somethingWentWrong)),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final l    = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     final auth = ref.watch(authControllerProvider);
 
-    ref.listen<AuthState>(authControllerProvider, (previous, next) async {
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (!next.authenticated) {
         _isRoutingAfterAuth = false;
         return;
       }
       if (_isRoutingAfterAuth || !mounted) return;
       _isRoutingAfterAuth = true;
-
-      final onboardingComplete =
-          await ref.read(preferencesProvider).getOnboardingComplete();
-      if (!mounted) return;
-
       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) =>
-              onboardingComplete ? const AppShell() : const OnboardingScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const AppShell()),
         (route) => false,
       );
     });
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark
-          .copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: AppColors.bg,
         body: SafeArea(
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                switchInCurve:  Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, anim) => SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(_isSignup ? 1.0 : -1.0, 0),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: FadeTransition(opacity: anim, child: child),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xxl),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.xxl),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: auth.otpRequested
+                        ? _OtpStep(
+                            key: const ValueKey('otp-step'),
+                            l10n: l10n,
+                            auth: auth,
+                            otpFormKey: _otpFormKey,
+                            phone: _phoneCtl.text.trim(),
+                            otpCtl: _otpCtl,
+                            validateOtp: (value) => _validateOtp(value, l10n),
+                            onVerify: _submitOtp,
+                            onResend: _submitPhone,
+                            onChangePhone: () {
+                              ref
+                                  .read(authControllerProvider.notifier)
+                                  .resetOtpFlow(phone: _phoneCtl.text.trim());
+                            },
+                          )
+                        : _PhoneStep(
+                            key: const ValueKey('phone-step'),
+                            l10n: l10n,
+                            auth: auth,
+                            phoneFormKey: _phoneFormKey,
+                            phoneCtl: _phoneCtl,
+                            validatePhone: (value) =>
+                                _validatePhone(value, l10n),
+                            onSubmit: _submitPhone,
+                          ),
+                  ),
                 ),
-                child: _isSignup
-                    ? _SignupForm(
-                        key: const ValueKey('signup'),
-                        l: l, auth: auth,
-                        formKey: _signupKey,
-                        bizCtl: _bizCtl,
-                        phoneCtl: _phoneCtl,
-                        passCtl: _passCtl,
-                        vBiz:   (v) => _vBiz(v, l),
-                        vPhone: (v) => _vPhone(v, l),
-                        vPass:  (v) => _vPass(v, l),
-                        onBack:        () => setState(() => _isSignup = false),
-                        onSubmit:      () => _signup(l),
-                        onSwitchLogin: () => setState(() => _isSignup = false),
-                      )
-                    : _LoginForm(
-                        key: const ValueKey('login'),
-                        l: l, auth: auth,
-                        formKey: _loginKey,
-                        phoneCtl: _phoneCtl,
-                        passCtl:  _passCtl,
-                        vPhone: (v) => _vPhone(v, l),
-                        vPass:  (v) => _vPass(v, l),
-                        onSubmit:        () => _login(l),
-                        onForgotPw:      () => _forgotPassword(context, l),
-                        onSwitchSignup:  () => setState(() => _isSignup = true),
-                      ),
               ),
             ),
           ),
@@ -177,483 +151,250 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 }
 
-// ─── login form ───────────────────────────────────────────────────────────────
-
-class _LoginForm extends StatefulWidget {
-  const _LoginForm({
+class _PhoneStep extends StatelessWidget {
+  const _PhoneStep({
     super.key,
-    required this.l,
+    required this.l10n,
     required this.auth,
-    required this.formKey,
+    required this.phoneFormKey,
     required this.phoneCtl,
-    required this.passCtl,
-    required this.vPhone,
-    required this.vPass,
+    required this.validatePhone,
     required this.onSubmit,
-    required this.onForgotPw,
-    required this.onSwitchSignup,
   });
 
-  final AppLocalizations l;
+  final AppLocalizations l10n;
   final AuthState auth;
-  final GlobalKey<FormState> formKey;
+  final GlobalKey<FormState> phoneFormKey;
   final TextEditingController phoneCtl;
-  final TextEditingController passCtl;
-  final String? Function(String?) vPhone;
-  final String? Function(String?) vPass;
+  final String? Function(String?) validatePhone;
   final Future<void> Function() onSubmit;
-  final VoidCallback onForgotPw;
-  final VoidCallback onSwitchSignup;
-
-  @override
-  State<_LoginForm> createState() => _LoginFormState();
-}
-
-class _LoginFormState extends State<_LoginForm> {
-  bool _hide = true;
 
   @override
   Widget build(BuildContext context) {
-    final l = widget.l;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
-      child: Form(
-        key: widget.formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Brand(labelSubtitle: l.authBrandSubtitle),
-            const SizedBox(height: 48),
-
-            Text(l.welcomeBack, style: _headStyle(context)),
-            const SizedBox(height: 6),
-            Text(l.signInToContinue,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: _muted)),
-            const SizedBox(height: 36),
-
-            _Lbl(l.phone),
-            const SizedBox(height: 7),
-            TextFormField(
-              key: const Key('auth_phone'),
-              controller: widget.phoneCtl,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: _inputStyle,
-              decoration: _inputDec(
-                  hint: '98XXXXXXXX', icon: Icons.phone_outlined),
-              validator: widget.vPhone,
-            ),
-            const SizedBox(height: 18),
-
-            _Lbl(l.password),
-            const SizedBox(height: 7),
-            TextFormField(
-              key: const Key('auth_password'),
-              controller: widget.passCtl,
-              obscureText: _hide,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => widget.onSubmit(),
-              style: _inputStyle,
-              decoration: _inputDec(
-                hint: l.passwordHint,
-                icon: Icons.lock_outline_rounded,
-                eye: _Eye(
-                  hide: _hide,
-                  onTap: () => setState(() => _hide = !_hide),
-                ),
-              ),
-              validator: widget.vPass,
-            ),
-
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: widget.onForgotPw,
-                style: TextButton.styleFrom(
-                  foregroundColor: _primary,
-                  textStyle: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w500),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-                ),
-                child: Text(l.forgotPassword),
-              ),
-            ),
-
-            if (widget.auth.error != null) ...[
-              InlineBanner(message: widget.auth.error!, type: BannerType.error),
-              const SizedBox(height: 14),
-            ],
-
-            _Btn(
-              label: l.signIn,
-              loading: widget.auth.loading,
-              onPressed: widget.onSubmit,
-            ),
-            const SizedBox(height: 32),
-            _Switch(
-              question: l.noAccount,
-              action: l.signup,
-              onTap: widget.onSwitchSignup,
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── signup form ──────────────────────────────────────────────────────────────
-
-class _SignupForm extends StatefulWidget {
-  const _SignupForm({
-    super.key,
-    required this.l,
-    required this.auth,
-    required this.formKey,
-    required this.bizCtl,
-    required this.phoneCtl,
-    required this.passCtl,
-    required this.vBiz,
-    required this.vPhone,
-    required this.vPass,
-    required this.onBack,
-    required this.onSubmit,
-    required this.onSwitchLogin,
-  });
-
-  final AppLocalizations l;
-  final AuthState auth;
-  final GlobalKey<FormState> formKey;
-  final TextEditingController bizCtl;
-  final TextEditingController phoneCtl;
-  final TextEditingController passCtl;
-  final String? Function(String?) vBiz;
-  final String? Function(String?) vPhone;
-  final String? Function(String?) vPass;
-  final VoidCallback onBack;
-  final Future<void> Function() onSubmit;
-  final VoidCallback onSwitchLogin;
-
-  @override
-  State<_SignupForm> createState() => _SignupFormState();
-}
-
-class _SignupFormState extends State<_SignupForm> {
-  bool _hide = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = widget.l;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
-      child: Form(
-        key: widget.formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // back row
-            GestureDetector(
-              onTap: widget.onBack,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 13, color: _label),
-                    const SizedBox(width: 5),
-                    Text(
-                      l.authBackLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: _label,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            Text(l.createAccount, style: _headStyle(context)),
-            const SizedBox(height: 6),
-            Text(l.startManagingYourBusiness,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: _muted)),
-            const SizedBox(height: 36),
-
-            _Lbl(l.businessName),
-            const SizedBox(height: 7),
-            TextFormField(
-              key: const Key('signup_business_name'),
-              controller: widget.bizCtl,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              style: _inputStyle,
-              decoration: _inputDec(
-                  hint: l.businessNameHint, icon: Icons.storefront_outlined),
-              validator: widget.vBiz,
-            ),
-            const SizedBox(height: 18),
-
-            _Lbl(l.phone),
-            const SizedBox(height: 7),
-            TextFormField(
-              key: const Key('signup_phone'),
-              controller: widget.phoneCtl,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: _inputStyle,
-              decoration: _inputDec(
-                  hint: '98XXXXXXXX', icon: Icons.phone_outlined),
-              validator: widget.vPhone,
-            ),
-            const SizedBox(height: 18),
-
-            _Lbl(l.password),
-            const SizedBox(height: 7),
-            TextFormField(
-              key: const Key('signup_password'),
-              controller: widget.passCtl,
-              obscureText: _hide,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => widget.onSubmit(),
-              style: _inputStyle,
-              decoration: _inputDec(
-                hint: l.passwordHint,
-                icon: Icons.lock_outline_rounded,
-                eye: _Eye(
-                  hide: _hide,
-                  onTap: () => setState(() => _hide = !_hide),
-                ),
-              ),
-              validator: widget.vPass,
-            ),
-            const SizedBox(height: 28),
-
-            if (widget.auth.error != null) ...[
-              InlineBanner(message: widget.auth.error!, type: BannerType.error),
-              const SizedBox(height: 14),
-            ],
-
-            _Btn(
-              label: l.createAccount,
-              loading: widget.auth.loading,
-              onPressed: widget.onSubmit,
-            ),
-            const SizedBox(height: 32),
-            _Switch(
-              question: l.haveAccount,
-              action: l.login,
-              onTap: widget.onSwitchLogin,
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── shared micro-widgets ─────────────────────────────────────────────────────
-
-TextStyle _headStyle(BuildContext ctx) =>
-    Theme.of(ctx).textTheme.headlineMedium!.copyWith(
-          fontWeight: FontWeight.w700,
-          color: _label,
-          letterSpacing: -0.5,
-          height: 1.1,
-        );
-
-const _inputStyle = TextStyle(fontSize: 15, color: _label);
-
-InputDecoration _inputDec({
-  required String hint,
-  required IconData icon,
-  Widget? eye,
-}) =>
-    InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.hint, fontSize: 14),
-      prefixIcon:
-          Icon(icon, size: 19, color: _muted),
-      suffixIcon: eye,
-      filled: true,
-      fillColor: _surface,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-      border:            _ob(_border),
-      enabledBorder:     _ob(_border),
-      focusedBorder:     _ob(_primary, w: 1.6),
-      errorBorder:       _ob(_errText),
-      focusedErrorBorder: _ob(_errText, w: 1.6),
-      errorStyle: const TextStyle(fontSize: 12, height: 1.3),
-    );
-
-OutlineInputBorder _ob(Color c, {double w = 1.0}) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: c, width: w),
-    );
-
-// brand
-class _Brand extends StatelessWidget {
-  const _Brand({required this.labelSubtitle});
-  final String labelSubtitle;
-
-  @override
-  Widget build(BuildContext ctx) => Row(
+    return Form(
+      key: phoneFormKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: _primary,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+          _BrandHeader(
+            title: l10n.authOtpTitle,
+            subtitle: l10n.authOtpSubtitle,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          TextFormField(
+            controller: phoneCtl,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.phone,
+              hintText: '98XXXXXXXX',
+              prefixIcon: const Icon(Icons.phone_outlined),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              child: Image.asset(
-                Branding.logoAsset,
-                fit: BoxFit.cover,
-              ),
+            validator: validatePhone,
+            onFieldSubmitted: (_) => onSubmit(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            l10n.authOtpAutoCreateBody,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.muted,
+              height: 1.5,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          if (auth.error != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            InlineBanner(type: BannerType.error, message: auth.error!),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: auth.loading ? null : onSubmit,
+              child: auth.loading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.authSendOtp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OtpStep extends StatelessWidget {
+  const _OtpStep({
+    super.key,
+    required this.l10n,
+    required this.auth,
+    required this.otpFormKey,
+    required this.phone,
+    required this.otpCtl,
+    required this.validateOtp,
+    required this.onVerify,
+    required this.onResend,
+    required this.onChangePhone,
+  });
+
+  final AppLocalizations l10n;
+  final AuthState auth;
+  final GlobalKey<FormState> otpFormKey;
+  final String phone;
+  final TextEditingController otpCtl;
+  final String? Function(String?) validateOtp;
+  final Future<void> Function() onVerify;
+  final Future<void> Function() onResend;
+  final VoidCallback onChangePhone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: otpFormKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _BrandHeader(
+            title: l10n.authVerifyOtpTitle,
+            subtitle: l10n.authOtpSentTo(phone),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          TextFormField(
+            controller: otpCtl,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: l10n.authOtpCodeLabel,
+              hintText: '123456',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+            ),
+            validator: validateOtp,
+            onFieldSubmitted: (_) => onVerify(),
+          ),
+          if (auth.debugOtpCode != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            InlineBanner(
+              type: BannerType.info,
+              message: l10n.authOtpDebugCode(auth.debugOtpCode!),
+            ),
+          ],
+          if (auth.error != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            InlineBanner(type: BannerType.error, message: auth.error!),
+          ],
+          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: auth.loading ? null : onVerify,
+              child: auth.loading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.authVerifyOtp),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
             children: [
-              const Text(
-                AppConfig.appName,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _primary,
-                  letterSpacing: -0.2,
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: auth.loading ? null : onResend,
+                  child: Text(l10n.authResendOtp),
                 ),
               ),
-              Text(
-                labelSubtitle,
-                style: const TextStyle(
-                    fontSize: 11, color: _muted, letterSpacing: 0.1),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: TextButton(
+                  onPressed: auth.loading ? null : onChangePhone,
+                  child: Text(l10n.authChangePhone),
+                ),
               ),
             ],
           ),
         ],
-      );
+      ),
+    );
+  }
 }
 
-// field label
-class _Lbl extends StatelessWidget {
-  const _Lbl(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext _) => Text(
-        text,
-        style: const TextStyle(
-            fontSize: 13, fontWeight: FontWeight.w600, color: _label),
-      );
-}
-
-// eye toggle
-class _Eye extends StatelessWidget {
-  const _Eye({required this.hide, required this.onTap});
-  final bool hide;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext _) => IconButton(
-        icon: Icon(
-          hide ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-          size: 19,
-          color: _muted,
-        ),
-        onPressed: onTap,
-        splashRadius: 20,
-      );
-}
-
-// primary button
-class _Btn extends StatelessWidget {
-  const _Btn({
-    required this.label,
-    required this.loading,
-    required this.onPressed,
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader({
+    required this.title,
+    required this.subtitle,
   });
-  final String label;
-  final bool loading;
-  final Future<void> Function() onPressed;
+
+  final String title;
+  final String subtitle;
 
   @override
-  Widget build(BuildContext _) => SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: FilledButton(
-          onPressed: loading ? null : onPressed,
-          style: FilledButton.styleFrom(
-            backgroundColor: _primary,
-            disabledBackgroundColor: _primary.withAlpha(180),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md)),
-            elevation: 0,
-          ),
-          child: loading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2.2, color: Colors.white),
-                )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2),
-                ),
-        ),
-      );
-}
-
-// switch prompt ("Don't have an account? Sign up")
-class _Switch extends StatelessWidget {
-  const _Switch({
-    required this.question,
-    required this.action,
-    required this.onTap,
-  });
-  final String question;
-  final String action;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('$question ',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: _muted)),
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              action,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _primary,
-                fontWeight: FontWeight.w600,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Image.asset(Branding.logoAsset, fit: BoxFit.cover),
               ),
             ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppConfig.appName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    AppConfig.tagline,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
           ),
-        ],
-      );
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.muted,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
 }

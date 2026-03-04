@@ -13,6 +13,24 @@ class EnvironmentConfig {
   final int receiveTimeoutSeconds;
   final String sourceAssetPath;
 
+  EnvironmentConfig copyWith({
+    String? env,
+    String? baseUrl,
+    int? connectTimeoutSeconds,
+    int? receiveTimeoutSeconds,
+    String? sourceAssetPath,
+  }) {
+    return EnvironmentConfig(
+      env: env ?? this.env,
+      baseUrl: baseUrl ?? this.baseUrl,
+      connectTimeoutSeconds:
+          connectTimeoutSeconds ?? this.connectTimeoutSeconds,
+      receiveTimeoutSeconds:
+          receiveTimeoutSeconds ?? this.receiveTimeoutSeconds,
+      sourceAssetPath: sourceAssetPath ?? this.sourceAssetPath,
+    );
+  }
+
   static EnvironmentConfig fromMap(
     Map<String, dynamic> json, {
     required String sourceAssetPath,

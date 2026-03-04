@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -57,6 +58,10 @@ final environmentConfigProvider = Provider<EnvironmentConfig>((ref) {
 
 final preferencesProvider = Provider<AppPreferences>((ref) => AppPreferences());
 
+final hasLanguageSelectionProvider = FutureProvider<bool>((ref) async {
+  return ref.watch(preferencesProvider).hasLocalePreference();
+});
+
 class DataRefreshRevision extends Notifier<int> {
   @override
   int build() => 0;
@@ -89,10 +94,8 @@ final billingLanguageCodeProvider = FutureProvider<String>((ref) async {
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final env = ref.watch(environmentConfigProvider);
-  const baseUrl = "http://localhost:8080/api/v1";
   return ApiClient(
-    // baseUrl: env.baseUrl,
-    baseUrl: baseUrl,
+    baseUrl: env.baseUrl,
     connectTimeoutSeconds: env.connectTimeoutSeconds,
     receiveTimeoutSeconds: env.receiveTimeoutSeconds,
   );
@@ -173,6 +176,91 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  Future<void> requestOtp({required String phone}) async {
+    state = state.copyWith(
+      loading: true,
+      error: null,
+      otpRequested: false,
+      pendingPhone: phone,
+      debugOtpCode: null,
+    );
+    try {
+      final locale = ref.read(localeControllerProvider).languageCode;
+      final response = await _session.requestOtp(
+        phone: phone,
+        localeCode: locale,
+      );
+      final debugOtp = response['otp_debug_code']?.toString();
+      if (kDebugMode && debugOtp != null && debugOtp.trim().isNotEmpty) {
+        developer.log(
+          'OTP debug code for $phone: $debugOtp',
+          name: 'app.auth.otp',
+        );
+        debugPrint('OTP debug code for $phone: $debugOtp');
+      }
+      state = state.copyWith(
+        loading: false,
+        error: null,
+        otpRequested: true,
+        pendingPhone: phone,
+        debugOtpCode:
+            debugOtp != null && debugOtp.trim().isNotEmpty ? debugOtp : null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        loading: false,
+        authenticated: false,
+        otpRequested: false,
+        pendingPhone: phone,
+        debugOtpCode: null,
+        error: _otpErrorMessage(e),
+      );
+    }
+  }
+
+  Future<void> verifyOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    state = state.copyWith(loading: true, error: null);
+    try {
+      final previousPhone = await _prefs.getUserPhone();
+      final locale = ref.read(localeControllerProvider).languageCode;
+      await _session.verifyOtp(
+        phone: phone,
+        otp: otp,
+        localeCode: locale,
+      );
+      await _handlePostAuthStoreScope(
+        phone: phone,
+        previousPhone: previousPhone,
+      );
+      await _prefs.setUserPhone(phone);
+      final role = await _session.fetchCurrentUserRole(localeCode: locale);
+      if (role != null && role.isNotEmpty) {
+        await _prefs.setUserRole(role);
+      }
+      state = state.copyWith(
+        loading: false,
+        authenticated: true,
+        phone: phone,
+        role: role ?? state.role ?? 'owner',
+        error: null,
+        otpRequested: false,
+        pendingPhone: null,
+        debugOtpCode: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        loading: false,
+        authenticated: false,
+        error: _otpErrorMessage(e),
+        otpRequested: true,
+        pendingPhone: phone,
+      );
+    }
+  }
+
   Future<void> signup({
     required String businessName,
     required String phone,
@@ -222,6 +310,17 @@ class AuthController extends Notifier<AuthState> {
     await _prefs.clearActiveStoreId();
   }
 
+  void resetOtpFlow({String? phone}) {
+    state = state.copyWith(
+      loading: false,
+      authenticated: false,
+      error: null,
+      otpRequested: false,
+      pendingPhone: phone,
+      debugOtpCode: null,
+    );
+  }
+
   void setRole(String role) {
     final normalized = role.trim().toLowerCase();
     if (normalized.isEmpty) return;
@@ -245,6 +344,34 @@ class AuthController extends Notifier<AuthState> {
       }
       if (apiError.statusCode == 422) {
         return 'Please check your input and try again.';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Cannot reach server. Check internet or backend status.';
+      }
+      if (apiError.message.isNotEmpty && apiError.message != 'Request failed') {
+        return apiError.message;
+      }
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
+  String _otpErrorMessage(Object error) {
+    if (error is DioException) {
+      final apiError = ApiError.fromDio(error);
+      final code = (apiError.code ?? '').toUpperCase();
+      if (code == 'INVALID_OTP') {
+        return 'Invalid code. Please try again.';
+      }
+      if (code == 'OTP_EXPIRED') {
+        return 'Code expired. Request a new OTP.';
+      }
+      if (code == 'OTP_BLOCKED' || apiError.statusCode == 429) {
+        return 'Too many OTP attempts. Please try again later.';
+      }
+      if (code == 'OTP_NOT_FOUND') {
+        return 'Request a new OTP and try again.';
       }
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
@@ -741,6 +868,29 @@ class DashboardSummary {
   double get estimatedProfit => todaySales - todayExpenses;
 }
 
+class SetupPrompt {
+  const SetupPrompt({
+    required this.id,
+  });
+
+  final String id;
+}
+
+class FirstRunSnapshot {
+  const FirstRunSnapshot({
+    required this.productCount,
+    required this.customerCount,
+    required this.saleCount,
+  });
+
+  final int productCount;
+  final int customerCount;
+  final int saleCount;
+
+  bool get isEmptyBusiness =>
+      productCount == 0 && customerCount == 0 && saleCount == 0;
+}
+
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   ref.watch(dataRefreshRevisionProvider);
   final salesRepo = ref.watch(salesRepositoryProvider);
@@ -755,19 +905,65 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   );
 });
 
+final setupPromptsProvider = FutureProvider<List<SetupPrompt>>((ref) async {
+  final prefs = ref.watch(preferencesProvider);
+  final storeId = await prefs.getActiveStoreId();
+  final profile = await ref.watch(profileProvider.future);
+  final products = await ref.watch(productsListProvider.future);
+  final customers = await ref.watch(customersListProvider.future);
+  final taxSettings = await prefs.getTaxSettings();
+  final billingSettings = await prefs.getBillingSettings();
+
+  final prompts = <SetupPrompt>[
+    if ((profile.storeName?.trim().isEmpty ?? true) ||
+        (profile.storePhone?.trim().isEmpty ?? true) ||
+        (profile.storeAddress?.trim().isEmpty ?? true))
+      const SetupPrompt(id: 'business_profile'),
+    if (!(taxSettings['enabled'] as bool? ?? false))
+      const SetupPrompt(id: 'tax_settings'),
+    if (products.isEmpty) const SetupPrompt(id: 'first_product'),
+    if (customers.isEmpty) const SetupPrompt(id: 'first_customer'),
+    if ((billingSettings['invoice_prefix']?.toString().trim().isEmpty ?? true) ||
+        billingSettings['invoice_prefix']?.toString().trim() == 'INV')
+      const SetupPrompt(id: 'invoice_prefix'),
+  ];
+
+  final visible = <SetupPrompt>[];
+  for (final prompt in prompts) {
+    final dismissed = await prefs.isSetupPromptDismissed(
+      prompt.id,
+      storeId: storeId,
+    );
+    if (!dismissed) visible.add(prompt);
+  }
+  return visible;
+});
+
+final firstRunSnapshotProvider = FutureProvider<FirstRunSnapshot>((ref) async {
+  final products = await ref.watch(productsListProvider.future);
+  final customers = await ref.watch(customersListProvider.future);
+  final sales = await ref.watch(salesRepositoryProvider).listSales();
+  return FirstRunSnapshot(
+    productCount: products.length,
+    customerCount: customers.length,
+    saleCount: sales.length,
+  );
+});
+
 final appStartupProvider = FutureProvider<void>((ref) async {
   final isAuthenticated = ref.watch(
     authControllerProvider.select((auth) => auth.authenticated),
   );
   if (!isAuthenticated) return;
   final localeCode = ref.watch(localeControllerProvider).languageCode;
-  final db = ref.watch(localDatabaseProvider);
-  await db.seedIfEmpty();
   try {
     await ref.watch(sessionServiceProvider).ensureReady(localeCode: localeCode);
     await ref
         .watch(syncManagerProvider)
         .processPendingSync(localeCode: localeCode);
+  } on SessionAuthException {
+    await ref.read(authControllerProvider.notifier).logout();
+    rethrow;
   } catch (_) {
     // App remains usable offline if backend/session bootstrap fails.
   }

@@ -213,6 +213,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String get languageSelectionTitle => 'Choose your language';
+
+  @override
+  String get languageSelectionSubtitle => 'Start in the language you are most comfortable with. You can change it later in settings.';
+
+  @override
   String get expensesFeatureComingSoon => 'Expenses entry screen coming soon';
 
   @override
@@ -294,6 +300,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardOverview => 'Dashboard overview';
 
   @override
+  String get dashboardFirstRunTitle => 'Welcome to Naphaa';
+
+  @override
+  String get dashboardFirstRunSubtitle => 'Your store is ready. Add products, record sales, and set up business details from the shortcuts below.';
+
+  @override
+  String get dashboardLowStockEmptyNoProducts => 'Add products first. Low-stock tracking starts after your inventory is created.';
+
+  @override
   String get failedToLoadDashboard => 'Failed to load dashboard';
 
   @override
@@ -361,6 +376,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quickActionsTitle => 'QUICK ACTIONS';
+
+  @override
+  String get setupSectionTitle => 'SETUP';
+
+  @override
+  String get setupPromptBusinessProfileTitle => 'Complete business profile';
+
+  @override
+  String get setupPromptBusinessProfileSubtitle => 'Add your store name, phone, and address so invoices and reports look professional.';
+
+  @override
+  String get setupPromptBusinessProfileAction => 'Setup Business';
+
+  @override
+  String get setupPromptTaxSettingsTitle => 'Enable tax settings';
+
+  @override
+  String get setupPromptTaxSettingsSubtitle => 'Turn on VAT and save your PAN/VAT details before you start issuing tax invoices.';
+
+  @override
+  String get setupPromptTaxSettingsAction => 'Configure Tax';
+
+  @override
+  String get setupPromptFirstProductTitle => 'Add your first product';
+
+  @override
+  String get setupPromptFirstProductSubtitle => 'Create products first so sales, stock, and low-stock alerts work correctly.';
+
+  @override
+  String get setupPromptFirstProductAction => 'Add Product';
+
+  @override
+  String get setupPromptFirstCustomerTitle => 'Add your first customer';
+
+  @override
+  String get setupPromptFirstCustomerSubtitle => 'Save customer details now if you plan to track credit sales and collections.';
+
+  @override
+  String get setupPromptFirstCustomerAction => 'Add Customer';
+
+  @override
+  String get setupPromptInvoicePrefixTitle => 'Set your invoice prefix';
+
+  @override
+  String get setupPromptInvoicePrefixSubtitle => 'Customize invoice numbering before you start issuing bills to customers.';
+
+  @override
+  String get setupPromptInvoicePrefixAction => 'Open Invoices';
 
   @override
   String get recordPay => 'Record Pay';
@@ -634,6 +697,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forgotPasswordHint => 'Please contact support to reset your password.';
+
+  @override
+  String get authOtpTitle => 'Continue with your phone number';
+
+  @override
+  String get authOtpSubtitle => 'Enter your mobile number. We will send a one-time code to sign in or create your account automatically.';
+
+  @override
+  String get authSendOtp => 'Send OTP';
+
+  @override
+  String get authVerifyOtpTitle => 'Verify your OTP';
+
+  @override
+  String get authOtpCodeLabel => 'One-time code';
+
+  @override
+  String get authVerifyOtp => 'Verify and continue';
+
+  @override
+  String get authResendOtp => 'Resend OTP';
+
+  @override
+  String get authChangePhone => 'Change phone';
+
+  @override
+  String get authOtpInvalidCode => 'Enter a valid code';
+
+  @override
+  String get authOtpAutoCreateBody => 'New phone numbers create an account automatically with default business settings. Existing numbers sign in directly.';
+
+  @override
+  String authOtpSentTo(Object phone) {
+    return 'We sent a code to $phone';
+  }
+
+  @override
+  String authOtpDebugCode(Object code) {
+    return 'Debug OTP: $code';
+  }
 
   @override
   String get offlineMode => 'Offline mode';
@@ -1344,6 +1447,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get businessSettings => 'Business Settings';
+
+  @override
+  String get billingSettingsTitle => 'Billing Settings';
+
+  @override
+  String get billingSettingsSubtitle => 'Invoice prefix, language, tax mode, and default notes';
+
+  @override
+  String get settingsBillingSettingsSubtitle => 'Invoice prefix, terms, footer';
+
+  @override
+  String get billingSettingsInvoicePrefixLabel => 'Invoice Prefix';
+
+  @override
+  String get billingSettingsInvoicePrefixRequired => 'Invoice prefix is required';
+
+  @override
+  String get billingSettingsTaxModeLabel => 'Tax Mode';
+
+  @override
+  String get billingSettingsTaxModeExclusive => 'Exclusive';
+
+  @override
+  String get billingSettingsTaxModeInclusive => 'Inclusive';
+
+  @override
+  String get billingSettingsTermsDefaultLabel => 'Default Terms';
+
+  @override
+  String get billingSettingsTermsDefaultHint => 'Payment due within 7 days';
+
+  @override
+  String get billingSettingsFooterDefaultLabel => 'Default Footer';
+
+  @override
+  String get billingSettingsFooterDefaultHint => 'Thank you for your business';
+
+  @override
+  String get billingSettingsSaved => 'Billing settings saved';
+
+  @override
+  String get billingSettingsSaveFailed => 'Failed to save billing settings. Try again.';
 
   @override
   String get taxSettingsTitle => 'Tax Settings';

@@ -109,6 +109,26 @@ class SessionService {
     }
   }
 
+  Future<Map<String, dynamic>> requestOtp({
+    required String phone,
+    required String localeCode,
+  }) async {
+    return _gateway.requestOtp(phone: phone, localeDefault: localeCode);
+  }
+
+  Future<void> verifyOtp({
+    required String phone,
+    required String otp,
+    required String localeCode,
+  }) async {
+    final auth = await _gateway.verifyOtp(
+      phone: phone,
+      otp: otp,
+      localeDefault: localeCode,
+    );
+    await _applyAuth(auth, localeCode: localeCode);
+  }
+
   Future<void> logout() async {
     final refresh = await _tokens.getRefreshToken();
     _ready = false;

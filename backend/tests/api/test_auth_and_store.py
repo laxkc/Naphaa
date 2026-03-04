@@ -36,6 +36,77 @@ def test_auth_register_login_refresh(client):
     assert new_refresh.status_code == 200
 
 
+def test_auth_otp_request_and_verify_creates_user_and_store(client):
+    request = client.post(
+        "/api/v1/auth/otp/request",
+        json={"phone": "9855555555", "locale_default": "en"},
+    )
+    assert request.status_code == 200
+    request_body = request.json()
+    assert request_body["is_new_user"] is True
+    assert request_body["expires_in_seconds"] == 300
+    otp = request_body["otp_debug_code"]
+    assert otp
+
+    verify = client.post(
+        "/api/v1/auth/otp/verify",
+        json={"phone": "9855555555", "otp": otp, "locale_default": "en"},
+        headers={"X-Device-Id": "device-otp-1"},
+    )
+    assert verify.status_code == 200
+    token = verify.json()["access_token"]
+
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    body = me.json()
+    assert body["phone"] == "9855555555"
+    assert body["store_name"] == "My Shop"
+    assert body["locale_default"] == "en"
+    assert body["currency"] == "NPR"
+    assert body["calendar_mode"] == "BS"
+    assert body["business_timezone"] == "Asia/Kathmandu"
+
+
+def test_auth_otp_verify_rejects_invalid_code(client):
+    request = client.post(
+        "/api/v1/auth/otp/request",
+        json={"phone": "9866666666", "locale_default": "ne"},
+    )
+    assert request.status_code == 200
+
+    verify = client.post(
+        "/api/v1/auth/otp/verify",
+        json={"phone": "9866666666", "otp": "000000"},
+    )
+    assert verify.status_code == 401
+    assert verify.json()["detail"]["code"] == "INVALID_OTP"
+
+
+def test_auth_otp_verify_existing_user_keeps_account(client):
+    register = client.post(
+        "/api/v1/auth/register",
+        json={"phone": "9877777777", "password": "pass1234"},
+    )
+    assert register.status_code == 200
+
+    request = client.post(
+        "/api/v1/auth/otp/request",
+        json={"phone": "9877777777", "locale_default": "ne"},
+    )
+    assert request.status_code == 200
+    assert request.json()["is_new_user"] is False
+
+    verify = client.post(
+        "/api/v1/auth/otp/verify",
+        json={
+            "phone": "9877777777",
+            "otp": request.json()["otp_debug_code"],
+            "locale_default": "ne",
+        },
+    )
+    assert verify.status_code == 200
+
+
 def test_store_create_me_update(client, auth_headers):
     create = client.post(
         "/api/v1/stores",

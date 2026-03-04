@@ -1,152 +1,164 @@
-# SME Digital Progress (Clean Tracker)
+# SME Digital Progress
 
-Last updated: 2026-02-27
+Last updated: 2026-03-04
 
-## Project Snapshot
+## Current Active Plan
 
-Status: `Active`
+Status: `Completed`
+Focus: `Progressive onboarding refactor for mobile app`
 
-Current state:
-- Offline-first core is implemented (`mobile local-first + sync`, backend sync hardening)
-- Intelligence/Risk Layer (`IR0`-`IR8`) is complete (`v1 core`)
-- Billing + PDF + i18n (mobile-only) (`BP0`-`BP9`) is complete (`v1 core`)
-- Broad mobile UI localization pass is largely complete (user-facing screens localized with migration helper)
-- Calendar architecture refactor planning started (`CAL0`)
+Goal:
+- remove blocking pre-dashboard onboarding
+- move to `Language -> OTP -> Dashboard`
+- push business configuration into progressive in-app setup
 
-Important note:
-- This file is intentionally concise.
-- Detailed implementation history was removed from here to keep this tracker usable day-to-day.
-- Source of detailed truth remains: git history + docs in `/Users/laxmankc/Startup/SME/sme-digital/docs`
+## Product Rules
 
-## Calendar Refactor Plan (BS Default, AD Safe Core)
+- [x] User reaches dashboard through the shortest path: `Language -> OTP -> Dashboard`
+- [x] Language is the only pre-auth setup step
+- [x] Auth becomes phone OTP based, not password based
+- [x] Signup and login are unified into one flow
+- [x] No onboarding wizard blocks dashboard access
+- [x] Backend auto-creates user/store/default settings after OTP verification
+- [x] Dashboard becomes the first-use setup surface
+- [x] Business/tax/calendar/unit settings stay editable later in settings
 
-Status: `🟡 Planned`
-Audit basis:
-- backend + mobile calendar/date audit completed
-- target rule set confirmed: `AD-only storage`, `BS default UI`, `BusinessDate != EventTimestamp`
+## Current-State Findings
 
-### Target Rules (Non-Negotiable)
+- [x] `LandingPage` is still the unauthenticated home screen
+- [x] `AuthScreen` still uses separate password login and signup flows
+- [x] `OnboardingScreen` still exists as a post-auth gate
+- [x] onboarding selections are mostly UI-only and not persisted as canonical business setup
+- [x] `ForgotPasswordPage` is still a placeholder local-only screen
+- [x] startup still seeds sample business data when the local DB is empty
+- [x] mobile API base URL behavior still needs environment-driven cleanup
 
-- [ ] Storage remains AD only across backend DB, mobile DB, sync payloads, exports
-- [ ] Business/accounting dates become explicit `*_date_ad` fields (`YYYY-MM-DD`)
-- [ ] Event/audit/sync timestamps become explicit UTC `*_at_utc` fields (`RFC3339 Z`)
-- [ ] BS is presentation/input only, never grouping/filtering/storage authority
-- [ ] Default calendar mode becomes `BS`, with per-business switch to `AD`
-- [ ] All reporting buckets use business timezone + AD business date, never raw `created_at`
+## Phase ONB0 — Freeze New Startup Architecture
 
-### Phase CAL0 — Freeze Architecture + Inventory
+- [x] Publish target startup rule set:
+- [x] `language selected? -> auth token? -> dashboard/auth`
+- [x] remove wizard-based setup from critical path
+- [x] define backend-owned default store values:
+- [x] currency = `NPR`
+- [x] calendar = `BS`
+- [x] timezone = `Asia/Kathmandu`
+- [x] tax disabled by default via local business/tax preferences until backend tax profile exists
+- [x] document progressive setup points inside app (`Business Settings`, `Tax Settings`, `Billing Settings`)
+- [x] Acceptance: startup architecture is frozen before implementation
 
-- [x] Inventory backend/mobile/API/PDF/sync date fields
-- [x] Classify fields into `BusinessDate`, `EventTimestamp`, `FiscalBoundary`, `AuditDate`, `DerivedDate`, `DisplayOnlyDate`
-- [x] Identify current danger zones (`DateTime.now()`, naive ISO strings, timestamp-based reporting, fake BS year numbering)
-- [x] Publish final implementation spec doc from audit (`/Users/laxmankc/Startup/SME/sme-digital/docs/calendar-architecture-refactor.md`)
-- [ ] Acceptance: architecture is frozen before schema changes start
+## Phase ONB1 — Language Gate
 
-### Phase CAL1 — Server Schema Refactor
+- [x] Add a dedicated `LanguageSelectionScreen`
+- [x] Show it only when no language has been selected yet
+- [x] Persist choice locally using existing locale preferences
+- [x] Route immediately to auth gate after selection
+- [x] Keep language switch available later in settings
+- [x] Acceptance: first-run users choose language before any auth or dashboard content
 
-- [x] Add `stores.business_timezone` with default `Asia/Kathmandu`
-- [x] Add `stores.calendar_mode` with default `BS`
-- [x] Add explicit business date columns:
-- [x] `sales.sale_date_ad`
-- [x] `expenses.expense_date_ad`
-- [x] `customer_payments.payment_date_ad`
-- [x] `sale_refunds.refund_date_ad`
-- [x] Populate new business date fields for new backend writes (`sales`, `expenses`, `customer_payments`, `sale_refunds`)
-- [x] Propagate new fields through core backend schemas/responses
-- [x] Standardize canonical event timestamps as UTC-only semantics on sync/API boundary
-- [x] Tighten remaining core DTO/API fields that still leaked time values as free-form strings (`alerts`, `metrics`, sync validation)
-- [x] Acceptance: backend can persist business dates independently from timestamps
+## Phase ONB2 — Backend OTP Authentication
 
-### Phase CAL2 — Mobile Schema Refactor
+- [x] Add OTP request endpoint
+- [x] Add OTP verify endpoint
+- [x] Auto-create user on successful verify if phone is new
+- [x] Auto-create store on successful verify if phone is new
+- [x] Issue access token + refresh token from OTP verify
+- [x] Rate limit OTP request and verify attempts
+- [x] Add OTP expiry and resend policy
+- [x] Keep `/auth/me` returning user + store snapshot after OTP auth
+- [x] Acceptance: backend supports passwordless auth without requiring separate signup
 
-- [x] Add local business date columns mirroring backend:
-- [x] `sales.sale_date_ad`
-- [x] `expenses.expense_date_ad`
-- [x] `customer_payments.payment_date_ad`
-- [x] `sale_refunds.refund_date_ad`
-- [x] `invoices.issue_date_ad`
-- [x] `invoices.due_date_ad`
-- [x] Standardize local event timestamps to UTC string fields (`*_at_utc`)
-- [x] Remove ongoing reliance on naive local ISO timestamps for new writes
-- [x] Acceptance: local DB can support offline-safe accounting dates
+## Phase ONB3 — Mobile OTP Flow
 
-### Phase CAL3 — Historical Backfill + Compatibility
+- [x] Replace password auth UI with one `OtpAuthScreen`
+- [x] Step 1: phone input
+- [x] Step 2: OTP input
+- [x] Add resend OTP behavior
+- [x] Remove separate signup/login toggle from primary flow
+- [x] Wire success path into existing auth/session state
+- [x] Acceptance: new and existing users authenticate through one phone-based flow
 
-- [ ] Backfill server business dates from legacy timestamps using business timezone
-- [x] Backfill mobile business dates from legacy timestamps using business timezone
-- [x] Keep compatibility read path during migration window
-- [x] Add one-time migration diagnostics for malformed/naive legacy timestamps
-- [ ] Acceptance: old data remains usable and lands in deterministic accounting buckets
+## Phase ONB4 — Dashboard-First Entry
 
-### Phase CAL4 — BusinessClock Service
+- [x] Remove `OnboardingScreen` from post-auth routing
+- [x] Route auth success directly to `AppShell`
+- [x] Remove onboarding-complete flag from startup gating logic
+- [x] Remove remaining onboarding assets instead of keeping them in active fallback paths
+- [x] Acceptance: authenticated user always lands in dashboard immediately
 
-- [x] Introduce centralized `BusinessClock` on mobile
-- [x] Add `nowUtc()`
-- [x] Add `currentBusinessDate()`
-- [x] Add `startOfDayAd()` / `endOfDayAd()`
-- [x] Route all `today / this week / this month` logic through `BusinessClock`
-- [x] Remove direct feature-level `DateTime.now()` usage in reports/dashboard/accounting filters
-- [x] Acceptance: all period logic is business-timezone aware and deterministic
+## Phase ONB5 — Progressive Setup Inside App
 
-### Phase CAL5 — CalendarAdapter Layer
+- [x] Move setup ownership to in-app surfaces:
+- [x] `Business Settings`
+- [x] `Tax Settings`
+- [x] `Billing Settings`
+- [x] add non-blocking dashboard setup prompts:
+- [x] complete business profile
+- [x] enable tax
+- [x] add first product
+- [x] set invoice prefix
+- [x] make prompts dismissible and context-aware
+- [x] Acceptance: no setup is forced, but missing critical configuration is clearly surfaced
 
-- [x] Introduce single calendar adapter service (`BS <-> AD`)
-- [x] Hide third-party Nepali date library behind adapter boundary
-- [x] Support:
-- [x] `bsToAdDate`
-- [x] `adToBsDate`
-- [x] `formatBusinessDate`
-- [x] `formatFiscalYearLabel`
-- [x] Acceptance: UI/PDF/forms never talk to calendar library directly
+## Phase ONB6 — First-Run Empty Dashboard
 
-### Phase CAL6 — Settings + Default BS UX
+- [x] Remove production dependency on `seedIfEmpty()` for first-run UX
+- [x] Keep sample/demo seeding only behind explicit debug/dev path if still needed
+- [x] Ensure first dashboard can legitimately show:
+- [x] today sales = `0`
+- [x] products = `0`
+- [x] customers = `0`
+- [x] quick actions for `Add Product`, `Record Sale`, `Add Customer`, `Setup Business`
+- [x] Acceptance: first-run dashboard reflects a real empty business, not seeded demo data
 
-- [x] Add persisted `calendar_mode` per business/profile with default `BS`
-- [x] Load calendar mode from source of truth (`backend store/profile`, then local cache)
-- [x] Switch UI date display based on business setting, not device locale alone
-- [ ] Add BS/AD-aware date input strategy for forms
-- [ ] Acceptance: fresh business sees BS by default; AD remains selectable without data model change
+## Phase ONB7 — Backend Defaulting and Store Bootstrap
 
-### Phase CAL7 — Reporting Refactor
+- [x] Ensure backend-created store defaults are canonical:
+- [x] `currency = NPR`
+- [x] `calendar_mode = BS`
+- [x] `business_timezone = Asia/Kathmandu`
+- [x] `locale_default = selected language` when available
+- [x] persist those defaults so mobile reads them via `/auth/me` and `/stores/me`
+- [x] Acceptance: mobile does not invent canonical first-business defaults on its own
 
-- [x] Refactor backend report queries to use explicit business date columns
-- [x] Refactor mobile local reports to use `*_date_ad`, not `created_at`
-- [x] Refactor dashboard summaries, sales reports, profit reports, credit aging, business health
-- [x] Ensure server and offline reports bucket identically
-- [x] Acceptance: accounting/report totals are stable across timezone changes and sync boundaries
+## Phase ONB8 — Cleanup of Legacy Auth and Onboarding
 
-### Phase CAL8 — Billing / Overdue / Numbering
+- [x] Decommission `LandingPage` as startup root
+- [x] Decommission password-based `AuthScreen` from primary user flow
+- [x] Decommission `ForgotPasswordPage` unless a real backend recovery flow exists
+- [x] Decommission `OnboardingScreen` after migration is complete
+- [x] Remove unused onboarding-complete preference gating logic
+- [x] Acceptance: there is one clear first-run/auth path in the codebase
 
-- [x] Replace invoice business date usage with `issue_date_ad` / `due_date_ad`
-- [x] Refactor overdue logic to compare against `currentBusinessDate()`
-- [x] Fix invoice numbering:
-- [x] AD mode -> AD year
-- [x] BS mode -> real BS year from adapter
-- [x] Refactor invoice PDF/date labels through calendar formatting service
-- [x] Acceptance: invoice dates/numbering are correct in BS mode without corrupting storage
+## Phase ONB9 — Migration and Rollout
 
-### Phase CAL9 — Sync Contract Hardening
+- [x] Decide migration behavior for existing password users
+- [x] Keep legacy auth fallback only at backend/service level while OTP rollout is primary
+- [x] Document that a dedicated feature flag is not required because legacy endpoints remain available for rollback
+- [x] Validate account creation, token refresh, logout, and returning-user startup
+- [x] Acceptance: progressive onboarding can replace the old flow without breaking existing accounts
 
-- [x] Reject naive timestamps in sync/API boundary
-- [x] Require UTC `Z` timestamps for event fields
-- [x] Treat business dates as immutable accounting fields during sync
-- [x] Ensure conflict handling never silently rewrites accounting dates from formatted/local display values
-- [x] Acceptance: offline-first sync cannot corrupt accounting day buckets
+## Phase ONB10 — Testing and UX Validation
 
-### Phase CAL10 — Testing and Rollout
+- [x] First install: language -> OTP -> dashboard
+- [x] Returning user with valid token -> dashboard directly
+- [x] Returning user with expired token -> OTP flow
+- [x] New user auto-creation path
+- [x] Existing user OTP login path
+- [x] Dashboard first-run empty state regression tests
+- [x] No sample seed data in production first-run flow
+- [x] Business defaults visible in profile/settings after first login
+- [x] Acceptance: startup and onboarding behavior is production-safe and measurable
 
-- [ ] Golden BS↔AD round-trip tests
-- [ ] Month-end / fiscal-year / overdue boundary tests
-- [x] Offline create -> reconnect sync consistency tests
-- [ ] Device timezone change regression tests
-- [x] Server vs local report parity tests
-- [ ] Library version pin + upgrade policy for Nepali calendar dependency
-- [ ] Acceptance: calendar support is enterprise-safe before rollout
+## Delivery Order
 
-### Delivery Order
+- [x] Step 1: `ONB0 -> ONB2`
+- [x] Step 2: `ONB1 -> ONB3`
+- [x] Step 3: `ONB4 -> ONB6`
+- [x] Step 4: `ONB7 -> ONB8`
+- [x] Step 5: `ONB9 -> ONB10`
 
-- [ ] Step 1: `CAL0 -> CAL1 -> CAL2`
-- [ ] Step 2: `CAL3 -> CAL4 -> CAL5`
-- [ ] Step 3: `CAL6 -> CAL7`
-- [ ] Step 4: `CAL8 -> CAL9`
-- [ ] Step 5: `CAL10` + rollout checklist
+## Final Artifacts
+
+- [x] Rollout and migration doc: `/Users/laxmankc/Startup/SME/sme-digital/docs/progressive-onboarding-rollout.md`
+- [x] Startup flow widget tests: `/Users/laxmankc/Startup/SME/sme-digital/mobile/test/integration/onboarding_startup_flow_test.dart`
+- [x] Backend OTP/default bootstrap tests: `/Users/laxmankc/Startup/SME/sme-digital/backend/tests/api/test_auth_and_store.py`
