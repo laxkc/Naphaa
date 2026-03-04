@@ -5,6 +5,7 @@ import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
+import '../../auth/presentation/auth_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'billing_settings_screen.dart';
 import 'business_settings_screen.dart';
@@ -264,10 +265,10 @@ class SettingsScreen extends ConsumerWidget {
               if (confirm) {
                 await ref.read(authControllerProvider.notifier).logout();
                 if (context.mounted) {
-                  Navigator.of(
-                    context,
-                    rootNavigator: true,
-                  ).popUntil((route) => route.isFirst);
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    (route) => false,
+                  );
                 }
               }
             },

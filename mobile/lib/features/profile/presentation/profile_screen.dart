@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
 import '../../../core/providers/app_providers.dart';
+import '../../auth/presentation/auth_screen.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -215,10 +216,13 @@ class ProfileScreen extends ConsumerWidget {
                               .read(authControllerProvider.notifier)
                               .logout();
                           if (context.mounted) {
-                            Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            ).popUntil((route) => route.isFirst);
+                            Navigator.of(context, rootNavigator: true)
+                                .pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                builder: (_) => const AuthScreen(),
+                              ),
+                              (route) => false,
+                            );
                           }
                         }
                       },
