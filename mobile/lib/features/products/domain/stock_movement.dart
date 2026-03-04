@@ -22,9 +22,12 @@ class StockMovement {
       id: map['id'] as String,
       productId: map['product_id'] as String,
       delta: (map['delta'] as num? ?? map['delta_qty'] as num? ?? 0).toDouble(),
-      reason: map['reason'] as String? ?? 'ADJUSTMENT',
+      reason:
+          map['reason'] as String? ??
+          map['movement_type'] as String? ??
+          'ADJUSTMENT',
       createdAt: DateTime.parse(map['created_at'] as String),
-      note: map['note'] as String?,
+      note: map['note'] as String? ?? map['reference_id'] as String?,
     );
   }
 }

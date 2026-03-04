@@ -9,14 +9,8 @@ String riskLevelLabel(
 }) {
   final l10n = AppLocalizations.of(context)!;
   return switch (level.trim().toLowerCase()) {
-    'red' =>
-      short
-          ? l10n.highLabel
-          : l10n.highRiskLabel,
-    'yellow' =>
-      short
-          ? l10n.mediumLabel
-          : l10n.mediumRiskLabel,
+    'red' => short ? l10n.highLabel : l10n.highRiskLabel,
+    'yellow' => short ? l10n.mediumLabel : l10n.mediumRiskLabel,
     _ => short ? l10n.lowLabel : l10n.lowRiskLabel,
   };
 }
@@ -36,6 +30,7 @@ String paymentMethodLabel(BuildContext context, String method) {
     'CASH' => l10n.paymentMethodCashLabel,
     'BANK' => l10n.paymentMethodBankLabel,
     'QR' => l10n.paymentMethodQrLabel,
+    'WALLET' => 'WALLET',
     'CREDIT' => l10n.paymentMethodCreditLabel,
     _ => method.toUpperCase(),
   };
@@ -49,5 +44,15 @@ String invoiceStatusLabel(BuildContext context, InvoiceStatus status) {
     InvoiceStatus.paid => l10n.invoiceStatusPaidLabel,
     InvoiceStatus.overdue => l10n.invoiceStatusOverdueLabel,
     InvoiceStatus.cancelled => l10n.invoiceStatusCancelledLabel,
+  };
+}
+
+String saleStatusLabel(BuildContext context, String status) {
+  final normalized = status.trim().toLowerCase();
+  return switch (normalized) {
+    'void' || 'voided' => 'VOIDED',
+    'refunded' => 'REFUNDED',
+    'partial' => 'PARTIAL',
+    _ => 'COMPLETED',
   };
 }

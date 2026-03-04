@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../features/reports/domain/ledger_entry.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ui_kit.dart';
 
@@ -13,8 +15,14 @@ class LedgerReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final ledgerAsync = ref.watch(ledgerReportProvider);
+    final localeCode = ref.watch(localeControllerProvider).languageCode;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(calendarMode: 'AD', localeCode: localeCode);
     final currFmt = NumberFormat('#,##0.00');
-    final dtFmt = DateFormat('yyyy-MM-dd HH:mm');
+    final timeFmt = DateFormat('h:mm a');
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -22,14 +30,16 @@ class LedgerReportScreen extends ConsumerWidget {
         backgroundColor: AppColors.surface,
       ),
       body: ledgerAsync.when(
-        loading: () => ListView.builder(
-          itemCount: 6,
-          itemBuilder: (_, __) => const SkeletonListTile(),
-        ),
-        error: (e, _) => ErrorRetry(
-          onRetry: () => ref.invalidate(ledgerReportProvider),
-          message: e.toString(),
-        ),
+        loading:
+            () => ListView.builder(
+              itemCount: 6,
+              itemBuilder: (_, __) => const SkeletonListTile(),
+            ),
+        error:
+            (e, _) => ErrorRetry(
+              onRetry: () => ref.invalidate(ledgerReportProvider),
+              message: e.toString(),
+            ),
         data: (items) {
           if (items.isEmpty) {
             return EmptyState(
@@ -57,7 +67,9 @@ class LedgerReportScreen extends ConsumerWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isIn ? Icons.call_received_rounded : Icons.call_made_rounded,
+                        isIn
+                            ? Icons.call_received_rounded
+                            : Icons.call_made_rounded,
                         size: 18,
                         color: color,
                       ),
@@ -76,25 +88,42 @@ class LedgerReportScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            dtFmt.format(item.createdAt.toLocal()),
-                            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                            '${calendar.formatBusinessDate(item.createdAt.toLocal())} • ${timeFmt.format(item.createdAt.toLocal())}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
                           ),
-                          if (item.metadata != null && item.metadata!.isNotEmpty)
+                          if (_correctionLink(item) case final link?)
                             Text(
-                              item.metadata!.entries
-                                  .take(2)
-                                  .map((e) => '${e.key}:${e.value}')
-                                  .join(' • '),
+                              'linked_sale_id:$link',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          if (item.metadata != null &&
+                              item.metadata!.isNotEmpty)
+                            Text(
+                              _metadataSummary(item.metadata!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.muted,
+                              ),
                             ),
                         ],
                       ),
                     ),
                     Text(
                       '${isIn ? '+' : '-'}NPR ${currFmt.format(item.amount)}',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: color),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
                     ),
                   ],
                 ),
@@ -105,4 +134,46 @@ class LedgerReportScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _metadataSummary(Map<String, dynamic> metadata) {
+  const preferredOrder = [
+    'original_sale_id',
+    'sale_id',
+    'refund_id',
+    'reason',
+    'void_reason',
+  ];
+  final orderedEntries = <MapEntry<String, dynamic>>[];
+  final seen = <String>{};
+  for (final key in preferredOrder) {
+    if (metadata.containsKey(key)) {
+      orderedEntries.add(MapEntry(key, metadata[key]));
+      seen.add(key);
+    }
+  }
+  for (final entry in metadata.entries) {
+    if (!seen.contains(entry.key)) orderedEntries.add(entry);
+  }
+  return orderedEntries
+      .where((e) => e.value != null && e.value.toString().trim().isNotEmpty)
+      .take(2)
+      .map((e) => '${e.key}:${e.value}')
+      .join(' • ');
+}
+
+String? _correctionLink(LedgerEntryItem item) {
+  final metadata = item.metadata ?? const <String, dynamic>{};
+  final candidates = [
+    metadata['original_sale_id'],
+    metadata['sale_id'],
+    metadata['saleId'],
+    metadata['source_sale_id'],
+    item.saleId,
+  ];
+  for (final value in candidates) {
+    final text = value?.toString().trim();
+    if (text != null && text.isNotEmpty) return text;
+  }
+  return null;
 }

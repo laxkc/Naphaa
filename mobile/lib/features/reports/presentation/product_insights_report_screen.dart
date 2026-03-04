@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../products/presentation/product_detail_screen.dart';
@@ -31,8 +32,13 @@ class _ProductInsightsReportScreenState
   Widget build(BuildContext context) {
     final params = _params;
     final reportAsync = ref.watch(productMetricsReportProvider(params));
+    final localeCode = ref.watch(localeControllerProvider).languageCode;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(calendarMode: 'AD', localeCode: localeCode);
     final currFmt = NumberFormat('#,##0.00');
-    final dateFmt = DateFormat('MMM d');
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -249,7 +255,7 @@ class _ProductInsightsReportScreenState
                               final lastSale =
                                   p.lastSaleAt == null
                                       ? l10n.productInsightsNoSalesYet
-                                      : '${l10n.productInsightsLastSaleLabel}: ${dateFmt.format(p.lastSaleAt!.toLocal())}';
+                                      : '${l10n.productInsightsLastSaleLabel}: ${calendar.formatBusinessDate(p.lastSaleAt!.toLocal())}';
                               final deadValue =
                                   p.deadStockValue == null
                                       ? l10n.productInsightsCostNotSet

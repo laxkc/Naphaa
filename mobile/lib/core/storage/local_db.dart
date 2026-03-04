@@ -31,7 +31,7 @@ class LocalDatabase {
     final dbPath = await getDatabasesPath();
     final db = await _openStrategy.open(
       path: join(dbPath, dbName),
-      version: 13,
+      version: 17,
       onCreate: (db, version) async {
         await _createSchema(db);
       },
@@ -363,9 +363,7 @@ class LocalDatabase {
         }
         if (oldVersion < 13) {
           try {
-            await db.execute(
-              "ALTER TABLE sales ADD COLUMN sale_date_ad TEXT",
-            );
+            await db.execute("ALTER TABLE sales ADD COLUMN sale_date_ad TEXT");
           } catch (_) {}
           try {
             await db.execute(
@@ -457,6 +455,77 @@ class LocalDatabase {
             );
           } catch (_) {}
         }
+        if (oldVersion < 14) {
+          try {
+            await db.execute(
+              "ALTER TABLE sales ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'",
+            );
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE sales SET status = 'completed' WHERE status IS NULL OR trim(status) = ''",
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 15) {
+          try {
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS sync_dead_letters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                direction TEXT NOT NULL,
+                store_id TEXT,
+                op_id TEXT,
+                event_id TEXT,
+                entity TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                payload TEXT,
+                reason TEXT NOT NULL,
+                created_at TEXT NOT NULL
+              )
+            ''');
+          } catch (_) {}
+          try {
+            await db.execute(
+              "UPDATE sync_queue SET status = CASE "
+              "WHEN synced = 1 THEN 'synced' "
+              "WHEN COALESCE(status, '') IN ('pending','syncing','failed','blocked','synced') THEN status "
+              "WHEN status = 'deferred' THEN 'pending' "
+              "ELSE 'pending' END",
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 16) {
+          try {
+            await db.execute(
+              "ALTER TABLE sale_refunds ADD COLUMN credit_refund_amount REAL NOT NULL DEFAULT 0",
+            );
+          } catch (_) {}
+        }
+        if (oldVersion < 17) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS checkout_diagnostics (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              store_id TEXT,
+              flow TEXT NOT NULL,
+              sale_type TEXT NOT NULL,
+              payment_method TEXT NOT NULL,
+              total_amount REAL NOT NULL DEFAULT 0,
+              cart_item_count INTEGER NOT NULL DEFAULT 0,
+              duration_ms INTEGER NOT NULL DEFAULT 0,
+              sync_retry_notice INTEGER NOT NULL DEFAULT 0,
+              success INTEGER NOT NULL DEFAULT 1,
+              error_code TEXT,
+              error_message TEXT,
+              created_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_checkout_diagnostics_created_at ON checkout_diagnostics(created_at)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS ix_checkout_diagnostics_store_created ON checkout_diagnostics(store_id, created_at)',
+          );
+        }
       },
     );
     await _runCalendarCompatibilityPass(db);
@@ -500,6 +569,7 @@ class LocalDatabase {
         customer_id TEXT,
         total_amount REAL NOT NULL,
         sale_date_ad TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'completed',
         created_at TEXT NOT NULL
       )
     ''');
@@ -533,6 +603,7 @@ class LocalDatabase {
         id TEXT PRIMARY KEY,
         sale_id TEXT NOT NULL,
         amount REAL NOT NULL,
+        credit_refund_amount REAL NOT NULL DEFAULT 0,
         reason TEXT,
         refund_date_ad TEXT NOT NULL,
         created_at TEXT NOT NULL
@@ -617,6 +688,21 @@ class LocalDatabase {
     );
 
     await db.execute('''
+      CREATE TABLE sync_dead_letters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        direction TEXT NOT NULL,
+        store_id TEXT,
+        op_id TEXT,
+        event_id TEXT,
+        entity TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload TEXT,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE customer_metrics (
         customer_id TEXT PRIMARY KEY,
         outstanding_amount REAL NOT NULL DEFAULT 0,
@@ -699,6 +785,30 @@ class LocalDatabase {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE checkout_diagnostics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_id TEXT,
+        flow TEXT NOT NULL,
+        sale_type TEXT NOT NULL,
+        payment_method TEXT NOT NULL,
+        total_amount REAL NOT NULL DEFAULT 0,
+        cart_item_count INTEGER NOT NULL DEFAULT 0,
+        duration_ms INTEGER NOT NULL DEFAULT 0,
+        sync_retry_notice INTEGER NOT NULL DEFAULT 0,
+        success INTEGER NOT NULL DEFAULT 1,
+        error_code TEXT,
+        error_message TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX ix_checkout_diagnostics_created_at ON checkout_diagnostics(created_at)',
+    );
+    await db.execute(
+      'CREATE INDEX ix_checkout_diagnostics_store_created ON checkout_diagnostics(store_id, created_at)',
+    );
 
     await db.execute('''
       CREATE TABLE invoices (
@@ -836,6 +946,14 @@ class LocalDatabase {
         'unit': 'piece',
         'category': null,
         'updated_at': now,
+      });
+      await db.insert('stock_movements', {
+        'id': _id(),
+        'product_id': id,
+        'movement_type': 'OPENING',
+        'delta_qty': stockQty,
+        'reference_id': 'seed_product',
+        'created_at': now,
       });
       // Seeded starter products must also be synced to backend; otherwise sales
       // against them fail with PRODUCT_NOT_FOUND during /sync/push.
@@ -1094,12 +1212,25 @@ class LocalDatabase {
     final nowIso = BusinessTime.nowUtcIso();
     final diagnostics = <String, int>{};
 
+    Future<bool> tableExists(String table) async {
+      final rows = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+        [table],
+      );
+      return rows.isNotEmpty;
+    }
+
     Future<void> repairDateColumn({
       required String table,
       required String idColumn,
       required String dateColumn,
       required String timestampColumn,
     }) async {
+      if (!await tableExists(table)) {
+        diagnostics['${table}_repaired'] = 0;
+        diagnostics['${table}_malformed'] = 0;
+        return;
+      }
       final rows = await db.query(
         table,
         columns: [idColumn, dateColumn, timestampColumn],
@@ -1117,7 +1248,11 @@ class LocalDatabase {
         }
         await db.update(
           table,
-          {dateColumn: BusinessTime.businessDateAd(timestampUtc: parsed.toUtc())},
+          {
+            dateColumn: BusinessTime.businessDateAd(
+              timestampUtc: parsed.toUtc(),
+            ),
+          },
           where: '$idColumn = ?',
           whereArgs: [row[idColumn]],
         );
@@ -1152,13 +1287,22 @@ class LocalDatabase {
       timestampColumn: 'created_at',
     );
 
-    final invoiceRows = await db.query(
-      'invoices',
-      columns: ['id', 'issue_date_ad', 'issue_date', 'due_date_ad', 'due_date'],
-      where:
-          "(issue_date IS NOT NULL AND (issue_date_ad IS NULL OR trim(issue_date_ad) = '')) "
-          "OR (due_date IS NOT NULL AND (due_date_ad IS NULL OR trim(due_date_ad) = ''))",
-    );
+    final invoiceRows =
+        await tableExists('invoices')
+            ? await db.query(
+              'invoices',
+              columns: [
+                'id',
+                'issue_date_ad',
+                'issue_date',
+                'due_date_ad',
+                'due_date',
+              ],
+              where:
+                  "(issue_date IS NOT NULL AND (issue_date_ad IS NULL OR trim(issue_date_ad) = '')) "
+                  "OR (due_date IS NOT NULL AND (due_date_ad IS NULL OR trim(due_date_ad) = ''))",
+            )
+            : const <Map<String, Object?>>[];
     var issueRepaired = 0;
     var issueMalformed = 0;
     var dueRepaired = 0;
@@ -1206,6 +1350,16 @@ class LocalDatabase {
     diagnostics['invoices_issue_malformed'] = issueMalformed;
     diagnostics['invoices_due_repaired'] = dueRepaired;
     diagnostics['invoices_due_malformed'] = dueMalformed;
+
+    if (!await tableExists('migration_diagnostics')) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS migration_diagnostics (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+    }
 
     for (final entry in diagnostics.entries) {
       await db.insert('migration_diagnostics', {

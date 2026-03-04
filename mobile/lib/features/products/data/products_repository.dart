@@ -18,22 +18,70 @@ class ProductsRepository {
   Future<List<Product>> searchProducts(String query) async {
     final db = await _db.database;
     final q = query.trim();
-    final rows = await db.query(
-      'products',
-      where: q.isEmpty ? null : 'name LIKE ?',
-      whereArgs: q.isEmpty ? null : ['%$q%'],
-      orderBy: 'name ASC',
-      limit: 30,
-    );
+    final rows =
+        q.isEmpty
+            ? await db.rawQuery('''
+              SELECT p.*
+              FROM products p
+              ORDER BY p.updated_at DESC, p.name COLLATE NOCASE ASC
+              LIMIT 30
+              ''')
+            : await db.rawQuery(
+              '''
+              SELECT p.*
+              FROM products p
+              WHERE p.name LIKE ?
+              ORDER BY
+                CASE
+                  WHEN LOWER(p.name) = LOWER(?) THEN 0
+                  WHEN LOWER(p.name) LIKE LOWER(?) THEN 1
+                  ELSE 2
+                END ASC,
+                CASE WHEN p.stock_qty > 0 THEN 0 ELSE 1 END ASC,
+                (
+                  SELECT MAX(s.created_at)
+                  FROM sale_items si
+                  JOIN sales s ON s.id = si.sale_id
+                  WHERE si.product_id = p.id
+                    AND COALESCE(s.status, 'completed') != 'void'
+                ) DESC,
+                p.updated_at DESC,
+                p.name COLLATE NOCASE ASC
+              LIMIT 30
+              ''',
+              ['%$q%', q, '$q%'],
+            );
     return rows.map(Product.fromMap).toList();
   }
 
   Future<List<Product>> recentProducts() async {
     final db = await _db.database;
-    final rows = await db.query(
-      'products',
-      orderBy: 'updated_at DESC',
-      limit: AppConstants.quickRecentProductsLimit,
+    final rows = await db.rawQuery(
+      '''
+      SELECT p.*
+      FROM products p
+      ORDER BY
+        CASE
+          WHEN (
+            SELECT MAX(s.created_at)
+            FROM sale_items si
+            JOIN sales s ON s.id = si.sale_id
+            WHERE si.product_id = p.id
+              AND COALESCE(s.status, 'completed') != 'void'
+          ) IS NULL THEN 1
+          ELSE 0
+        END ASC,
+        (
+          SELECT MAX(s.created_at)
+          FROM sale_items si
+          JOIN sales s ON s.id = si.sale_id
+          WHERE si.product_id = p.id
+            AND COALESCE(s.status, 'completed') != 'void'
+        ) DESC,
+        p.updated_at DESC
+      LIMIT ?
+      ''',
+      [AppConstants.quickRecentProductsLimit],
     );
     return rows.map(Product.fromMap).toList();
   }
@@ -69,6 +117,15 @@ class ProductsRepository {
         'unit': unit,
         'category': category,
         'updated_at': now,
+      });
+
+      await txn.insert('stock_movements', {
+        'id': newUuidV4(),
+        'product_id': id,
+        'movement_type': 'OPENING',
+        'delta_qty': stockQty,
+        'reference_id': 'product:$id',
+        'created_at': now,
       });
 
       await txn.insert('sync_queue', {
@@ -217,6 +274,15 @@ class ProductsRepository {
         whereArgs: [productId],
       );
 
+      await txn.insert('stock_movements', {
+        'id': newUuidV4(),
+        'product_id': productId,
+        'movement_type': _movementTypeForReason(cleanReason),
+        'delta_qty': deltaQty,
+        'reference_id': cleanReason,
+        'created_at': now,
+      });
+
       await txn.insert('sync_queue', {
         'op_id': newUuidV4(),
         'store_id': activeStoreId,
@@ -245,5 +311,16 @@ class ProductsRepository {
     } catch (_) {
       // Product writes should succeed even if intelligence cache refresh fails.
     }
+  }
+
+  String _movementTypeForReason(String reason) {
+    final normalized = reason.trim().toUpperCase();
+    if (normalized == 'RETURN') return 'RETURN';
+    if (normalized == 'DAMAGE' ||
+        normalized == 'EXPIRED' ||
+        normalized == 'LOSS') {
+      return 'LOSS';
+    }
+    return 'ADJUSTMENT';
   }
 }

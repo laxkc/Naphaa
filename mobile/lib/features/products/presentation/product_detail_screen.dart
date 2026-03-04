@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/providers/auth_role_providers.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/date/calendar_adapter.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../domain/stock_movement.dart';
 import 'product_form_screen.dart';
@@ -312,13 +313,19 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
-class _MovementTile extends StatelessWidget {
+class _MovementTile extends ConsumerWidget {
   const _MovementTile({required this.movement});
   final StockMovement movement;
 
   @override
-  Widget build(BuildContext context) {
-    final fmt = DateFormat('MMM d, h:mm a');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final localeCode = ref.watch(localeControllerProvider).languageCode;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(calendarMode: 'AD', localeCode: localeCode);
+    final timeFmt = DateFormat('h:mm a');
     final isAdd = movement.isAddition;
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -357,7 +364,7 @@ class _MovementTile extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 Text(
-                  fmt.format(movement.createdAt.toLocal()),
+                  '${calendar.formatBusinessDate(movement.createdAt.toLocal())} • ${timeFmt.format(movement.createdAt.toLocal())}',
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
               ],

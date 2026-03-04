@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/date/calendar_adapter.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import '../../sales/presentation/credit_payment_screen.dart';
 import '../domain/customer_risk_metric.dart';
@@ -19,7 +20,13 @@ class CustomerDetailScreen extends ConsumerWidget {
     final ledgerAsync = ref.watch(customerLedgerProvider(customerId));
     final riskMetrics = ref.watch(customerRiskMetricsProvider);
     final currFmt = NumberFormat('#,##0.00');
-    final dateFmt = DateFormat('MMM d, y · h:mm a');
+    final localeCode = ref.watch(localeControllerProvider).languageCode;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(calendarMode: 'AD', localeCode: localeCode);
+    final timeFmt = DateFormat('h:mm a');
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -319,7 +326,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                                                     ),
                                               ),
                                               Text(
-                                                dateFmt.format(date.toLocal()),
+                                                '${calendar.formatBusinessDate(date.toLocal())} • ${timeFmt.format(date.toLocal())}',
                                                 style:
                                                     Theme.of(
                                                       context,

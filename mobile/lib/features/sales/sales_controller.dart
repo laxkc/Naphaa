@@ -31,16 +31,20 @@ class SalesController extends Notifier<SalesState> {
     return SalesState();
   }
 
-  Future<void> search(String query) async {
+  Future<void> search(String query, {bool clearMessage = true}) async {
     try {
-      state = state.copyWith(loading: true, search: query, message: null);
+      state = state.copyWith(
+        loading: true,
+        search: query,
+        message: clearMessage ? null : state.message,
+      );
       final products = await _productsRepository.searchProducts(query);
       final recentProducts = await _productsRepository.recentProducts();
       state = state.copyWith(
         loading: false,
         products: products,
         recentProducts: recentProducts,
-        message: null,
+        message: clearMessage ? null : state.message,
       );
     } catch (e) {
       state = state.copyWith(
@@ -67,15 +71,15 @@ class SalesController extends Notifier<SalesState> {
     state = state.copyWith(selected: selected, message: null);
   }
 
-  Future<void> saveCashSale() async {
-    await _saveSale('CASH');
+  Future<bool> saveCashSale() async {
+    return _saveSale(saleType: 'CASH', paymentMethod: PaymentMethod.cash);
   }
 
-  Future<void> saveCreditSale() async {
-    await _saveSale('CREDIT');
+  Future<bool> saveCreditSale() async {
+    return _saveSale(saleType: 'CREDIT', paymentMethod: PaymentMethod.credit);
   }
 
-  Future<void> saveCreditSaleWithCustomer({
+  Future<bool> saveCreditSaleWithCustomer({
     required String customerName,
     String? phone,
   }) async {
@@ -84,13 +88,67 @@ class SalesController extends Notifier<SalesState> {
       state = state.copyWith(
         message: 'Customer name is required for credit sale.',
       );
-      return;
+      return false;
     }
-    final customerId = await _customersRepository.addCustomer(
-      name: name,
-      phone: phone?.trim().isEmpty ?? true ? null : phone?.trim(),
+    final customerId = await _resolveOrCreateCustomerId(
+      customerName: name,
+      phone: phone,
     );
-    await _saveSale('CREDIT', customerId: customerId);
+    return _saveSale(
+      saleType: 'CREDIT',
+      paymentMethod: PaymentMethod.credit,
+      customerId: customerId,
+    );
+  }
+
+  Future<bool> saveCreditSaleForCustomerId(String customerId) async {
+    final clean = customerId.trim();
+    if (clean.isEmpty) {
+      state = state.copyWith(message: 'Select a customer for credit sale.');
+      return false;
+    }
+    return _saveSale(
+      saleType: 'CREDIT',
+      paymentMethod: PaymentMethod.credit,
+      customerId: clean,
+    );
+  }
+
+  Future<bool> saveSaleWithPayments({
+    required List<SalePaymentInput> payments,
+    String? customerName,
+    String? customerPhone,
+  }) async {
+    if (payments.isEmpty) {
+      state = state.copyWith(message: 'Select at least one payment method.');
+      return false;
+    }
+    final hasCredit = payments.any((p) => p.method == PaymentMethod.credit);
+    String? customerId;
+    if (hasCredit) {
+      final name = customerName?.trim() ?? '';
+      if (name.isEmpty) {
+        state = state.copyWith(
+          message: 'Customer name is required when credit is included.',
+        );
+        return false;
+      }
+      customerId = await _resolveOrCreateCustomerId(
+        customerName: name,
+        phone: customerPhone,
+      );
+    }
+
+    final saleType =
+        hasCredit ? 'CREDIT' : (payments.length > 1 ? 'MIXED' : 'CASH');
+    final paymentMethod =
+        payments.length > 1 ? PaymentMethod.mixed : payments.first.method;
+    return _saveSale(
+      saleType: saleType,
+      paymentMethod: paymentMethod,
+      customerId: customerId,
+      payments: payments,
+    );
   }
 
   Future<void> quickAddProduct({
@@ -122,17 +180,25 @@ class SalesController extends Notifier<SalesState> {
     state = state.copyWith(message: 'Product created and added to cart.');
   }
 
-  Future<void> _saveSale(String saleType, {String? customerId}) async {
+  Future<bool> _saveSale({
+    required String saleType,
+    required PaymentMethod paymentMethod,
+    String? customerId,
+    List<SalePaymentInput> payments = const [],
+  }) async {
     if (!state.canSave) {
       state = state.copyWith(message: 'Please add at least one product.');
-      return;
+      return false;
     }
 
+    final checkoutStart = DateTime.now();
     try {
       state = state.copyWith(loading: true, message: null);
       final items = <SaleItemInput>[];
+      var cartItemCount = 0;
       for (final entry in state.selected.entries) {
         final product = _findProduct(entry.key);
+        cartItemCount += entry.value;
         items.add(
           SaleItemInput(
             productId: product.id,
@@ -145,30 +211,166 @@ class SalesController extends Notifier<SalesState> {
       await _salesRepository.createSale(
         SaleInput(
           saleType: saleType,
-          paymentMethod:
-              saleType == 'CREDIT' ? PaymentMethod.credit : PaymentMethod.cash,
+          paymentMethod: paymentMethod,
           customerId: customerId,
           items: items,
+          payments: payments,
         ),
       );
+      var syncRetryNotice = false;
       final localeCode = ref.read(localeControllerProvider).languageCode;
-      await ref
-          .read(syncManagerProvider)
-          .processPendingSync(localeCode: localeCode);
+      try {
+        await ref
+            .read(syncManagerProvider)
+            .processPendingSync(localeCode: localeCode);
+      } catch (_) {
+        // Local save already succeeded; keep checkout successful and retry sync later.
+        syncRetryNotice = true;
+      }
       ref.invalidate(dashboardSummaryProvider);
       ref.invalidate(productsListProvider);
       ref.invalidate(lowStockProductsProvider);
       ref.invalidate(customersListProvider);
       ref.invalidate(expensesListProvider);
 
-      state = state.copyWith(
-        loading: false,
-        selected: {},
-        message: 'Sale saved successfully.',
+      final successMessage =
+          saleType == 'CREDIT'
+              ? 'Credit sale saved successfully.'
+              : saleType == 'MIXED'
+              ? 'Sale saved successfully.'
+              : 'Cash sale saved successfully.';
+      final message =
+          syncRetryNotice
+              ? '$successMessage Sync failed. Will retry automatically.'
+              : successMessage;
+      await search(state.search, clearMessage: false);
+      final durationMs =
+          DateTime.now().difference(checkoutStart).inMilliseconds;
+      await _recordCheckoutDiagnostic(
+        flow: _checkoutFlow(
+          saleType: saleType,
+          paymentMethod: paymentMethod,
+          payments: payments,
+        ),
+        saleType: saleType,
+        paymentMethod: paymentMethodToApi(paymentMethod),
+        totalAmount: items.fold<double>(0, (sum, item) => sum + item.lineTotal),
+        cartItemCount: cartItemCount,
+        durationMs: durationMs,
+        syncRetryNotice: syncRetryNotice,
+        success: true,
       );
-      await search(state.search);
+      state = state.copyWith(loading: false, selected: {}, message: message);
+      return true;
     } catch (e) {
-      state = state.copyWith(loading: false, message: e.toString());
+      final descriptor = _describeSaveError(e);
+      final durationMs =
+          DateTime.now().difference(checkoutStart).inMilliseconds;
+      await _recordCheckoutDiagnostic(
+        flow: _checkoutFlow(
+          saleType: saleType,
+          paymentMethod: paymentMethod,
+          payments: payments,
+        ),
+        saleType: saleType,
+        paymentMethod: paymentMethodToApi(paymentMethod),
+        totalAmount: state.selected.entries.fold<double>(0, (sum, entry) {
+          try {
+            final product = _findProduct(entry.key);
+            return sum + (entry.value * product.sellPrice);
+          } catch (_) {
+            return sum;
+          }
+        }),
+        cartItemCount: state.selected.values.fold<int>(
+          0,
+          (sum, qty) => sum + qty,
+        ),
+        durationMs: durationMs,
+        syncRetryNotice: false,
+        success: false,
+        errorCode: descriptor.code,
+        errorMessage: descriptor.message,
+      );
+      state = state.copyWith(loading: false, message: descriptor.message);
+      return false;
+    }
+  }
+
+  ({String code, String message}) _describeSaveError(Object error) {
+    final raw = error.toString();
+    final lower = raw.toLowerCase();
+    if (lower.contains('insufficient stock')) {
+      return (
+        code: 'insufficient_stock',
+        message: 'Sale could not be saved: insufficient stock.',
+      );
+    }
+    if (lower.contains('customer') && lower.contains('required')) {
+      return (
+        code: 'customer_required',
+        message: 'Sale could not be saved: select a customer for credit.',
+      );
+    }
+    if (lower.contains('product missing') ||
+        lower.contains('product not found')) {
+      return (
+        code: 'product_missing',
+        message:
+            'Sale could not be saved: one or more products are unavailable.',
+      );
+    }
+    return (
+      code: 'save_failed',
+      message: 'Sale could not be saved. Please review items and try again.',
+    );
+  }
+
+  String _checkoutFlow({
+    required String saleType,
+    required PaymentMethod paymentMethod,
+    required List<SalePaymentInput> payments,
+  }) {
+    if (payments.length > 1 || paymentMethod == PaymentMethod.mixed) {
+      return 'advanced_mixed';
+    }
+    if (saleType == 'CREDIT' || paymentMethod == PaymentMethod.credit) {
+      return 'quick_credit';
+    }
+    return 'quick_cash';
+  }
+
+  Future<void> _recordCheckoutDiagnostic({
+    required String flow,
+    required String saleType,
+    required String paymentMethod,
+    required double totalAmount,
+    required int cartItemCount,
+    required int durationMs,
+    required bool syncRetryNotice,
+    required bool success,
+    String? errorCode,
+    String? errorMessage,
+  }) async {
+    try {
+      final db = await ref.read(localDatabaseProvider).database;
+      final storeId = await ref.read(preferencesProvider).getActiveStoreId();
+      await db.insert('checkout_diagnostics', {
+        'store_id': storeId,
+        'flow': flow,
+        'sale_type': saleType,
+        'payment_method': paymentMethod,
+        'total_amount': totalAmount,
+        'cart_item_count': cartItemCount,
+        'duration_ms': durationMs,
+        'sync_retry_notice': syncRetryNotice ? 1 : 0,
+        'success': success ? 1 : 0,
+        'error_code': errorCode,
+        'error_message': errorMessage,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (_) {
+      // Never block checkout on local diagnostics write failure.
     }
   }
 
@@ -180,5 +382,29 @@ class SalesController extends Notifier<SalesState> {
       if (product.id == id) return product;
     }
     throw StateError('Product not found');
+  }
+
+  Future<String> _resolveOrCreateCustomerId({
+    required String customerName,
+    String? phone,
+  }) async {
+    final cleanName = customerName.trim();
+    final cleanPhone = phone?.trim();
+    final customers = await _customersRepository.listCustomers();
+    for (final c in customers) {
+      final samePhone =
+          cleanPhone != null &&
+          cleanPhone.isNotEmpty &&
+          (c.phone?.trim() ?? '') == cleanPhone;
+      final sameName = c.name.trim().toLowerCase() == cleanName.toLowerCase();
+      if (samePhone || sameName) {
+        return c.id;
+      }
+    }
+
+    return _customersRepository.addCustomer(
+      name: cleanName,
+      phone: cleanPhone?.isEmpty ?? true ? null : cleanPhone,
+    );
   }
 }

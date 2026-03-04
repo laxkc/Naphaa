@@ -6,7 +6,10 @@ import '../../../core/l10n/display_labels.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/ui_kit.dart';
+import '../../customers/domain/customer.dart';
+import '../../customers/domain/customer_risk_metric.dart';
 import '../sales_controller.dart';
+import '../domain/sale_models.dart';
 import '../sales_state.dart';
 
 class CreateSaleScreen extends ConsumerWidget {
@@ -33,17 +36,13 @@ class CreateSaleScreen extends ConsumerWidget {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: Text(
-              l10n.salesQuickAddProductTitle,
-            ),
+            title: Text(l10n.salesQuickAddProductTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: l10n.productName,
-                  ),
+                  decoration: InputDecoration(labelText: l10n.productName),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -51,9 +50,7 @@ class CreateSaleScreen extends ConsumerWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: InputDecoration(
-                    labelText: l10n.sellPriceLabel,
-                  ),
+                  decoration: InputDecoration(labelText: l10n.sellPriceLabel),
                 ),
               ],
             ),
@@ -91,17 +88,13 @@ class CreateSaleScreen extends ConsumerWidget {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: Text(
-              l10n.salesQuickCreditCustomerTitle,
-            ),
+            title: Text(l10n.salesQuickCreditCustomerTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameCtrl,
-                  decoration: InputDecoration(
-                    labelText: l10n.customerName,
-                  ),
+                  decoration: InputDecoration(labelText: l10n.customerName),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -133,13 +126,158 @@ class CreateSaleScreen extends ConsumerWidget {
                   );
                   if (ctx.mounted) Navigator.of(ctx).pop();
                 },
-                child: Text(
-                  l10n.saveCreditSale,
-                ),
+                child: Text(l10n.saveCreditSale),
               ),
             ],
           ),
     );
+  }
+
+  Future<void> _showCreditCustomerPickerDialog(
+    BuildContext context,
+    WidgetRef ref,
+    SalesController controller,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    List<Customer> customers;
+    Map<String, CustomerRiskMetric> riskMap;
+    try {
+      customers = await ref.read(customersListProvider.future);
+      riskMap = await ref.read(customerRiskMetricsProvider.future);
+    } catch (_) {
+      await _showQuickCreditCustomerDialog(context, ref, controller);
+      return;
+    }
+
+    final searchCtrl = TextEditingController();
+    var query = '';
+    try {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (ctx) => StatefulBuilder(
+              builder: (ctx, setState) {
+                final filtered =
+                    customers.where((c) {
+                      final q = query.trim().toLowerCase();
+                      if (q.isEmpty) return true;
+                      return c.name.toLowerCase().contains(q) ||
+                          (c.phone?.toLowerCase().contains(q) ?? false);
+                    }).toList();
+                return AlertDialog(
+                  title: Text(l10n.salesQuickCreditCustomerTitle),
+                  content: SizedBox(
+                    width: 420,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: searchCtrl,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            hintText: l10n.searchProducts,
+                            isDense: true,
+                          ),
+                          onChanged: (value) => setState(() => query = value),
+                        ),
+                        const SizedBox(height: 10),
+                        if (filtered.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Text(
+                              'No customers found',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          )
+                        else
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 280),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              separatorBuilder:
+                                  (_, __) =>
+                                      const Divider(height: 1, thickness: 0.5),
+                              itemBuilder: (_, i) {
+                                final customer = filtered[i];
+                                final risk = riskMap[customer.id];
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(customer.name),
+                                  subtitle: Text(
+                                    [
+                                      if (customer.phone?.isNotEmpty == true)
+                                        customer.phone!,
+                                      '${l10n.nprLabel} ${customer.balance.toStringAsFixed(2)}',
+                                    ].join(' • '),
+                                  ),
+                                  trailing:
+                                      risk == null
+                                          ? null
+                                          : StatusChip(
+                                            label: riskLevelLabel(
+                                              context,
+                                              risk.riskLevel,
+                                              short: true,
+                                            ),
+                                            color:
+                                                risk.riskLevel.toLowerCase() ==
+                                                        'red'
+                                                    ? AppColors.error
+                                                    : risk.riskLevel
+                                                            .toLowerCase() ==
+                                                        'yellow'
+                                                    ? AppColors.warning
+                                                    : AppColors.success,
+                                          ),
+                                  onTap: () async {
+                                    final confirmed =
+                                        await _confirmCreditRiskForCustomer(
+                                          context,
+                                          customer: customer,
+                                          risk: risk,
+                                        );
+                                    if (!confirmed) return;
+                                    final ok = await controller
+                                        .saveCreditSaleForCustomerId(
+                                          customer.id,
+                                        );
+                                    if (ok && ctx.mounted) {
+                                      Navigator.of(ctx).pop();
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _showQuickCreditCustomerDialog(
+                          context,
+                          ref,
+                          controller,
+                        );
+                      },
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: Text(l10n.addCustomer),
+                    ),
+                  ],
+                );
+              },
+            ),
+      );
+    } finally {
+      searchCtrl.dispose();
+    }
   }
 
   Future<bool> _confirmCreditRiskIfNeeded(
@@ -174,9 +312,7 @@ class CreateSaleScreen extends ConsumerWidget {
           final label = riskLevelLabel(context, level);
           final l10n = AppLocalizations.of(ctx)!;
           return AlertDialog(
-            title: Text(
-              l10n.salesCreditRiskWarningTitle,
-            ),
+            title: Text(l10n.salesCreditRiskWarningTitle),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,14 +329,8 @@ class CreateSaleScreen extends ConsumerWidget {
                     risk.outstandingAmount.toStringAsFixed(2),
                   ),
                 ),
-                Text(
-                  l10n.salesCreditRiskOldestDueDays(
-                    risk.oldestDueDays,
-                  ),
-                ),
-                Text(
-                  l10n.salesCreditRiskScore(risk.riskScore.toString()),
-                ),
+                Text(l10n.salesCreditRiskOldestDueDays(risk.oldestDueDays)),
+                Text(l10n.salesCreditRiskScore(risk.riskScore.toString())),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -209,9 +339,7 @@ class CreateSaleScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: color.withValues(alpha: 0.20)),
                   ),
-                  child: Text(
-                    l10n.salesCreditRiskContinueWarning,
-                  ),
+                  child: Text(l10n.salesCreditRiskContinueWarning),
                 ),
               ],
             ),
@@ -231,6 +359,264 @@ class CreateSaleScreen extends ConsumerWidget {
       return shouldProceed ?? false;
     } catch (_) {
       return true;
+    }
+  }
+
+  Future<bool> _confirmCreditRiskForCustomer(
+    BuildContext context, {
+    required Customer customer,
+    CustomerRiskMetric? risk,
+  }) async {
+    final level = risk?.riskLevel.toLowerCase() ?? '';
+    if (level != 'red' && level != 'yellow') return true;
+    final color = level == 'red' ? AppColors.error : AppColors.warning;
+    final l10n = AppLocalizations.of(context)!;
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(l10n.salesCreditRiskWarningTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.salesCreditRiskExistingCustomerMarked(
+                    customer.name,
+                    riskLevelLabel(context, level),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.salesCreditRiskOutstandingNpr(
+                    (risk?.outstandingAmount ?? customer.balance)
+                        .toStringAsFixed(2),
+                  ),
+                ),
+                Text(
+                  l10n.salesCreditRiskOldestDueDays(risk?.oldestDueDays ?? 0),
+                ),
+                Text(
+                  l10n.salesCreditRiskScore((risk?.riskScore ?? 0).toString()),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: color.withValues(alpha: 0.20)),
+                  ),
+                  child: Text(l10n.salesCreditRiskContinueWarning),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.continueLabel),
+              ),
+            ],
+          ),
+    );
+    return shouldProceed ?? false;
+  }
+
+  Future<void> _showAdvancedCheckoutDialog(
+    BuildContext context,
+    SalesController controller, {
+    required double totalAmt,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final methods = <PaymentMethod>[
+      PaymentMethod.cash,
+      PaymentMethod.qr,
+      PaymentMethod.bank,
+      PaymentMethod.wallet,
+      PaymentMethod.credit,
+    ];
+    final selected = <PaymentMethod>{PaymentMethod.cash};
+    final amountCtrls = <PaymentMethod, TextEditingController>{
+      for (final method in methods)
+        method: TextEditingController(
+          text: method == PaymentMethod.cash ? totalAmt.toStringAsFixed(2) : '',
+        ),
+    };
+    final customerNameCtrl = TextEditingController();
+    final customerPhoneCtrl = TextEditingController();
+    String? errorText;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (ctx) => StatefulBuilder(
+              builder: (ctx, setState) {
+                double parsed(TextEditingController c) =>
+                    double.tryParse(c.text.trim()) ?? 0;
+                final enteredTotal = selected.fold<double>(
+                  0,
+                  (sum, m) => sum + parsed(amountCtrls[m]!),
+                );
+
+                return AlertDialog(
+                  title: Text(l10n.paymentMethodLabelTitle),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              methods.map((method) {
+                                final isSelected = selected.contains(method);
+                                return FilterChip(
+                                  label: Text(
+                                    paymentMethodLabel(
+                                      context,
+                                      paymentMethodToApi(method),
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (value) {
+                                    setState(() {
+                                      if (value) {
+                                        selected.add(method);
+                                      } else if (selected.length > 1) {
+                                        selected.remove(method);
+                                      }
+                                      errorText = null;
+                                    });
+                                  },
+                                  showCheckmark: false,
+                                );
+                              }).toList(),
+                        ),
+                        const SizedBox(height: 12),
+                        for (final method in selected) ...[
+                          Text(
+                            paymentMethodLabel(
+                              context,
+                              paymentMethodToApi(method),
+                            ),
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: amountCtrls[method],
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: l10n.amount,
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setState(() => errorText = null),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (selected.contains(PaymentMethod.credit)) ...[
+                          TextField(
+                            controller: customerNameCtrl,
+                            decoration: InputDecoration(
+                              labelText: l10n.customerName,
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setState(() => errorText = null),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: customerPhoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(
+                              labelText: l10n.phoneOptionalLabel,
+                              isDense: true,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        Text(
+                          '${l10n.totalLabel}: ${l10n.nprLabel} ${totalAmt.toStringAsFixed(2)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        Text(
+                          'Entered: ${l10n.nprLabel} ${enteredTotal.toStringAsFixed(2)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (errorText != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            errorText!,
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () async {
+                        final payments = <SalePaymentInput>[];
+                        for (final method in selected) {
+                          final amount = double.tryParse(
+                            amountCtrls[method]!.text.trim(),
+                          );
+                          if (amount == null || amount <= 0) {
+                            setState(() => errorText = l10n.enterValidAmount);
+                            return;
+                          }
+                          payments.add(
+                            SalePaymentInput(method: method, amount: amount),
+                          );
+                        }
+                        final sum = payments.fold<double>(
+                          0,
+                          (s, p) => s + p.amount,
+                        );
+                        if ((sum - totalAmt).abs() > 0.01) {
+                          setState(
+                            () =>
+                                errorText =
+                                    'Payment total must equal cart total.',
+                          );
+                          return;
+                        }
+                        final ok = await controller.saveSaleWithPayments(
+                          payments: payments,
+                          customerName:
+                              selected.contains(PaymentMethod.credit)
+                                  ? customerNameCtrl.text
+                                  : null,
+                          customerPhone:
+                              selected.contains(PaymentMethod.credit)
+                                  ? customerPhoneCtrl.text
+                                  : null,
+                        );
+                        if (ok && ctx.mounted) Navigator.of(ctx).pop();
+                      },
+                      child: Text(l10n.save),
+                    ),
+                  ],
+                );
+              },
+            ),
+      );
+    } finally {
+      for (final c in amountCtrls.values) {
+        c.dispose();
+      }
+      customerNameCtrl.dispose();
+      customerPhoneCtrl.dispose();
     }
   }
 
@@ -406,7 +792,13 @@ class CreateSaleScreen extends ConsumerWidget {
             loading: state.loading,
             onCash: controller.saveCashSale,
             onCredit:
-                () => _showQuickCreditCustomerDialog(context, ref, controller),
+                () => _showCreditCustomerPickerDialog(context, ref, controller),
+            onMore:
+                () => _showAdvancedCheckoutDialog(
+                  context,
+                  controller,
+                  totalAmt: totalAmt,
+                ),
           ),
         ],
       ),
@@ -605,6 +997,7 @@ class _CartFooter extends StatelessWidget {
     required this.loading,
     required this.onCash,
     required this.onCredit,
+    required this.onMore,
   });
   final AppLocalizations l10n;
   final int totalQty;
@@ -613,6 +1006,7 @@ class _CartFooter extends StatelessWidget {
   final bool loading;
   final VoidCallback onCash;
   final VoidCallback onCredit;
+  final VoidCallback onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +1083,16 @@ class _CartFooter extends StatelessWidget {
                     foregroundColor: AppColors.primary,
                   ),
                 ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              FilledButton.tonal(
+                onPressed: loading || totalQty == 0 ? null : onMore,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(52, 46),
+                  backgroundColor: AppColors.surfaceAlt,
+                  foregroundColor: AppColors.primary,
+                ),
+                child: const Icon(Icons.tune_rounded, size: 18),
               ),
             ],
           ),

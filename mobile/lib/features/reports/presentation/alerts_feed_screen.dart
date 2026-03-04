@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:sme_digital/l10n/app_localizations.dart';
 
+import '../../../core/date/calendar_adapter.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../shared/widgets/ui_kit.dart';
 import 'alert_action_router.dart';
@@ -14,7 +14,12 @@ class AlertsFeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final alertsAsync = ref.watch(alertsUnreadFeedProvider);
     final readCtrl = ref.read(alertReadControllerProvider);
-    final dateFmt = DateFormat('MMM d, h:mm a');
+    final localeCode = ref.watch(localeControllerProvider).languageCode;
+    final calendarAsync = ref.watch(calendarAdapterProvider);
+    final calendar =
+        calendarAsync is AsyncData<CalendarAdapter>
+            ? calendarAsync.value
+            : CalendarAdapter(calendarMode: 'AD', localeCode: localeCode);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -124,7 +129,10 @@ class AlertsFeedScreen extends ConsumerWidget {
                           ),
                           if (a.createdAt != null)
                             _MetaChip(
-                              label: dateFmt.format(a.createdAt!.toLocal()),
+                              label: calendar.formatBusinessDate(
+                                a.createdAt!.toLocal(),
+                                includeTime: true,
+                              ),
                               color: AppColors.muted,
                               outlined: true,
                             ),

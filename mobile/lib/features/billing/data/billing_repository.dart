@@ -54,7 +54,9 @@ class BillingRepository {
         'due_date':
             dueDateAd == null
                 ? null
-                : BusinessTime.parseAdDate(dueDateAd)?.toUtc().toIso8601String(),
+                : BusinessTime.parseAdDate(
+                  dueDateAd,
+                )?.toUtc().toIso8601String(),
         'issue_date_ad': null,
         'due_date_ad': dueDateAd,
         'currency_code': settings['currency_code'],
@@ -123,7 +125,8 @@ class BillingRepository {
       timezone: timezone,
     );
     final issueBusinessDate =
-        BusinessTime.parseAdDate(issueDateAd) ?? DateTime(now.year, now.month, now.day);
+        BusinessTime.parseAdDate(issueDateAd) ??
+        DateTime(now.year, now.month, now.day);
 
     await db.transaction((txn) async {
       final invoice = await _getInvoiceRow(txn, invoiceId);
@@ -263,9 +266,11 @@ class BillingRepository {
           'subtotal': (issuedInvoice['subtotal'] as num?)?.toDouble() ?? 0.0,
           'discount_amount':
               (issuedInvoice['discount_amount'] as num?)?.toDouble() ?? 0.0,
-          'tax_amount': (issuedInvoice['tax_amount'] as num?)?.toDouble() ?? 0.0,
+          'tax_amount':
+              (issuedInvoice['tax_amount'] as num?)?.toDouble() ?? 0.0,
           'total': (issuedInvoice['total'] as num?)?.toDouble() ?? 0.0,
-          'paid_amount': (issuedInvoice['paid_amount'] as num?)?.toDouble() ?? 0.0,
+          'paid_amount':
+              (issuedInvoice['paid_amount'] as num?)?.toDouble() ?? 0.0,
           'balance_due':
               (issuedInvoice['balance_due'] as num?)?.toDouble() ?? 0.0,
           'payment_method_summary': issuedInvoice['payment_method_summary'],
@@ -463,7 +468,8 @@ class BillingRepository {
       'invoices',
       where: clauses.isEmpty ? null : clauses.join(' AND '),
       whereArgs: clauses.isEmpty ? null : args,
-      orderBy: 'COALESCE(issue_date_ad, substr(created_at, 1, 10)) DESC, created_at DESC',
+      orderBy:
+          'COALESCE(issue_date_ad, substr(created_at, 1, 10)) DESC, created_at DESC',
     );
     return rows.map(InvoiceRecord.fromMap).toList();
   }
@@ -530,9 +536,9 @@ class BillingRepository {
       'created_at': nowIso,
       'updated_at': nowIso,
       'synced': 0,
-      'status': 'deferred',
+      'status': 'pending',
       'retry_count': 0,
-      'last_error': 'Deferred: backend invoice sync handlers not implemented yet',
+      'last_error': null,
     });
   }
 

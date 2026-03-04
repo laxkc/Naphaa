@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LedgerEntryItem {
   const LedgerEntryItem({
     required this.id,
@@ -31,13 +33,12 @@ class LedgerEntryItem {
       entryType: json['entry_type']?.toString() ?? '',
       direction: json['direction']?.toString() ?? 'IN',
       amount: _toDouble(json['amount']),
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       customerId: json['customer_id']?.toString(),
       saleId: json['sale_id']?.toString(),
-      metadata: json['metadata_json'] is Map
-          ? Map<String, dynamic>.from(json['metadata_json'] as Map)
-          : null,
+      metadata: _parseMetadata(json['metadata_json']),
     );
   }
 }
@@ -45,4 +46,21 @@ class LedgerEntryItem {
 double _toDouble(Object? value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+Map<String, dynamic>? _parseMetadata(Object? value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  if (value is String && value.trim().isNotEmpty) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
 }

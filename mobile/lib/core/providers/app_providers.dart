@@ -218,19 +218,12 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> verifyOtp({
-    required String phone,
-    required String otp,
-  }) async {
+  Future<void> verifyOtp({required String phone, required String otp}) async {
     state = state.copyWith(loading: true, error: null);
     try {
       final previousPhone = await _prefs.getUserPhone();
       final locale = ref.read(localeControllerProvider).languageCode;
-      await _session.verifyOtp(
-        phone: phone,
-        otp: otp,
-        localeCode: locale,
-      );
+      await _session.verifyOtp(phone: phone, otp: otp, localeCode: locale);
       await _handlePostAuthStoreScope(
         phone: phone,
         previousPhone: previousPhone,
@@ -724,13 +717,17 @@ class SyncCoordinatorController extends Notifier<SyncStatusState> {
   Future<void> _refreshPendingCount() async {
     if (!ref.mounted) return;
     final db = await ref.read(localDatabaseProvider).database;
+    final activeStoreId =
+        await ref.read(preferencesProvider).getActiveStoreId();
     if (!ref.mounted) return;
+    final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
     final row = await db.rawQuery("""
       SELECT COUNT(*) AS total
       FROM sync_queue
       WHERE synced = 0
         AND COALESCE(status, 'pending') IN ('pending', 'failed', 'blocked')
-      """);
+        ${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}
+      """, hasStoreScope ? [activeStoreId] : null);
     if (!ref.mounted) return;
     final count = (row.first['total'] as num?)?.toInt() ?? 0;
     state = state.copyWith(pendingCount: count);
@@ -802,12 +799,10 @@ final customersListProvider = FutureProvider<List<Customer>>(
   (ref) => ref.watch(customersRepositoryProvider).listCustomers(),
 );
 
-final expensesListProvider = FutureProvider<List<Expense>>(
-  (ref) {
-    ref.watch(dataRefreshRevisionProvider);
-    return ref.watch(expensesRepositoryProvider).listExpenses();
-  },
-);
+final expensesListProvider = FutureProvider<List<Expense>>((ref) {
+  ref.watch(dataRefreshRevisionProvider);
+  return ref.watch(expensesRepositoryProvider).listExpenses();
+});
 
 final salesRepositoryProvider = Provider<SalesRepository>(
   (ref) => SalesRepository(
@@ -869,9 +864,7 @@ class DashboardSummary {
 }
 
 class SetupPrompt {
-  const SetupPrompt({
-    required this.id,
-  });
+  const SetupPrompt({required this.id});
 
   final String id;
 }
@@ -923,7 +916,8 @@ final setupPromptsProvider = FutureProvider<List<SetupPrompt>>((ref) async {
       const SetupPrompt(id: 'tax_settings'),
     if (products.isEmpty) const SetupPrompt(id: 'first_product'),
     if (customers.isEmpty) const SetupPrompt(id: 'first_customer'),
-    if ((billingSettings['invoice_prefix']?.toString().trim().isEmpty ?? true) ||
+    if ((billingSettings['invoice_prefix']?.toString().trim().isEmpty ??
+            true) ||
         billingSettings['invoice_prefix']?.toString().trim() == 'INV')
       const SetupPrompt(id: 'invoice_prefix'),
   ];
@@ -1361,10 +1355,14 @@ final salesReportProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, ReportParams>((ref, params) async {
       ref.watch(dataRefreshRevisionProvider);
       final repo = ref.watch(salesRepositoryProvider);
-      final sales = await repo.listSales(
+      final allSales = await repo.listSales(
         fromDate: params.fromDate,
         toDate: params.toDate,
       );
+      final sales =
+          allSales
+              .where((s) => s.status != SaleStatus.voided && s.totalAmount > 0)
+              .toList();
       double totalRevenue = 0;
       double cashTotal = 0;
       double creditTotal = 0;

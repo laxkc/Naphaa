@@ -6,10 +6,12 @@ import 'package:sqflite/sqflite.dart';
 
 import '../storage/local_db.dart';
 import '../storage/preferences.dart';
+import '../storage/stock_projection_service.dart';
 import '../utils/uuid_id.dart';
 import '../date/business_time.dart';
 import '../config/app_config.dart';
 import '../sync/sync_error_mapper.dart';
+import 'models/sync_models.dart';
 import 'backend_gateway.dart';
 import 'session_service.dart';
 
@@ -70,13 +72,20 @@ class SyncService {
       if (value is Map) {
         return <String, dynamic>{
           for (final entry in value.entries)
-            entry.key.toString(): normalize(entry.value, key: entry.key.toString()),
+            entry.key.toString(): normalize(
+              entry.value,
+              key: entry.key.toString(),
+            ),
         };
       }
       if (value is List) {
         return value.map((item) => normalize(item)).toList();
       }
-      if (key != null && (key == 'created_at' || key == 'updated_at' || key == 'deleted_at' || key.endsWith('_at'))) {
+      if (key != null &&
+          (key == 'created_at' ||
+              key == 'updated_at' ||
+              key == 'deleted_at' ||
+              key.endsWith('_at'))) {
         return BusinessTime.normalizeUtcIso(value);
       }
       return value;
@@ -132,6 +141,7 @@ class SyncService {
         [nowIso, activeStoreId],
       );
     }
+    await _normalizeQueueStatuses(db, activeStoreId: activeStoreId);
     final localSalesCount =
         Sqflite.firstIntValue(
           await db.rawQuery('SELECT COUNT(*) FROM sales'),
@@ -208,9 +218,33 @@ class SyncService {
       try {
         for (var i = 0; i < rowsWithOpIds.length; i += _pushChunkSize) {
           final chunk = rowsWithOpIds.skip(i).take(_pushChunkSize).toList();
+          final validChunk = <Map<String, dynamic>>[];
+          final invalidChunk = <Map<String, dynamic>>[];
+          for (final row in chunk) {
+            final validationError = _validateOutgoingQueueRow(row);
+            if (validationError != null) {
+              invalidChunk.add({...row, '__validation_error': validationError});
+            } else {
+              validChunk.add(row);
+            }
+          }
+          if (invalidChunk.isNotEmpty) {
+            await _deadLetterOutboundRows(db, invalidChunk);
+          }
+          if (validChunk.isEmpty) {
+            result = SyncRunResult(
+              pendingAtStart: result.pendingAtStart,
+              pushedEvents: result.pushedEvents,
+              ackedEvents: result.ackedEvents,
+              failedEvents: result.failedEvents + invalidChunk.length,
+              pulledEvents: result.pulledEvents,
+              appliedEvents: result.appliedEvents,
+            );
+            continue;
+          }
           final pushedEvents = result.pushedEvents + chunk.length;
           final events =
-              chunk
+              validChunk
                   .map(
                     (row) => {
                       'op_id': row['op_id'],
@@ -228,6 +262,11 @@ class SyncService {
                   .toList();
           final pushResult = await _gateway.pushSync(events);
           final ackedOpIds = pushResult.ackedOpIds.toSet();
+          final failedByOpIdDetail = <String, SyncPushFailure>{
+            for (final failed in pushResult.failedEvents)
+              if (failed.opId != null && failed.opId!.isNotEmpty)
+                failed.opId!: failed,
+          };
           final failedByOpId = <String, String>{
             for (final failed in pushResult.failedEvents)
               if (failed.opId != null && failed.opId!.isNotEmpty)
@@ -239,10 +278,12 @@ class SyncService {
                 failed.code == 'PRODUCT_NOT_FOUND' &&
                 failed.opId != null &&
                 failed.opId!.isNotEmpty) {
-              final sourceRow = chunk.cast<Map<String, dynamic>?>().firstWhere(
-                (row) => row?['op_id'] == failed.opId,
-                orElse: () => null,
-              );
+              final sourceRow = validChunk
+                  .cast<Map<String, dynamic>?>()
+                  .firstWhere(
+                    (row) => row?['op_id'] == failed.opId,
+                    orElse: () => null,
+                  );
               if (sourceRow != null) {
                 await _enqueueMissingProductDependenciesForSale(db, sourceRow);
               }
@@ -258,24 +299,49 @@ class SyncService {
 
           final batch = db.batch();
           final now = BusinessTime.nowUtcIso();
-          for (final row in chunk) {
+          final permanentlyFailedRows = <Map<String, dynamic>>[];
+          for (final row in validChunk) {
             final id = row['id'] as int;
             final opId = row['op_id'] as String?;
             final acked = opId != null && ackedOpIds.contains(opId);
+            final failure = opId == null ? null : failedByOpIdDetail[opId];
+            final permanentlyInvalid =
+                failure != null && _isPermanentPushFailure(failure);
+            if (permanentlyInvalid) permanentlyFailedRows.add(row);
             batch.update(
               'sync_queue',
               {
                 'synced': acked ? 1 : 0,
-                'status': acked ? 'synced' : 'failed',
+                'status':
+                    acked
+                        ? 'synced'
+                        : (permanentlyInvalid ? 'blocked' : 'failed'),
                 'next_retry_at':
-                    acked ? null : _nextRetryAtIso(_nextRetryCount(row)),
+                    acked || permanentlyInvalid
+                        ? null
+                        : _nextRetryAtIso(_nextRetryCount(row)),
                 'last_error':
                     acked
                         ? null
-                        : (failedByOpId[opId] ??
-                            'Sync failed on server. We will retry automatically.'),
+                        : (permanentlyInvalid
+                            ? (() {
+                              final f =
+                                  opId == null
+                                      ? null
+                                      : failedByOpIdDetail[opId];
+                              if (f == null) {
+                                return 'Permanent push failure. Moved to dead-letter.';
+                              }
+                              return '${f.code}: ${f.message}. Moved to dead-letter.';
+                            })()
+                            : (failedByOpId[opId] ??
+                                'Sync failed on server. We will retry automatically.')),
                 'retry_count':
-                    acked ? row['retry_count'] : _nextRetryCount(row),
+                    acked
+                        ? row['retry_count']
+                        : (permanentlyInvalid
+                            ? _maxRetryCount
+                            : _nextRetryCount(row)),
                 'updated_at': now,
               },
               where: 'id = ?',
@@ -296,12 +362,29 @@ class SyncService {
               );
             }
           }
+          if (permanentlyFailedRows.isNotEmpty) {
+            await _deadLetterOutboundRows(
+              db,
+              permanentlyFailedRows.map((row) {
+                final opId = row['op_id']?.toString();
+                final failure = opId == null ? null : failedByOpIdDetail[opId];
+                final reason = switch (failure) {
+                  null => 'Permanent push failure',
+                  _ => '${failure.code}: ${failure.message}',
+                };
+                return {...row, '__validation_error': reason};
+              }).toList(),
+              updateQueueStatus: false,
+            );
+          }
           result = SyncRunResult(
             pendingAtStart: result.pendingAtStart,
             pushedEvents: pushedEvents,
             ackedEvents: result.ackedEvents + ackedOpIds.length,
             failedEvents:
-                result.failedEvents + (chunk.length - ackedOpIds.length),
+                result.failedEvents +
+                invalidChunk.length +
+                (validChunk.length - ackedOpIds.length),
             pulledEvents: result.pulledEvents,
             appliedEvents: result.appliedEvents,
           );
@@ -380,8 +463,24 @@ class SyncService {
         );
         pulledCustomerFinancialChanges =
             pulledCustomerFinancialChanges || shouldReconcileCustomerBalances;
+        var appliedCount = 0;
         await db.transaction((txn) async {
           for (final event in pulled) {
+            final inboundValidationError = _validateInboundEvent(event);
+            if (inboundValidationError != null) {
+              await _recordDeadLetter(
+                txn,
+                direction: 'pull',
+                storeId: activeStoreId,
+                opId: null,
+                eventId: event.id,
+                entity: event.entity,
+                operation: event.operation,
+                payload: event.payload,
+                reason: inboundValidationError,
+              );
+              continue;
+            }
             await _applyEvent(txn, {
               'id': event.id,
               'entity': event.entity,
@@ -390,6 +489,7 @@ class SyncService {
               if (event.createdAt != null)
                 'created_at': event.createdAt!.toIso8601String(),
             });
+            appliedCount += 1;
           }
           if (shouldReconcileCustomerBalances) {
             await _reconcileCustomerBalances(txn);
@@ -401,7 +501,7 @@ class SyncService {
           ackedEvents: result.ackedEvents,
           failedEvents: result.failedEvents,
           pulledEvents: result.pulledEvents + pulled.length,
-          appliedEvents: result.appliedEvents + pulled.length,
+          appliedEvents: result.appliedEvents + appliedCount,
         );
       }
 
@@ -424,6 +524,9 @@ class SyncService {
         await _reconcileCustomerBalances(txn);
       });
     }
+    await db.transaction((txn) async {
+      await StockProjectionService.reconcile(txn);
+    });
     await _refreshIntelligenceCaches();
     await _prefs.setLastSyncAt(BusinessTime.nowUtcIso());
     _logRun('success', result, startedAt);
@@ -467,6 +570,221 @@ class SyncService {
     return DateTime.now()
         .add(Duration(seconds: clampedSeconds))
         .toIso8601String();
+  }
+
+  Future<void> _normalizeQueueStatuses(
+    Database db, {
+    required String? activeStoreId,
+  }) async {
+    final hasStoreScope = activeStoreId != null && activeStoreId.isNotEmpty;
+    final storeWhere =
+        hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : '';
+    final storeArgs =
+        hasStoreScope ? <Object?>[activeStoreId] : const <Object?>[];
+
+    await db.rawUpdate('''
+      UPDATE sync_queue
+      SET status = CASE
+        WHEN synced = 1 THEN 'synced'
+        WHEN COALESCE(status, '') IN ('pending', 'failed') THEN status
+        WHEN COALESCE(status, '') IN ('deferred', 'syncing', '') THEN 'pending'
+        ELSE CASE WHEN status IN ('blocked', 'archived') THEN status ELSE 'pending' END
+      END,
+      updated_at = COALESCE(updated_at, created_at)
+      WHERE 1=1 $storeWhere
+      ''', storeArgs);
+  }
+
+  String? _validateOutgoingQueueRow(Map<String, dynamic> row) {
+    final entity = (row['entity'] ?? '').toString().trim();
+    final operation = (row['operation'] ?? '').toString().trim().toUpperCase();
+    if (entity.isEmpty) return 'Invalid outbound event: missing entity';
+    if (operation.isEmpty) return 'Invalid outbound event: missing operation';
+    final payloadRaw = row['payload']?.toString();
+    if (payloadRaw == null || payloadRaw.trim().isEmpty) {
+      return 'Invalid outbound event: empty payload';
+    }
+    Map<String, dynamic> payload;
+    try {
+      payload = Map<String, dynamic>.from(jsonDecode(payloadRaw) as Map);
+    } catch (_) {
+      return 'Invalid outbound event: payload is not valid JSON object';
+    }
+
+    if (entity == 'sale' && !_isValidIncomingSalePayload(payload)) {
+      return 'Invalid outbound sale event: sale payload invariant failed';
+    }
+    if (entity == 'invoice' &&
+        !_isValidOutgoingInvoicePayload(payload, operation)) {
+      return 'Invalid outbound invoice event: missing required invoice fields';
+    }
+    if (entity == 'sale_refund') {
+      final refundId =
+          payload['refund_id']?.toString() ?? payload['id']?.toString();
+      final saleId = payload['sale_id']?.toString();
+      if (refundId == null ||
+          refundId.isEmpty ||
+          saleId == null ||
+          saleId.isEmpty) {
+        return 'Invalid outbound sale_refund event: missing refund_id or sale_id';
+      }
+    }
+    if (entity == 'sale_void') {
+      final saleId =
+          payload['sale_id']?.toString() ?? payload['id']?.toString();
+      if (saleId == null || saleId.isEmpty) {
+        return 'Invalid outbound sale_void event: missing sale_id';
+      }
+    }
+    return null;
+  }
+
+  bool _isValidOutgoingInvoicePayload(
+    Map<String, dynamic> payload,
+    String operation,
+  ) {
+    final invoiceId =
+        payload['invoice_id']?.toString() ?? payload['id']?.toString();
+    if (invoiceId == null || invoiceId.isEmpty) return false;
+    if (operation == 'DELETE') return true;
+    final total = _toDoubleAny(payload['total'], fallback: -1);
+    if (total < 0) return false;
+    final status = (payload['status'] ?? '').toString().toLowerCase();
+    if (operation == 'ISSUE' ||
+        status == 'issued' ||
+        status == 'paid' ||
+        status == 'overdue') {
+      final items = payload['items'];
+      if (items is! List || items.isEmpty) return false;
+    }
+    return true;
+  }
+
+  bool _isPermanentPushFailure(SyncPushFailure failure) {
+    final code = failure.code.toUpperCase();
+    if (code == 'UNSUPPORTED_ENTITY' || code == 'UNSUPPORTED_OPERATION') {
+      return true;
+    }
+    if (code.startsWith('INVALID_')) return true;
+    return false;
+  }
+
+  Future<void> _deadLetterOutboundRows(
+    Database db,
+    List<Map<String, dynamic>> rows, {
+    bool updateQueueStatus = true,
+  }) async {
+    if (rows.isEmpty) return;
+    final now = BusinessTime.nowUtcIso();
+    final batch = db.batch();
+    for (final row in rows) {
+      final reason =
+          row['__validation_error']?.toString() ??
+          'Invalid outbound event moved to dead-letter';
+      batch.insert('sync_dead_letters', {
+        'direction': 'push',
+        'store_id': row['store_id']?.toString(),
+        'op_id': row['op_id']?.toString(),
+        'event_id': null,
+        'entity': row['entity']?.toString() ?? 'unknown',
+        'operation': row['operation']?.toString() ?? 'UNKNOWN',
+        'payload': row['payload']?.toString(),
+        'reason': reason,
+        'created_at': now,
+      });
+      if (updateQueueStatus) {
+        batch.update(
+          'sync_queue',
+          {
+            'status': 'blocked',
+            'synced': 0,
+            'retry_count': _maxRetryCount,
+            'next_retry_at': null,
+            'last_error': '$reason Moved to dead-letter.',
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> _recordDeadLetter(
+    DatabaseExecutor txn, {
+    required String direction,
+    required String? storeId,
+    required String? opId,
+    required String? eventId,
+    required String entity,
+    required String operation,
+    required Map<String, dynamic> payload,
+    required String reason,
+  }) async {
+    await txn.insert('sync_dead_letters', {
+      'direction': direction,
+      'store_id': storeId,
+      'op_id': opId,
+      'event_id': eventId,
+      'entity': entity,
+      'operation': operation,
+      'payload': jsonEncode(payload),
+      'reason': reason,
+      'created_at': BusinessTime.nowUtcIso(),
+    });
+  }
+
+  String? _validateInboundEvent(SyncPullEventModel event) {
+    final entity = event.entity.trim();
+    final operation = event.operation.trim().toUpperCase();
+    final payload = event.payload;
+    if (entity.isEmpty) return 'Invalid pull event: missing entity';
+    if (operation.isEmpty) return 'Invalid pull event: missing operation';
+    const supportedEntities = {
+      'product',
+      'customer',
+      'customer_payment',
+      'expense',
+      'sale',
+      'invoice',
+      'sale_refund',
+      'stock_loss',
+    };
+    if (!supportedEntities.contains(entity)) {
+      return 'Invalid pull event: unsupported entity $entity';
+    }
+    if (entity == 'sale' && !_isValidIncomingSalePayload(payload)) {
+      return 'Invalid pull sale event: sale payload invariant failed';
+    }
+    if (entity == 'invoice' &&
+        !_isValidOutgoingInvoicePayload(payload, operation)) {
+      return 'Invalid pull invoice event: missing required invoice fields';
+    }
+    if (entity == 'sale_refund') {
+      final refundId =
+          payload['refund_id']?.toString() ?? payload['id']?.toString();
+      final saleId = payload['sale_id']?.toString();
+      if (refundId == null ||
+          refundId.isEmpty ||
+          saleId == null ||
+          saleId.isEmpty) {
+        return 'Invalid pull sale_refund event: missing refund_id or sale_id';
+      }
+    }
+    if (entity == 'stock_loss') {
+      final lossId = payload['id']?.toString();
+      final productId = payload['product_id']?.toString();
+      final qty = _toDoubleAny(payload['qty'], fallback: -1);
+      if (lossId == null ||
+          lossId.isEmpty ||
+          productId == null ||
+          productId.isEmpty ||
+          qty <= 0) {
+        return 'Invalid pull stock_loss event: missing id/product_id/qty';
+      }
+    }
+    return null;
   }
 
   Future<void> _overwriteCustomerMetricsCache(
@@ -520,8 +838,7 @@ class SyncService {
             item['action_payload'] == null
                 ? null
                 : jsonEncode(item['action_payload']),
-        'created_at':
-            BusinessTime.normalizeUtcIso(item['created_at']),
+        'created_at': BusinessTime.normalizeUtcIso(item['created_at']),
         'resolved_at': item['resolved_at']?.toString(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
@@ -558,8 +875,7 @@ class SyncService {
             item['dead_stock_value'] == null
                 ? null
                 : _toDoubleAny(item['dead_stock_value']),
-        'computed_at':
-            BusinessTime.normalizeUtcIso(item['computed_at']),
+        'computed_at': BusinessTime.normalizeUtcIso(item['computed_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
@@ -713,12 +1029,21 @@ class SyncService {
           'products',
           {
             'stock_qty': nextQty,
-            'updated_at':
-                BusinessTime.normalizeUtcIso(payload['updated_at']),
+            'updated_at': BusinessTime.normalizeUtcIso(payload['updated_at']),
           },
           where: 'id = ?',
           whereArgs: [productId],
         );
+        await txn.insert('stock_movements', {
+          'id': newUuidV4(),
+          'product_id': productId,
+          'movement_type': _movementTypeForAdjustmentReason(
+            payload['reason']?.toString(),
+          ),
+          'delta_qty': delta,
+          'reference_id': payload['reason']?.toString() ?? 'sync_adjust',
+          'created_at': BusinessTime.normalizeUtcIso(payload['updated_at']),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
         return;
       }
 
@@ -732,8 +1057,7 @@ class SyncService {
             (payload['low_stock_threshold'] as num?)?.toDouble() ?? 0,
         'unit': (payload['unit'] ?? 'piece').toString(),
         'category': payload['category']?.toString(),
-        'updated_at':
-            BusinessTime.normalizeUtcIso(payload['updated_at']),
+        'updated_at': BusinessTime.normalizeUtcIso(payload['updated_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       return;
     }
@@ -818,7 +1142,364 @@ class SyncService {
       return;
     }
 
+    if (entity == 'invoice') {
+      final invoiceId =
+          payload['invoice_id']?.toString() ?? payload['id']?.toString();
+      if (invoiceId == null || invoiceId.isEmpty) return;
+      final operation = (event['operation'] ?? '').toString().toUpperCase();
+      if (operation == 'DELETE') {
+        await txn.delete(
+          'invoice_payments',
+          where: 'invoice_id = ?',
+          whereArgs: [invoiceId],
+        );
+        await txn.delete(
+          'invoice_items',
+          where: 'invoice_id = ?',
+          whereArgs: [invoiceId],
+        );
+        await txn.delete('invoices', where: 'id = ?', whereArgs: [invoiceId]);
+        return;
+      }
+
+      final existingRows = await txn.query(
+        'invoices',
+        columns: ['status'],
+        where: 'id = ?',
+        whereArgs: [invoiceId],
+        limit: 1,
+      );
+      final existingStatus =
+          existingRows.isEmpty
+              ? null
+              : (existingRows.first['status']?.toString().toLowerCase());
+      final incomingStatus =
+          (payload['status'] ?? 'draft').toString().toLowerCase();
+      final shouldApplyInventory =
+          (operation == 'ISSUE' ||
+              incomingStatus == 'issued' ||
+              incomingStatus == 'paid' ||
+              incomingStatus == 'overdue') &&
+          (existingStatus == null ||
+              existingStatus == 'draft' ||
+              existingStatus == 'cancelled');
+
+      final issueDateAd = payload['issue_date_ad']?.toString();
+      final dueDateAd = payload['due_date_ad']?.toString();
+      final issueDate =
+          issueDateAd == null || issueDateAd.isEmpty
+              ? payload['issue_date']
+              : issueDateAd;
+      final dueDate =
+          dueDateAd == null || dueDateAd.isEmpty
+              ? payload['due_date']
+              : dueDateAd;
+      final nowIso = BusinessTime.normalizeUtcIso(
+        payload['updated_at'] ?? payload['created_at'],
+      );
+
+      await txn.insert('invoices', {
+        'id': invoiceId,
+        'business_id': payload['business_id']?.toString() ?? '',
+        'customer_id': payload['customer_id']?.toString(),
+        'invoice_number': payload['invoice_number']?.toString(),
+        'status': incomingStatus,
+        'issue_date': BusinessTime.normalizeUtcIso(issueDate),
+        'due_date': BusinessTime.normalizeUtcIso(dueDate),
+        'issue_date_ad': issueDateAd,
+        'due_date_ad': dueDateAd,
+        'currency_code': payload['currency_code']?.toString() ?? 'NPR',
+        'fiscal_calendar_snapshot':
+            payload['fiscal_calendar_snapshot']?.toString() ?? 'AD',
+        'language_snapshot': payload['language_snapshot']?.toString() ?? 'en',
+        'vat_enabled_snapshot': payload['vat_enabled_snapshot'] == true ? 1 : 0,
+        'vat_rate_snapshot': _toDoubleAny(
+          payload['vat_rate_snapshot'],
+          fallback: 13,
+        ),
+        'tax_mode_snapshot':
+            payload['tax_mode_snapshot']?.toString() ?? 'exclusive',
+        'subtotal': _toDoubleAny(payload['subtotal']),
+        'discount_amount': _toDoubleAny(payload['discount_amount']),
+        'tax_amount': _toDoubleAny(payload['tax_amount']),
+        'total': _toDoubleAny(payload['total']),
+        'paid_amount': _toDoubleAny(payload['paid_amount']),
+        'balance_due': _toDoubleAny(payload['balance_due']),
+        'payment_method_summary': payload['payment_method_summary']?.toString(),
+        'notes': payload['notes']?.toString(),
+        'updated_at': nowIso,
+        'created_at': BusinessTime.normalizeUtcIso(
+          payload['created_at'],
+          fallback: DateTime.tryParse(nowIso),
+        ),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      final items = (payload['items'] as List? ?? const []).whereType<Map>();
+      if (items.isNotEmpty) {
+        await txn.delete(
+          'invoice_items',
+          where: 'invoice_id = ?',
+          whereArgs: [invoiceId],
+        );
+        var index = 0;
+        for (final raw in items) {
+          final item = Map<String, dynamic>.from(raw);
+          final productId = item['product_id']?.toString();
+          final qty = _toDoubleAny(item['quantity']);
+          await txn.insert('invoice_items', {
+            'id': item['id']?.toString() ?? '$invoiceId-item-${index++}',
+            'invoice_id': invoiceId,
+            'product_id': productId,
+            'product_name_snapshot':
+                item['product_name_snapshot']?.toString() ?? 'Item',
+            'unit_snapshot': item['unit_snapshot']?.toString(),
+            'quantity': qty,
+            'unit_price': _toDoubleAny(item['unit_price']),
+            'discount': _toDoubleAny(item['discount']),
+            'tax_rate_snapshot': _toDoubleAny(item['tax_rate_snapshot']),
+            'line_subtotal': _toDoubleAny(item['line_subtotal']),
+            'line_tax': _toDoubleAny(item['line_tax']),
+            'line_total': _toDoubleAny(item['line_total']),
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+          if (!shouldApplyInventory ||
+              productId == null ||
+              productId.isEmpty ||
+              qty <= 0) {
+            continue;
+          }
+          final productRows = await txn.query(
+            'products',
+            columns: ['stock_qty'],
+            where: 'id = ?',
+            whereArgs: [productId],
+            limit: 1,
+          );
+          if (productRows.isEmpty) continue;
+          final currentQty = (productRows.first['stock_qty'] as num).toDouble();
+          final nextQty = currentQty - qty;
+          if (nextQty < 0) continue;
+          await txn.update(
+            'products',
+            {'stock_qty': nextQty, 'updated_at': nowIso},
+            where: 'id = ?',
+            whereArgs: [productId],
+          );
+          await txn.insert('stock_movements', {
+            'id': newUuidV4(),
+            'product_id': productId,
+            'movement_type': 'INVOICE_ISSUE',
+            'delta_qty': -qty,
+            'reference_id': invoiceId,
+            'created_at': nowIso,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+      }
+      return;
+    }
+
+    if (entity == 'sale_refund') {
+      final refundId =
+          payload['refund_id']?.toString() ?? payload['id']?.toString();
+      final saleId = payload['sale_id']?.toString();
+      if (refundId == null ||
+          refundId.isEmpty ||
+          saleId == null ||
+          saleId.isEmpty) {
+        return;
+      }
+
+      final existing = await txn.query(
+        'sale_refunds',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [refundId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) return;
+
+      final nowIso = BusinessTime.normalizeUtcIso(
+        payload['updated_at'] ?? payload['created_at'],
+      );
+      final refundDateAd =
+          payload['refund_date_ad']?.toString() ??
+          _businessDateFromPayload(payload);
+      final amount = _toDoubleAny(payload['amount']);
+
+      await txn.insert('sale_refunds', {
+        'id': refundId,
+        'sale_id': saleId,
+        'amount': amount,
+        'credit_refund_amount': _toDoubleAny(payload['credit_refund_amount']),
+        'reason': payload['reason']?.toString(),
+        'refund_date_ad': refundDateAd,
+        'created_at': BusinessTime.normalizeUtcIso(
+          payload['created_at'],
+          fallback: DateTime.tryParse(nowIso),
+        ),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      final items = (payload['items'] as List? ?? const []).whereType<Map>();
+      var idx = 0;
+      var refundedQtyTotal = 0.0;
+      for (final raw in items) {
+        final item = Map<String, dynamic>.from(raw);
+        final productId = item['product_id']?.toString();
+        final qty = _toDoubleAny(item['qty']);
+        if (productId == null || productId.isEmpty || qty <= 0) continue;
+        refundedQtyTotal += qty;
+        final unitPrice = _toDoubleAny(item['unit_price']);
+        final lineTotal = _toDoubleAny(
+          item['line_total'],
+          fallback: qty * unitPrice,
+        );
+        await txn.insert('sale_refund_items', {
+          'id': item['id']?.toString() ?? '$refundId-item-${idx++}',
+          'refund_id': refundId,
+          'sale_id': saleId,
+          'product_id': productId,
+          'qty': qty,
+          'unit_price': unitPrice,
+          'line_total': lineTotal,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+        final productRows = await txn.query(
+          'products',
+          columns: ['stock_qty'],
+          where: 'id = ?',
+          whereArgs: [productId],
+          limit: 1,
+        );
+        if (productRows.isNotEmpty) {
+          final currentQty = (productRows.first['stock_qty'] as num).toDouble();
+          await txn.update(
+            'products',
+            {'stock_qty': currentQty + qty, 'updated_at': nowIso},
+            where: 'id = ?',
+            whereArgs: [productId],
+          );
+        }
+        await txn.insert('stock_movements', {
+          'id': newUuidV4(),
+          'product_id': productId,
+          'movement_type': 'RETURN',
+          'delta_qty': qty,
+          'reference_id': refundId,
+          'created_at': nowIso,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+
+      final saleRows = await txn.query(
+        'sales',
+        columns: ['total_amount'],
+        where: 'id = ?',
+        whereArgs: [saleId],
+        limit: 1,
+      );
+      if (saleRows.isNotEmpty) {
+        final currentTotal = (saleRows.first['total_amount'] as num).toDouble();
+        final nextTotal = (currentTotal - amount).clamp(0.0, double.infinity);
+        final soldQtyRaw = await txn.rawQuery(
+          'SELECT COALESCE(SUM(qty), 0) AS total FROM sale_items WHERE sale_id = ?',
+          [saleId],
+        );
+        final refundedQtyRaw = await txn.rawQuery(
+          'SELECT COALESCE(SUM(qty), 0) AS total FROM sale_refund_items WHERE sale_id = ?',
+          [saleId],
+        );
+        final soldQty = _toDoubleAny(soldQtyRaw.first['total']);
+        final refundedQty = _toDoubleAny(refundedQtyRaw.first['total']);
+        final status =
+            soldQty > 0 && refundedQty >= (soldQty - 0.0001)
+                ? 'refunded'
+                : (refundedQtyTotal > 0 ? 'partial' : 'completed');
+        await txn.update(
+          'sales',
+          {'total_amount': nextTotal, 'status': status},
+          where: 'id = ?',
+          whereArgs: [saleId],
+        );
+      }
+
+      final creditRefundAmount = _toDoubleAny(payload['credit_refund_amount']);
+      if (creditRefundAmount > 0) {
+        final saleCustomer = await txn.query(
+          'sales',
+          columns: ['customer_id'],
+          where: 'id = ?',
+          whereArgs: [saleId],
+          limit: 1,
+        );
+        final customerId =
+            saleCustomer.isEmpty
+                ? null
+                : saleCustomer.first['customer_id']?.toString();
+        if (customerId != null && customerId.isNotEmpty) {
+          await txn.rawUpdate(
+            '''
+            UPDATE customers
+            SET balance = MAX(COALESCE(balance, 0) - ?, 0),
+                updated_at = ?
+            WHERE id = ?
+            ''',
+            [creditRefundAmount, nowIso, customerId],
+          );
+        }
+      }
+      return;
+    }
+
+    if (entity == 'stock_loss') {
+      final lossId = payload['id']?.toString();
+      final productId = payload['product_id']?.toString();
+      final qty = _toDoubleAny(payload['qty']);
+      if (lossId == null ||
+          lossId.isEmpty ||
+          productId == null ||
+          productId.isEmpty) {
+        return;
+      }
+      if (qty <= 0) return;
+      final nowIso = BusinessTime.normalizeUtcIso(payload['created_at']);
+
+      final productRows = await txn.query(
+        'products',
+        columns: ['stock_qty'],
+        where: 'id = ?',
+        whereArgs: [productId],
+        limit: 1,
+      );
+      if (productRows.isNotEmpty) {
+        final currentQty = (productRows.first['stock_qty'] as num).toDouble();
+        final nextQty = currentQty - qty;
+        if (nextQty >= 0) {
+          await txn.update(
+            'products',
+            {'stock_qty': nextQty, 'updated_at': nowIso},
+            where: 'id = ?',
+            whereArgs: [productId],
+          );
+          await txn.insert('stock_movements', {
+            'id': newUuidV4(),
+            'product_id': productId,
+            'movement_type': 'LOSS',
+            'delta_qty': -qty,
+            'reference_id': lossId,
+            'created_at': nowIso,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+      }
+      return;
+    }
+
     if (entity == 'sale') {
+      if (!_isValidIncomingSalePayload(payload)) {
+        developer.log(
+          'sync_pull_drop_invalid_sale payload=${jsonEncode(payload)}',
+          name: 'app.sync',
+        );
+        return;
+      }
       final saleId = payload['id']?.toString();
       if (saleId == null || saleId.isEmpty) return;
       final existingSaleRows = await txn.query(
@@ -839,7 +1520,9 @@ class SyncService {
         'customer_id': payload['customer_id'],
         'total_amount': (payload['total_amount'] as num?)?.toDouble() ?? 0,
         'sale_date_ad':
-            payload['sale_date_ad']?.toString() ?? _businessDateFromPayload(payload),
+            payload['sale_date_ad']?.toString() ??
+            _businessDateFromPayload(payload),
+        'status': _normalizeSaleStatus(payload['status']),
         'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
 
@@ -847,16 +1530,45 @@ class SyncService {
       final items = (payload['items'] as List? ?? const []);
       for (final it in items) {
         final item = Map<String, dynamic>.from(it as Map);
+        final productId = item['product_id']?.toString();
+        final qty = (item['qty'] as num?)?.toDouble() ?? 0;
+        final unitPrice = (item['unit_price'] as num?)?.toDouble() ?? 0;
         await txn.insert('sale_items', {
           'id': '${saleId}_${item['product_id']}_${item['qty']}',
           'sale_id': saleId,
-          'product_id': item['product_id'],
-          'qty': (item['qty'] as num?)?.toDouble() ?? 0,
-          'unit_price': (item['unit_price'] as num?)?.toDouble() ?? 0,
-          'line_total':
-              ((item['qty'] as num?)?.toDouble() ?? 0) *
-              ((item['unit_price'] as num?)?.toDouble() ?? 0),
+          'product_id': productId,
+          'qty': qty,
+          'unit_price': unitPrice,
+          'line_total': qty * unitPrice,
         });
+        if (productId == null || productId.isEmpty || qty <= 0) continue;
+        final productRows = await txn.query(
+          'products',
+          columns: ['stock_qty'],
+          where: 'id = ?',
+          whereArgs: [productId],
+          limit: 1,
+        );
+        if (productRows.isNotEmpty) {
+          final currentQty = (productRows.first['stock_qty'] as num).toDouble();
+          final nextQty = currentQty - qty;
+          if (nextQty >= 0) {
+            await txn.update(
+              'products',
+              {'stock_qty': nextQty, 'updated_at': BusinessTime.nowUtcIso()},
+              where: 'id = ?',
+              whereArgs: [productId],
+            );
+          }
+        }
+        await txn.insert('stock_movements', {
+          'id': newUuidV4(),
+          'product_id': productId,
+          'movement_type': 'SALE',
+          'delta_qty': -qty,
+          'reference_id': saleId,
+          'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
 
       await txn.delete(
@@ -872,8 +1584,7 @@ class SyncService {
           'sale_id': saleId,
           'method': (payload['payment_method'] ?? 'CASH').toString(),
           'amount': total,
-          'created_at':
-              BusinessTime.normalizeUtcIso(payload['created_at']),
+          'created_at': BusinessTime.normalizeUtcIso(payload['created_at']),
         }, conflictAlgorithm: ConflictAlgorithm.replace);
       } else {
         for (final p in payments) {
@@ -885,8 +1596,7 @@ class SyncService {
             'sale_id': saleId,
             'method': payment['method'],
             'amount': (payment['amount'] as num?)?.toDouble() ?? 0,
-            'created_at':
-                BusinessTime.normalizeUtcIso(payment['created_at']),
+            'created_at': BusinessTime.normalizeUtcIso(payment['created_at']),
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
@@ -940,6 +1650,75 @@ class SyncService {
     return 0.0;
   }
 
+  bool _isValidIncomingSalePayload(Map<String, dynamic> payload) {
+    final saleId = payload['id']?.toString().trim();
+    if (saleId == null || saleId.isEmpty) return false;
+
+    final saleType =
+        (payload['sale_type'] ?? '').toString().trim().toUpperCase();
+    if (saleType != 'CASH' && saleType != 'CREDIT' && saleType != 'MIXED') {
+      return false;
+    }
+
+    final customerId = payload['customer_id']?.toString().trim();
+    if (saleType == 'CREDIT' && (customerId == null || customerId.isEmpty)) {
+      return false;
+    }
+
+    final rawItems = payload['items'];
+    if (rawItems is! List || rawItems.isEmpty) return false;
+
+    var computedTotal = 0.0;
+    for (final raw in rawItems) {
+      if (raw is! Map) return false;
+      final item = Map<String, dynamic>.from(raw);
+      final productId = item['product_id']?.toString().trim();
+      if (productId == null || productId.isEmpty) return false;
+      final qty = _toDoubleAny(item['qty'], fallback: -1);
+      final unitPrice = _toDoubleAny(item['unit_price'], fallback: -1);
+      if (qty <= 0 || unitPrice < 0) return false;
+      computedTotal += qty * unitPrice;
+    }
+
+    final totalAmount = _toDoubleAny(payload['total_amount'], fallback: -1);
+    if (totalAmount < 0) return false;
+    if ((computedTotal - totalAmount).abs() > 0.01) return false;
+
+    final rawPayments = payload['payments'];
+    if (rawPayments is List && rawPayments.isNotEmpty) {
+      var paidTotal = 0.0;
+      for (final raw in rawPayments) {
+        if (raw is! Map) return false;
+        final payment = Map<String, dynamic>.from(raw);
+        final amount = _toDoubleAny(payment['amount'], fallback: -1);
+        if (amount <= 0) return false;
+        paidTotal += amount;
+      }
+      if ((paidTotal - totalAmount).abs() > 0.01) return false;
+    }
+    return true;
+  }
+
+  String _normalizeSaleStatus(Object? raw) {
+    final value = raw?.toString().trim().toLowerCase();
+    if (value == 'refunded' ||
+        value == 'partial' ||
+        value == 'completed' ||
+        value == 'void') {
+      return value!;
+    }
+    return 'completed';
+  }
+
+  String _movementTypeForAdjustmentReason(String? rawReason) {
+    final reason = (rawReason ?? '').trim().toUpperCase();
+    if (reason == 'RETURN') return 'RETURN';
+    if (reason == 'DAMAGE' || reason == 'EXPIRED' || reason == 'LOSS') {
+      return 'LOSS';
+    }
+    return 'ADJUSTMENT';
+  }
+
   double _toDoubleAny(Object? value, {double fallback = 0}) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? fallback;
@@ -971,7 +1750,15 @@ class SyncService {
             FROM sales s
             JOIN sale_payments sp ON sp.sale_id = s.id
             WHERE s.customer_id = customers.id
+              AND COALESCE(s.status, 'completed') != 'void'
               AND UPPER(COALESCE(sp.method, '')) = 'CREDIT'
+          ), 0)
+          - COALESCE((
+            SELECT SUM(sr.credit_refund_amount)
+            FROM sale_refunds sr
+            JOIN sales s ON s.id = sr.sale_id
+            WHERE s.customer_id = customers.id
+              AND COALESCE(s.status, 'completed') != 'void'
           ), 0)
           - COALESCE((
             SELECT SUM(cp.amount)

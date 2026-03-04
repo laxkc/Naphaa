@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/date/business_time.dart';
 import '../../../core/storage/local_db.dart';
+import '../../../core/storage/stock_projection_service.dart';
 import 'alerts_repository.dart';
 
 class MetricsRepository {
@@ -16,6 +17,7 @@ class MetricsRepository {
     final db = await _db.database;
     late final List<Map<String, dynamic>> alerts;
     await db.transaction((txn) async {
+      await StockProjectionService.reconcile(txn);
       final customerMetrics = await _computeCustomerMetrics(txn);
       await _writeCustomerMetrics(
         txn,
@@ -53,18 +55,28 @@ class MetricsRepository {
       where: 'COALESCE(is_deleted, 0) = 0',
     );
     final saleRows = await txn.rawQuery('''
-      SELECT s.id, s.customer_id, s.sale_date_ad, s.created_at, s.total_amount,
-             SUM(CASE WHEN UPPER(COALESCE(sp.method, '')) = 'CREDIT' THEN COALESCE(sp.amount, 0) ELSE 0 END) AS credit_amount
+      SELECT s.id, s.customer_id, s.sale_date_ad, s.created_at,
+             COALESCE((
+               SELECT SUM(COALESCE(sp.amount, 0))
+               FROM sale_payments sp
+               WHERE sp.sale_id = s.id
+                 AND UPPER(COALESCE(sp.method, '')) = 'CREDIT'
+             ), 0) AS credit_amount,
+             COALESCE((
+               SELECT SUM(COALESCE(sr.credit_refund_amount, 0))
+               FROM sale_refunds sr
+               WHERE sr.sale_id = s.id
+             ), 0) AS credit_refund_amount
       FROM sales s
-      LEFT JOIN sale_payments sp ON sp.sale_id = s.id
       WHERE s.customer_id IS NOT NULL
-      GROUP BY s.id, s.customer_id, s.sale_date_ad, s.created_at, s.total_amount
+        AND COALESCE(s.status, 'completed') != 'void'
       ORDER BY COALESCE(s.sale_date_ad, substr(s.created_at, 1, 10)) ASC, s.created_at ASC
     ''');
     final paymentRows = await txn.query(
       'customer_payments',
       columns: ['customer_id', 'amount', 'payment_date_ad', 'created_at'],
-      orderBy: 'COALESCE(payment_date_ad, substr(created_at, 1, 10)) ASC, created_at ASC',
+      orderBy:
+          'COALESCE(payment_date_ad, substr(created_at, 1, 10)) ASC, created_at ASC',
     );
 
     final paymentsByCustomer = <String, double>{};
@@ -79,7 +91,9 @@ class MetricsRepository {
     for (final row in saleRows) {
       final cid = row['customer_id']?.toString();
       if (cid == null || cid.isEmpty) continue;
-      final creditAmount = _toDouble(row['credit_amount']);
+      final creditAmount = (_toDouble(row['credit_amount']) -
+              _toDouble(row['credit_refund_amount']))
+          .clamp(0.0, double.infinity);
       if (creditAmount <= 0) continue;
       salesByCustomer
           .putIfAbsent(cid, () => [])
@@ -107,13 +121,19 @@ class MetricsRepository {
       if (customerSales.isNotEmpty) {
         avgInvoiceAmount =
             customerSales
-                .map((s) => _toDouble(s['credit_amount']))
+                .map(
+                  (s) => (_toDouble(s['credit_amount']) -
+                          _toDouble(s['credit_refund_amount']))
+                      .clamp(0.0, double.infinity),
+                )
                 .fold(0.0, (a, b) => a + b) /
             customerSales.length;
       }
 
       for (final sale in customerSales) {
-        final creditAmount = _toDouble(sale['credit_amount']);
+        final creditAmount = (_toDouble(sale['credit_amount']) -
+                _toDouble(sale['credit_refund_amount']))
+            .clamp(0.0, double.infinity);
         if (creditAmount <= 0) continue;
         final applied =
             remainingPaymentCredit <= 0
@@ -143,7 +163,15 @@ class MetricsRepository {
         aging[key] = (aging[key] ?? 0) + outstanding;
       }
 
-      final outstandingAmount = _toDouble(c['balance']);
+      final outstandingFromFacts =
+          (aging['d0_7'] ?? 0) +
+          (aging['d8_30'] ?? 0) +
+          (aging['d31_60'] ?? 0) +
+          (aging['d60_plus'] ?? 0);
+      final outstandingAmount = outstandingFromFacts;
+      if (outstandingAmount <= 0.0001) {
+        oldestDueDays = 0;
+      }
       totalOutstanding += outstandingAmount;
       if (oldestDueDays > 0) totalOverdue += outstandingAmount;
 
@@ -253,14 +281,39 @@ class MetricsRepository {
     final todayAd = BusinessTime.businessDateAd(timestampUtc: now);
     final products = await txn.query('products');
     final saleItemRows = await txn.rawQuery('''
-      SELECT si.product_id, si.qty, si.line_total, si.unit_price, s.sale_date_ad, s.created_at
+      SELECT si.sale_id, si.product_id, si.qty, si.line_total, si.unit_price, s.sale_date_ad, s.created_at
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
+      WHERE COALESCE(s.status, 'completed') != 'void'
     ''');
+    final refundRows = await txn.rawQuery('''
+      SELECT sri.sale_id, sri.product_id,
+             COALESCE(SUM(sri.qty), 0) AS refunded_qty,
+             COALESCE(SUM(sri.line_total), 0) AS refunded_total
+      FROM sale_refund_items sri
+      GROUP BY sri.sale_id, sri.product_id
+    ''');
+    final refundBySaleProduct = <String, Map<String, double>>{};
+    for (final row in refundRows) {
+      final saleId = row['sale_id']?.toString();
+      final productId = row['product_id']?.toString();
+      if (saleId == null ||
+          saleId.isEmpty ||
+          productId == null ||
+          productId.isEmpty) {
+        continue;
+      }
+      refundBySaleProduct['$saleId::$productId'] = {
+        'qty': _toDouble(row['refunded_qty']),
+        'total': _toDouble(row['refunded_total']),
+      };
+    }
     final aggregates = <String, Map<String, dynamic>>{};
     for (final row in saleItemRows) {
       final productId = row['product_id']?.toString();
       if (productId == null || productId.isEmpty) continue;
+      final saleId = row['sale_id']?.toString();
+      if (saleId == null || saleId.isEmpty) continue;
       final saleDateAd = _resolveBusinessDate(
         preferred: row['sale_date_ad']?.toString(),
         fallbackTimestamp: row['created_at']?.toString(),
@@ -276,13 +329,24 @@ class MetricsRepository {
           'sale_items': <Map<String, dynamic>>[],
         },
       );
-      final qty = _toDouble(row['qty']);
-      final lineTotal = _toDouble(row['line_total']);
+      final refund = refundBySaleProduct['$saleId::$productId'];
+      final qty = (_toDouble(row['qty']) - _toDouble(refund?['qty'])).clamp(
+        0.0,
+        double.infinity,
+      );
+      final lineTotal = (_toDouble(row['line_total']) -
+              _toDouble(refund?['total']))
+          .clamp(0.0, double.infinity);
+      if (qty <= 0 && lineTotal <= 0) continue;
       final ageDays = _dayDifference(todayAd, saleDateAd);
       if (ageDays <= 30) {
         agg['qty_sold_30d'] = (_toDouble(agg['qty_sold_30d'])) + qty;
         agg['revenue_30d'] = (_toDouble(agg['revenue_30d'])) + lineTotal;
-        (agg['sale_items'] as List).add(Map<String, dynamic>.from(row));
+        (agg['sale_items'] as List).add({
+          ...Map<String, dynamic>.from(row),
+          'qty': qty,
+          'line_total': lineTotal,
+        });
       }
       if (ageDays <= 7) {
         agg['qty_sold_7d'] = (_toDouble(agg['qty_sold_7d'])) + qty;
@@ -308,9 +372,7 @@ class MetricsRepository {
       final lastSaleAt = lastSaleAtRaw;
       final deadStock =
           stockQty > 0 &&
-          (lastSaleAt == null ||
-              _dayDifference(todayAd, lastSaleAt) >
-                  30);
+          (lastSaleAt == null || _dayDifference(todayAd, lastSaleAt) > 30);
       double? deadStockValue;
       if (deadStock && costPrice != null) {
         deadStockValue = stockQty * costPrice;
@@ -388,9 +450,11 @@ class MetricsRepository {
     Map<String, dynamic> productMetrics,
   ) async {
     final salesTotal = _toDouble(
-      (await txn.rawQuery(
-        'SELECT COALESCE(SUM(total_amount), 0) AS t FROM sales',
-      )).first['t'],
+      (await txn.rawQuery('''
+        SELECT COALESCE(SUM(total_amount), 0) AS t
+        FROM sales
+        WHERE COALESCE(status, 'completed') != 'void'
+        ''')).first['t'],
     );
     final expensesTotal = _toDouble(
       (await txn.rawQuery(
@@ -455,8 +519,7 @@ class MetricsRepository {
       'to_date': null,
       'payload_json': jsonEncode(payload),
       'computed_at':
-          payload['computed_at']?.toString() ??
-          BusinessTime.nowUtcIso(),
+          payload['computed_at']?.toString() ?? BusinessTime.nowUtcIso(),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

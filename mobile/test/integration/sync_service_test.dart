@@ -203,50 +203,55 @@ void main() {
     await db.reset();
   });
 
-  test('outgoing sync payload timestamps are normalized to UTC Z strings', () async {
-    final db = await createTestDb('sync_service_utc_normalize');
-    final sql = await db.database;
-    final prefs = _FakePrefs();
-    final gateway = _FakeGateway();
-    final session = _FakeSessionService();
+  test(
+    'outgoing sync payload timestamps are normalized to UTC Z strings',
+    () async {
+      final db = await createTestDb('sync_service_utc_normalize');
+      final sql = await db.database;
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
 
-    await sql.insert('sync_queue', {
-      'op_id': 'op-z-1',
-      'entity': 'expense',
-      'entity_id': 'exp-z-1',
-      'operation': 'UPSERT',
-      'payload': jsonEncode({
-        'id': 'exp-z-1',
-        'category': 'OTHER',
-        'amount': 10,
+      await sql.insert('sync_queue', {
+        'op_id': 'op-z-1',
+        'entity': 'expense',
+        'entity_id': 'exp-z-1',
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': 'exp-z-1',
+          'category': 'OTHER',
+          'amount': 10,
+          'created_at': '2026-02-27T12:00:00',
+          'updated_at': '2026-02-27T12:00:00',
+        }),
         'created_at': '2026-02-27T12:00:00',
         'updated_at': '2026-02-27T12:00:00',
-      }),
-      'created_at': '2026-02-27T12:00:00',
-      'updated_at': '2026-02-27T12:00:00',
-      'synced': 0,
-      'status': 'pending',
-      'retry_count': 0,
-    });
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
 
-    final service = SyncService(
-      db,
-      gateway,
-      prefs,
-      session,
-      connectivityCheck: () async => [ConnectivityResult.wifi],
-      pushChunkSize: 100,
-    );
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+        pushChunkSize: 100,
+      );
 
-    await service.processPendingSyncDetailed(localeCode: 'en');
+      await service.processPendingSyncDetailed(localeCode: 'en');
 
-    expect(gateway.pushedBatches, hasLength(1));
-    final payload = gateway.pushedBatches.single.single['payload'] as Map<String, dynamic>;
-    expect(payload['created_at'], endsWith('Z'));
-    expect(payload['updated_at'], endsWith('Z'));
+      expect(gateway.pushedBatches, hasLength(1));
+      final payload =
+          gateway.pushedBatches.single.single['payload']
+              as Map<String, dynamic>;
+      expect(payload['created_at'], endsWith('Z'));
+      expect(payload['updated_at'], endsWith('Z'));
 
-    await db.reset();
-  });
+      await db.reset();
+    },
+  );
 
   test('failed row is blocked after max retries', () async {
     final db = await createTestDb('sync_service_block_after_max_retries');
@@ -341,6 +346,377 @@ void main() {
 
     await db.reset();
   });
+
+  test('customer balance reconcile uses void/refund/payment facts', () async {
+    final db = await createTestDb('sync_service_reconcile_customer_balance');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+    final now = DateTime.now().toUtc().toIso8601String();
+    final todayAd = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+
+    await sql.insert('customers', {
+      'id': 'c-reconcile-1',
+      'name': 'Reconcile Customer',
+      'phone': null,
+      'address': null,
+      'notes': null,
+      'balance': 999.0, // stale value, should be rebuilt from facts
+      'created_at': now,
+      'is_deleted': 0,
+      'updated_at': now,
+    });
+    await sql.insert('sales', {
+      'id': 'sale-active',
+      'sale_type': 'CREDIT',
+      'payment_method': 'CREDIT',
+      'customer_id': 'c-reconcile-1',
+      'total_amount': 200.0,
+      'sale_date_ad': todayAd,
+      'status': 'completed',
+      'created_at': now,
+    });
+    await sql.insert('sale_payments', {
+      'id': 'pay-active',
+      'sale_id': 'sale-active',
+      'method': 'CREDIT',
+      'amount': 200.0,
+      'created_at': now,
+    });
+    await sql.insert('sale_refunds', {
+      'id': 'refund-active',
+      'sale_id': 'sale-active',
+      'amount': 100.0,
+      'credit_refund_amount': 100.0,
+      'reason': 'Returned items',
+      'refund_date_ad': todayAd,
+      'created_at': now,
+    });
+    await sql.insert('customer_payments', {
+      'id': 'cust-pay-1',
+      'customer_id': 'c-reconcile-1',
+      'method': 'CASH',
+      'amount': 50.0,
+      'note': null,
+      'payment_date_ad': todayAd,
+      'created_at': now,
+    });
+
+    // A voided credit sale should not increase receivable.
+    await sql.insert('sales', {
+      'id': 'sale-void',
+      'sale_type': 'CREDIT',
+      'payment_method': 'CREDIT',
+      'customer_id': 'c-reconcile-1',
+      'total_amount': 0.0,
+      'sale_date_ad': todayAd,
+      'status': 'void',
+      'created_at': now,
+    });
+    await sql.insert('sale_payments', {
+      'id': 'pay-void',
+      'sale_id': 'sale-void',
+      'method': 'CREDIT',
+      'amount': 70.0,
+      'created_at': now,
+    });
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSyncDetailed(localeCode: 'en');
+
+    final customer =
+        (await sql.query(
+          'customers',
+          where: 'id = ?',
+          whereArgs: ['c-reconcile-1'],
+          limit: 1,
+        )).single;
+    // expected = 200 credit - 100 credit refund - 50 customer payment = 50
+    expect((customer['balance'] as num).toDouble(), 50.0);
+
+    await db.reset();
+  });
+
+  test('deferred queue rows are normalized and processed as pending', () async {
+    final db = await createTestDb('sync_service_process_deferred_rows');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    await sql.insert('sync_queue', {
+      'op_id': 'op-deferred-1',
+      'store_id': 'store-a',
+      'entity': 'expense',
+      'entity_id': 'exp-deferred-1',
+      'operation': 'UPSERT',
+      'payload': jsonEncode({
+        'id': 'exp-deferred-1',
+        'category': 'OTHER',
+        'amount': 40.0,
+      }),
+      'created_at': now,
+      'updated_at': now,
+      'synced': 0,
+      'status': 'deferred',
+      'retry_count': 0,
+    });
+    await AppPreferences().setActiveStoreId('store-a');
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+      pushChunkSize: 100,
+    );
+    final result = await service.processPendingSyncDetailed(localeCode: 'en');
+
+    expect(result.pendingAtStart, 1);
+    expect(result.ackedEvents, 1);
+    expect(gateway.pushedBatches, hasLength(1));
+    expect(gateway.pushedBatches.single.single['op_id'], 'op-deferred-1');
+
+    final row =
+        (await sql.query(
+          'sync_queue',
+          where: 'op_id = ?',
+          whereArgs: ['op-deferred-1'],
+        )).single;
+    expect(row['status'], 'synced');
+    expect(row['synced'], 1);
+
+    await db.reset();
+  });
+
+  test(
+    'invalid outbound payload is blocked and moved to dead-letter',
+    () async {
+      final db = await createTestDb(
+        'sync_service_dead_letter_outbound_invalid',
+      );
+      final sql = await db.database;
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await sql.insert('sync_queue', {
+        'op_id': 'op-invalid-invoice',
+        'store_id': 'store-a',
+        'entity': 'invoice',
+        'entity_id': 'inv-invalid',
+        'operation': 'ISSUE',
+        'payload': jsonEncode({
+          // missing id/invoice_id and items
+          'status': 'issued',
+          'total': 100.0,
+        }),
+        'created_at': now,
+        'updated_at': now,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
+      await AppPreferences().setActiveStoreId('store-a');
+
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+      );
+      final result = await service.processPendingSyncDetailed(localeCode: 'en');
+
+      expect(result.pendingAtStart, 1);
+      expect(result.failedEvents, 1);
+      expect(gateway.pushedBatches, isEmpty);
+
+      final row =
+          (await sql.query(
+            'sync_queue',
+            where: 'op_id = ?',
+            whereArgs: ['op-invalid-invoice'],
+          )).single;
+      expect(row['status'], 'blocked');
+      expect(
+        (row['last_error'] as String?) ?? '',
+        contains('Invalid outbound invoice event'),
+      );
+
+      final deadLetters = await sql.query(
+        'sync_dead_letters',
+        where: 'op_id = ?',
+        whereArgs: ['op-invalid-invoice'],
+      );
+      expect(deadLetters, hasLength(1));
+      expect(deadLetters.single['direction'], 'push');
+      expect(
+        (deadLetters.single['reason'] as String?) ?? '',
+        contains('Invalid outbound invoice event'),
+      );
+
+      await db.reset();
+    },
+  );
+
+  test(
+    'invalid inbound pull event is rejected with dead-letter diagnostics',
+    () async {
+      final db = await createTestDb('sync_service_dead_letter_inbound_invalid');
+      final sql = await db.database;
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
+      await AppPreferences().setActiveStoreId('store-a');
+
+      gateway.pullResponses.add(
+        SyncPullResponseModel(
+          events: [
+            SyncPullEventModel(
+              id: 'evt-invalid-sale-1',
+              entity: 'sale',
+              operation: 'UPSERT',
+              payload: const {
+                'id': 'sale-invalid-1',
+                'sale_type': 'CASH',
+                'payment_method': 'CASH',
+                'total_amount': 200.0,
+                // missing items list => invalid
+                'created_at': '2026-03-04T10:00:00Z',
+              },
+              createdAt: DateTime.parse('2026-03-04T10:00:00Z'),
+            ),
+          ],
+          nextCursor: 'evt-invalid-sale-1',
+        ),
+      );
+
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+      );
+      final result = await service.processPendingSyncDetailed(localeCode: 'en');
+
+      expect(result.pulledEvents, 1);
+      expect(result.appliedEvents, 0);
+      final sales = await sql.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: ['sale-invalid-1'],
+      );
+      expect(sales, isEmpty);
+      final deadLetters = await sql.query(
+        'sync_dead_letters',
+        where: 'event_id = ?',
+        whereArgs: ['evt-invalid-sale-1'],
+      );
+      expect(deadLetters, hasLength(1));
+      expect(deadLetters.single['direction'], 'pull');
+      expect(
+        (deadLetters.single['reason'] as String?) ?? '',
+        contains('Invalid pull sale event'),
+      );
+
+      await db.reset();
+    },
+  );
+
+  test(
+    'account switch archives foreign store rows and pushes only active store',
+    () async {
+      final db = await createTestDb('sync_service_archive_foreign_store_rows');
+      final sql = await db.database;
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await sql.insert('sync_queue', {
+        'op_id': 'op-store-a',
+        'store_id': 'store-a',
+        'entity': 'expense',
+        'entity_id': 'exp-store-a',
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': 'exp-store-a',
+          'category': 'OTHER',
+          'amount': 10.0,
+        }),
+        'created_at': now,
+        'updated_at': now,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
+      await sql.insert('sync_queue', {
+        'op_id': 'op-store-b',
+        'store_id': 'store-b',
+        'entity': 'expense',
+        'entity_id': 'exp-store-b',
+        'operation': 'UPSERT',
+        'payload': jsonEncode({
+          'id': 'exp-store-b',
+          'category': 'OTHER',
+          'amount': 20.0,
+        }),
+        'created_at': now,
+        'updated_at': now,
+        'synced': 0,
+        'status': 'pending',
+        'retry_count': 0,
+      });
+      await AppPreferences().setActiveStoreId('store-a');
+
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+        pushChunkSize: 100,
+      );
+      await service.processPendingSyncDetailed(localeCode: 'en');
+
+      expect(gateway.pushedBatches, hasLength(1));
+      expect(gateway.pushedBatches.single, hasLength(1));
+      expect(gateway.pushedBatches.single.single['op_id'], 'op-store-a');
+
+      final rowA =
+          (await sql.query(
+            'sync_queue',
+            where: 'op_id = ?',
+            whereArgs: ['op-store-a'],
+          )).single;
+      final rowB =
+          (await sql.query(
+            'sync_queue',
+            where: 'op_id = ?',
+            whereArgs: ['op-store-b'],
+          )).single;
+      expect(rowA['status'], 'synced');
+      expect(rowB['status'], 'archived');
+      expect(
+        (rowB['last_error'] as String?) ?? '',
+        contains('different account/store'),
+      );
+
+      await db.reset();
+    },
+  );
 
   test('offline write syncs after reconnect with push then pull', () async {
     final db = await createTestDb('sync_service_offline_then_reconnect');
@@ -480,12 +856,19 @@ void main() {
       await service.processPendingSync(localeCode: 'en');
 
       final rows = await sql.query('sync_queue');
-      expect(rows.single['status'], 'failed');
+      expect(rows.single['status'], 'blocked');
       expect(rows.single['synced'], 0);
       expect(
-        rows.single['last_error'],
-        'Sync failed on server. We will retry automatically.',
+        (rows.single['last_error'] as String?) ?? '',
+        contains('Moved to dead-letter'),
       );
+      final deadLetters = await sql.query(
+        'sync_dead_letters',
+        where: 'op_id = ?',
+        whereArgs: ['op-fail-1'],
+      );
+      expect(deadLetters, hasLength(1));
+      expect(deadLetters.single['direction'], 'push');
 
       await db.reset();
     },
@@ -585,6 +968,477 @@ void main() {
 
     await db.reset();
   });
+
+  test('pull applies product ADJUST_STOCK and writes movement row', () async {
+    final db = await createTestDb('sync_service_pull_adjust_stock');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    await sql.insert('products', {
+      'id': 'p-adjust-1',
+      'name': 'Test Product',
+      'sell_price': 10.0,
+      'cost_price': 0.0,
+      'stock_qty': 5.0,
+      'low_stock_threshold': 1.0,
+      'unit': 'piece',
+      'category': null,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-adjust-1',
+            entity: 'product',
+            operation: 'ADJUST_STOCK',
+            payload: const {
+              'id': 'p-adjust-1',
+              'delta_qty': -2.0,
+              'reason': 'damage',
+              'updated_at': '2026-03-04T10:00:00Z',
+              'schema_version': 1,
+            },
+            createdAt: DateTime.parse('2026-03-04T10:00:00Z'),
+          ),
+        ],
+        nextCursor: 'evt-adjust-1',
+      ),
+    );
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSync(localeCode: 'en');
+
+    final productRows = await sql.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: ['p-adjust-1'],
+    );
+    expect(productRows, hasLength(1));
+    expect((productRows.single['stock_qty'] as num).toDouble(), 3.0);
+
+    final movementRows = await sql.query(
+      'stock_movements',
+      where: 'product_id = ? AND movement_type = ?',
+      whereArgs: ['p-adjust-1', 'LOSS'],
+    );
+    expect(movementRows, hasLength(1));
+    expect((movementRows.single['delta_qty'] as num).toDouble(), -2.0);
+    expect(movementRows.single['reference_id'], 'damage');
+    expect(await prefs.getLastSyncCursor(), 'evt-adjust-1');
+
+    await db.reset();
+  });
+
+  test('pull applies invoice ISSUE and writes inventory movements', () async {
+    final db = await createTestDb('sync_service_pull_invoice_issue');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    await sql.insert('products', {
+      'id': 'p-invoice-1',
+      'name': 'Invoice Product',
+      'sell_price': 250.0,
+      'cost_price': 120.0,
+      'stock_qty': 10.0,
+      'low_stock_threshold': 2.0,
+      'unit': 'piece',
+      'category': null,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-invoice-issue-1',
+            entity: 'invoice',
+            operation: 'ISSUE',
+            payload: const {
+              'id': 'inv-1',
+              'business_id': 'store-1',
+              'invoice_number': 'INV-2026-00001',
+              'status': 'issued',
+              'issue_date': '2026-03-04T10:00:00Z',
+              'issue_date_ad': '2026-03-04',
+              'currency_code': 'NPR',
+              'subtotal': 500.0,
+              'discount_amount': 0.0,
+              'tax_amount': 0.0,
+              'total': 500.0,
+              'paid_amount': 0.0,
+              'balance_due': 500.0,
+              'items': [
+                {
+                  'id': 'inv-item-1',
+                  'product_id': 'p-invoice-1',
+                  'product_name_snapshot': 'Invoice Product',
+                  'quantity': 2.0,
+                  'unit_price': 250.0,
+                  'line_total': 500.0,
+                },
+              ],
+              'updated_at': '2026-03-04T10:00:00Z',
+              'created_at': '2026-03-04T10:00:00Z',
+              'schema_version': 1,
+            },
+            createdAt: DateTime.parse('2026-03-04T10:00:00Z'),
+          ),
+        ],
+        nextCursor: 'evt-invoice-issue-1',
+      ),
+    );
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSync(localeCode: 'en');
+
+    final invoiceRows = await sql.query(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: ['inv-1'],
+    );
+    expect(invoiceRows, hasLength(1));
+    expect(invoiceRows.single['status'], 'issued');
+
+    final invoiceItemRows = await sql.query(
+      'invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: ['inv-1'],
+    );
+    expect(invoiceItemRows, hasLength(1));
+
+    final productRows = await sql.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: ['p-invoice-1'],
+    );
+    expect((productRows.single['stock_qty'] as num).toDouble(), 8.0);
+
+    final movementRows = await sql.query(
+      'stock_movements',
+      where: 'product_id = ? AND movement_type = ? AND reference_id = ?',
+      whereArgs: ['p-invoice-1', 'INVOICE_ISSUE', 'inv-1'],
+    );
+    expect(movementRows, hasLength(1));
+    expect((movementRows.single['delta_qty'] as num).toDouble(), -2.0);
+    expect(await prefs.getLastSyncCursor(), 'evt-invoice-issue-1');
+
+    await db.reset();
+  });
+
+  test('pull applies sale_refund and restocks inventory', () async {
+    final db = await createTestDb('sync_service_pull_sale_refund');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    final nowIso = DateTime.now().toIso8601String();
+    await sql.insert('products', {
+      'id': 'p-refund-1',
+      'name': 'Refund Product',
+      'sell_price': 100.0,
+      'cost_price': 50.0,
+      'stock_qty': 5.0,
+      'low_stock_threshold': 1.0,
+      'unit': 'piece',
+      'category': null,
+      'updated_at': nowIso,
+    });
+    await sql.insert('sales', {
+      'id': 'sale-ref-1',
+      'sale_type': 'CASH',
+      'payment_method': 'CASH',
+      'customer_id': null,
+      'total_amount': 300.0,
+      'sale_date_ad': '2026-03-04',
+      'status': 'completed',
+      'created_at': nowIso,
+    });
+    await sql.insert('sale_items', {
+      'id': 'sale-ref-1-item-1',
+      'sale_id': 'sale-ref-1',
+      'product_id': 'p-refund-1',
+      'qty': 3.0,
+      'unit_price': 100.0,
+      'line_total': 300.0,
+    });
+
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-refund-1',
+            entity: 'sale_refund',
+            operation: 'UPSERT',
+            payload: const {
+              'id': 'refund-1',
+              'sale_id': 'sale-ref-1',
+              'amount': 100.0,
+              'reason': 'Damaged pack return',
+              'refund_date_ad': '2026-03-04',
+              'created_at': '2026-03-04T12:00:00Z',
+              'items': [
+                {
+                  'id': 'refund-1-item-1',
+                  'product_id': 'p-refund-1',
+                  'qty': 1.0,
+                  'unit_price': 100.0,
+                  'line_total': 100.0,
+                },
+              ],
+              'schema_version': 1,
+            },
+            createdAt: DateTime.parse('2026-03-04T12:00:00Z'),
+          ),
+        ],
+        nextCursor: 'evt-refund-1',
+      ),
+    );
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSync(localeCode: 'en');
+
+    final refunds = await sql.query(
+      'sale_refunds',
+      where: 'id = ?',
+      whereArgs: ['refund-1'],
+    );
+    expect(refunds, hasLength(1));
+    final refundItems = await sql.query(
+      'sale_refund_items',
+      where: 'refund_id = ?',
+      whereArgs: ['refund-1'],
+    );
+    expect(refundItems, hasLength(1));
+
+    final productRows = await sql.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: ['p-refund-1'],
+    );
+    expect((productRows.single['stock_qty'] as num).toDouble(), 6.0);
+
+    final movementRows = await sql.query(
+      'stock_movements',
+      where: 'product_id = ? AND movement_type = ? AND reference_id = ?',
+      whereArgs: ['p-refund-1', 'RETURN', 'refund-1'],
+    );
+    expect(movementRows, hasLength(1));
+    expect((movementRows.single['delta_qty'] as num).toDouble(), 1.0);
+
+    final saleRows = await sql.query(
+      'sales',
+      where: 'id = ?',
+      whereArgs: ['sale-ref-1'],
+    );
+    expect(saleRows.single['status'], 'partial');
+    expect((saleRows.single['total_amount'] as num).toDouble(), 200.0);
+    expect(await prefs.getLastSyncCursor(), 'evt-refund-1');
+
+    await db.reset();
+  });
+
+  test('pull applies stock_loss and records LOSS movement type', () async {
+    final db = await createTestDb('sync_service_pull_stock_loss');
+    final sql = await db.database;
+    final prefs = _FakePrefs();
+    final gateway = _FakeGateway();
+    final session = _FakeSessionService();
+
+    await sql.insert('products', {
+      'id': 'p-loss-1',
+      'name': 'Loss Product',
+      'sell_price': 100.0,
+      'cost_price': 50.0,
+      'stock_qty': 7.0,
+      'low_stock_threshold': 1.0,
+      'unit': 'piece',
+      'category': null,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+
+    gateway.pullResponses.add(
+      SyncPullResponseModel(
+        events: [
+          SyncPullEventModel(
+            id: 'evt-loss-1',
+            entity: 'stock_loss',
+            operation: 'UPSERT',
+            payload: const {
+              'id': 'loss-1',
+              'product_id': 'p-loss-1',
+              'qty': 2.0,
+              'reason': 'Expired',
+              'created_at': '2026-03-04T13:00:00Z',
+              'schema_version': 1,
+            },
+            createdAt: DateTime.parse('2026-03-04T13:00:00Z'),
+          ),
+        ],
+        nextCursor: 'evt-loss-1',
+      ),
+    );
+
+    final service = SyncService(
+      db,
+      gateway,
+      prefs,
+      session,
+      connectivityCheck: () async => [ConnectivityResult.wifi],
+    );
+    await service.processPendingSync(localeCode: 'en');
+
+    final productRows = await sql.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: ['p-loss-1'],
+    );
+    expect((productRows.single['stock_qty'] as num).toDouble(), 5.0);
+
+    final movementRows = await sql.query(
+      'stock_movements',
+      where: 'product_id = ? AND movement_type = ? AND reference_id = ?',
+      whereArgs: ['p-loss-1', 'LOSS', 'loss-1'],
+    );
+    expect(movementRows, hasLength(1));
+    expect((movementRows.single['delta_qty'] as num).toDouble(), -2.0);
+    expect(await prefs.getLastSyncCursor(), 'evt-loss-1');
+
+    await db.reset();
+  });
+
+  test(
+    'pull drops invalid sale payload and applies valid sale payload',
+    () async {
+      final db = await createTestDb('sync_service_sale_payload_validation');
+      final prefs = _FakePrefs();
+      final gateway = _FakeGateway();
+      final session = _FakeSessionService();
+      final sql = await db.database;
+      await sql.insert('products', {
+        'id': 'p1',
+        'name': 'Seed Product',
+        'sell_price': 100.0,
+        'cost_price': 40.0,
+        'stock_qty': 5.0,
+        'low_stock_threshold': 1.0,
+        'unit': 'piece',
+        'category': null,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+
+      gateway.pullResponses.add(
+        SyncPullResponseModel(
+          events: [
+            SyncPullEventModel(
+              id: 'evt-sale-invalid',
+              entity: 'sale',
+              operation: 'UPSERT',
+              payload: const {
+                'id': 'sale-invalid',
+                'sale_type': 'CASH',
+                'payment_method': 'CASH',
+                'total_amount': 100,
+                'items': [],
+                'created_at': '2026-03-04T10:00:00Z',
+                'schema_version': 1,
+              },
+              createdAt: DateTime.parse('2026-03-04T10:00:00Z'),
+            ),
+            SyncPullEventModel(
+              id: 'evt-sale-valid',
+              entity: 'sale',
+              operation: 'UPSERT',
+              payload: const {
+                'id': 'sale-valid',
+                'sale_type': 'CASH',
+                'payment_method': 'CASH',
+                'total_amount': 200,
+                'sale_date_ad': '2026-03-04',
+                'status': 'completed',
+                'items': [
+                  {'product_id': 'p1', 'qty': 2, 'unit_price': 100},
+                ],
+                'created_at': '2026-03-04T10:05:00Z',
+                'schema_version': 1,
+              },
+              createdAt: DateTime.parse('2026-03-04T10:05:00Z'),
+            ),
+          ],
+          nextCursor: 'evt-sale-valid',
+        ),
+      );
+
+      final service = SyncService(
+        db,
+        gateway,
+        prefs,
+        session,
+        connectivityCheck: () async => [ConnectivityResult.wifi],
+      );
+      await service.processPendingSync(localeCode: 'en');
+
+      final invalidRows = await sql.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: ['sale-invalid'],
+      );
+      final validRows = await sql.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: ['sale-valid'],
+      );
+      expect(invalidRows, isEmpty);
+      expect(validRows, hasLength(1));
+      expect(validRows.single['status'], 'completed');
+
+      final validItems = await sql.query(
+        'sale_items',
+        where: 'sale_id = ?',
+        whereArgs: ['sale-valid'],
+      );
+      expect(validItems, hasLength(1));
+      final productRows = await sql.query(
+        'products',
+        where: 'id = ?',
+        whereArgs: ['p1'],
+      );
+      expect((productRows.single['stock_qty'] as num).toDouble(), 3.0);
+      final movementRows = await sql.query(
+        'stock_movements',
+        where: 'product_id = ? AND movement_type = ?',
+        whereArgs: ['p1', 'SALE'],
+      );
+      expect(movementRows, hasLength(1));
+      expect((movementRows.single['delta_qty'] as num).toDouble(), -2.0);
+
+      await db.reset();
+    },
+  );
 
   test('pull paginates with cursor when page size exceeded', () async {
     final db = await createTestDb('sync_service_pull_pagination');

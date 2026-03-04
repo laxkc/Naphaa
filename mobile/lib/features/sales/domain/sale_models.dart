@@ -1,6 +1,6 @@
 enum SaleType { cash, credit, mixed }
 
-enum PaymentMethod { cash, qr, bank, credit, mixed }
+enum PaymentMethod { cash, qr, bank, wallet, credit, mixed }
 
 String saleTypeToApi(SaleType value) {
   switch (value) {
@@ -23,6 +23,8 @@ String paymentMethodToApi(PaymentMethod value) {
       return 'BANK';
     case PaymentMethod.credit:
       return 'CREDIT';
+    case PaymentMethod.wallet:
+      return 'WALLET';
     case PaymentMethod.mixed:
       return 'MIXED';
   }

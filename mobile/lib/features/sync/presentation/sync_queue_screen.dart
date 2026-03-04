@@ -203,6 +203,7 @@ class SyncQueueScreen extends ConsumerWidget {
                             ? AppColors.warning
                             : AppColors.error,
                       'blocked' => AppColors.error,
+                      'archived' => AppColors.muted,
                       'pending' => AppColors.warning,
                       'syncing' => AppColors.primary,
                       _ => AppColors.success,
@@ -403,6 +404,8 @@ class SyncQueueScreen extends ConsumerWidget {
         return l10n.syncingShort.toUpperCase();
       case 'blocked':
         return 'BLOCKED';
+      case 'archived':
+        return 'ARCHIVED';
       default:
         return l10n.ackedLabel.toUpperCase();
     }

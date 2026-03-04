@@ -1,11 +1,13 @@
-enum SaleStatus { completed, refunded, partial }
+enum SaleStatus { completed, refunded, partial, voided }
 
 class Sale {
   Sale({
     required this.id,
     required this.totalAmount,
     required this.saleType,
+    required this.paymentMethod,
     required this.createdAt,
+    this.saleDateAd,
     this.customerId,
     this.customerName,
     this.status = SaleStatus.completed,
@@ -17,7 +19,9 @@ class Sale {
   final String id;
   final double totalAmount;
   final String saleType; // CASH, CREDIT, MIXED
+  final String paymentMethod; // CASH, QR, BANK, WALLET, CREDIT, MIXED
   final DateTime createdAt;
+  final String? saleDateAd;
   final String? customerId;
   final String? customerName;
   final SaleStatus status;
@@ -30,7 +34,9 @@ class Sale {
       id: map['id'] as String,
       totalAmount: (map['total_amount'] as num).toDouble(),
       saleType: map['sale_type'] as String? ?? 'CASH',
+      paymentMethod: map['payment_method'] as String? ?? 'CASH',
       createdAt: DateTime.parse(map['created_at'] as String),
+      saleDateAd: map['sale_date_ad'] as String?,
       customerId: map['customer_id'] as String?,
       customerName: map['customer_name'] as String?,
       status: _parseStatus(map['status'] as String?),
@@ -40,6 +46,8 @@ class Sale {
 
   static SaleStatus _parseStatus(String? s) {
     switch (s) {
+      case 'void':
+        return SaleStatus.voided;
       case 'refunded':
         return SaleStatus.refunded;
       case 'partial':
@@ -79,11 +87,7 @@ class SaleItem {
 }
 
 class SalePayment {
-  SalePayment({
-    required this.id,
-    required this.method,
-    required this.amount,
-  });
+  SalePayment({required this.id, required this.method, required this.amount});
 
   final String id;
   final String method; // CASH, QR, BANK, CREDIT

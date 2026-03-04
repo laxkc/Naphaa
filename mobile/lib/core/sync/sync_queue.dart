@@ -43,7 +43,7 @@ class SyncQueueService {
     return database.query(
       'sync_queue',
       where:
-          "synced = 0 AND (COALESCE(status, 'pending') = 'pending' OR "
+          "synced = 0 AND (COALESCE(status, 'pending') IN ('pending', 'deferred', 'syncing') OR "
           "(COALESCE(status, 'pending') = 'failed' AND "
           "(next_retry_at IS NULL OR next_retry_at <= ?))) "
           "${hasStoreScope ? 'AND (store_id IS NULL OR store_id = ?)' : ''}",
