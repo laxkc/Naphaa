@@ -275,12 +275,7 @@ class SaleDetailScreen extends ConsumerWidget {
       await ref
           .read(salesRepositoryProvider)
           .voidSale(saleId: saleId, reason: reason);
-      ref.invalidate(saleDetailProvider(saleId));
-      ref.invalidate(salesListProvider(const SalesListParams()));
-      ref.invalidate(productsListProvider);
-      ref.invalidate(lowStockProductsProvider);
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(customersListProvider);
+      _refreshAfterSaleMutation(ref, saleId);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sale voided successfully.')),
@@ -312,12 +307,7 @@ class SaleDetailScreen extends ConsumerWidget {
             reason: reason,
             itemQtyBySaleItemId: fullRefundItems,
           );
-      ref.invalidate(saleDetailProvider(sale.id));
-      ref.invalidate(salesListProvider(const SalesListParams()));
-      ref.invalidate(productsListProvider);
-      ref.invalidate(lowStockProductsProvider);
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(customersListProvider);
+      _refreshAfterSaleMutation(ref, sale.id);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sale refund saved successfully.')),
@@ -334,39 +324,74 @@ class SaleDetailScreen extends ConsumerWidget {
     BuildContext context, {
     required String title,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final ctl = TextEditingController();
-    final reason = await showDialog<String>(
+    return showDialog<String>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(title),
-            content: TextField(
-              controller: ctl,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: l10n.reasonLabel,
-                hintText: 'Enter reason',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final value = ctl.text.trim();
-                  if (value.isEmpty) return;
-                  Navigator.of(ctx).pop(value);
-                },
-                child: Text(l10n.save),
-              ),
-            ],
-          ),
+      builder: (ctx) => _ReasonDialog(title: title),
     );
-    ctl.dispose();
-    return reason;
+  }
+
+  void _refreshAfterSaleMutation(WidgetRef ref, String saleId) {
+    ref.invalidate(saleDetailProvider(saleId));
+    ref.invalidate(salesListProvider(const SalesListParams()));
+    ref.invalidate(productsListProvider);
+    ref.invalidate(lowStockProductsProvider);
+    ref.invalidate(dashboardSummaryProvider);
+    ref.invalidate(customersListProvider);
+  }
+}
+
+class _ReasonDialog extends StatefulWidget {
+  const _ReasonDialog({required this.title});
+
+  final String title;
+
+  @override
+  State<_ReasonDialog> createState() => _ReasonDialogState();
+}
+
+class _ReasonDialogState extends State<_ReasonDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: l10n.reasonLabel,
+          hintText: 'Enter reason',
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.save)),
+      ],
+    );
+  }
+
+  void _submit() {
+    final value = _controller.text.trim();
+    if (value.isEmpty) return;
+    Navigator.of(context).pop(value);
   }
 }
 

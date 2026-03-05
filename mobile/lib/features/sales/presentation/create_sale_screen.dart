@@ -32,48 +32,54 @@ class CreateSaleScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: initialName.trim());
     final priceCtrl = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.salesQuickAddProductTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(labelText: l10n.productName),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+    try {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: Text(l10n.salesQuickAddProductTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(labelText: l10n.productName),
                   ),
-                  decoration: InputDecoration(labelText: l10n.sellPriceLabel),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: priceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(labelText: l10n.sellPriceLabel),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final price = double.tryParse(priceCtrl.text.trim());
+                    if (price == null || price <= 0) return;
+                    await controller.quickAddProduct(
+                      name: nameCtrl.text.trim(),
+                      sellPrice: price,
+                    );
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                  child: Text(l10n.createLabel),
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final price = double.tryParse(priceCtrl.text.trim());
-                  if (price == null || price <= 0) return;
-                  await controller.quickAddProduct(
-                    name: nameCtrl.text.trim(),
-                    sellPrice: price,
-                  );
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                },
-                child: Text(l10n.createLabel),
-              ),
-            ],
-          ),
-    );
+      );
+    } finally {
+      nameCtrl.dispose();
+      priceCtrl.dispose();
+    }
   }
 
   Future<void> _showQuickCreditCustomerDialog(
@@ -84,53 +90,69 @@ class CreateSaleScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.salesQuickCreditCustomerTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(labelText: l10n.customerName),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: l10n.phoneOptionalLabel,
+    try {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: Text(l10n.salesQuickCreditCustomerTitle),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(labelText: l10n.customerName),
                   ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: l10n.phoneNumberLabel,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final confirmed = await _confirmCreditRiskIfNeeded(
+                      context,
+                      ref,
+                      customerName: nameCtrl.text,
+                      phone: phoneCtrl.text,
+                    );
+                    if (!confirmed) return;
+                    final ok = await controller.saveCreditSaleWithCustomer(
+                      customerName: nameCtrl.text,
+                      phone: phoneCtrl.text,
+                    );
+                    if (!ok) {
+                      if (!context.mounted) return;
+                      final message =
+                          ref.read(salesControllerProvider).message ??
+                          'Unable to save credit sale.';
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(message)));
+                      return;
+                    }
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                  child: Text(l10n.saveCreditSale),
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final confirmed = await _confirmCreditRiskIfNeeded(
-                    context,
-                    ref,
-                    customerName: nameCtrl.text,
-                    phone: phoneCtrl.text,
-                  );
-                  if (!confirmed) return;
-                  await controller.saveCreditSaleWithCustomer(
-                    customerName: nameCtrl.text,
-                    phone: phoneCtrl.text,
-                  );
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                },
-                child: Text(l10n.saveCreditSale),
-              ),
-            ],
-          ),
-    );
+      );
+    } finally {
+      nameCtrl.dispose();
+      phoneCtrl.dispose();
+    }
   }
 
   Future<void> _showCreditCustomerPickerDialog(
@@ -138,7 +160,6 @@ class CreateSaleScreen extends ConsumerWidget {
     WidgetRef ref,
     SalesController controller,
   ) async {
-    final l10n = AppLocalizations.of(context)!;
     List<Customer> customers;
     Map<String, CustomerRiskMetric> riskMap;
     try {
@@ -148,136 +169,28 @@ class CreateSaleScreen extends ConsumerWidget {
       await _showQuickCreditCustomerDialog(context, ref, controller);
       return;
     }
-
-    final searchCtrl = TextEditingController();
-    var query = '';
-    try {
-      await showDialog<void>(
-        context: context,
-        builder:
-            (ctx) => StatefulBuilder(
-              builder: (ctx, setState) {
-                final filtered =
-                    customers.where((c) {
-                      final q = query.trim().toLowerCase();
-                      if (q.isEmpty) return true;
-                      return c.name.toLowerCase().contains(q) ||
-                          (c.phone?.toLowerCase().contains(q) ?? false);
-                    }).toList();
-                return AlertDialog(
-                  title: Text(l10n.salesQuickCreditCustomerTitle),
-                  content: SizedBox(
-                    width: 420,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextField(
-                          controller: searchCtrl,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            hintText: l10n.searchProducts,
-                            isDense: true,
-                          ),
-                          onChanged: (value) => setState(() => query = value),
-                        ),
-                        const SizedBox(height: 10),
-                        if (filtered.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Text(
-                              'No customers found',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          )
-                        else
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 280),
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: filtered.length,
-                              separatorBuilder:
-                                  (_, __) =>
-                                      const Divider(height: 1, thickness: 0.5),
-                              itemBuilder: (_, i) {
-                                final customer = filtered[i];
-                                final risk = riskMap[customer.id];
-                                return ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(customer.name),
-                                  subtitle: Text(
-                                    [
-                                      if (customer.phone?.isNotEmpty == true)
-                                        customer.phone!,
-                                      '${l10n.nprLabel} ${customer.balance.toStringAsFixed(2)}',
-                                    ].join(' • '),
-                                  ),
-                                  trailing:
-                                      risk == null
-                                          ? null
-                                          : StatusChip(
-                                            label: riskLevelLabel(
-                                              context,
-                                              risk.riskLevel,
-                                              short: true,
-                                            ),
-                                            color:
-                                                risk.riskLevel.toLowerCase() ==
-                                                        'red'
-                                                    ? AppColors.error
-                                                    : risk.riskLevel
-                                                            .toLowerCase() ==
-                                                        'yellow'
-                                                    ? AppColors.warning
-                                                    : AppColors.success,
-                                          ),
-                                  onTap: () async {
-                                    final confirmed =
-                                        await _confirmCreditRiskForCustomer(
-                                          context,
-                                          customer: customer,
-                                          risk: risk,
-                                        );
-                                    if (!confirmed) return;
-                                    final ok = await controller
-                                        .saveCreditSaleForCustomerId(
-                                          customer.id,
-                                        );
-                                    if (ok && ctx.mounted) {
-                                      Navigator.of(ctx).pop();
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text(l10n.cancel),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: () async {
-                        Navigator.of(ctx).pop();
-                        await _showQuickCreditCustomerDialog(
-                          context,
-                          ref,
-                          controller,
-                        );
-                      },
-                      icon: const Icon(Icons.person_add_alt_1_outlined),
-                      label: Text(l10n.addCustomer),
-                    ),
-                  ],
-                );
-              },
-            ),
-      );
-    } finally {
-      searchCtrl.dispose();
-    }
+    await showDialog<void>(
+      context: context,
+      builder:
+          (ctx) => _CreditCustomerPickerDialog(
+            customers: customers,
+            riskMap: riskMap,
+            onCustomerTap: (customer, risk) async {
+              final confirmed = await _confirmCreditRiskForCustomer(
+                context,
+                customer: customer,
+                risk: risk,
+              );
+              if (!confirmed) return false;
+              return controller.saveCreditSaleForCustomerId(customer.id);
+            },
+            onAddCustomer: () async {
+              await Future<void>.delayed(Duration.zero);
+              if (!context.mounted) return;
+              await _showQuickCreditCustomerDialog(context, ref, controller);
+            },
+          ),
+    );
   }
 
   Future<bool> _confirmCreditRiskIfNeeded(
@@ -293,16 +206,51 @@ class CreateSaleScreen extends ConsumerWidget {
     try {
       final customers = await ref.read(customersListProvider.future);
       final riskMap = await ref.read(customerRiskMetricsProvider.future);
+      final matches =
+          customers.where((c) {
+            final phoneMatch =
+                phoneTrimmed.isNotEmpty &&
+                (c.phone?.trim() ?? '') == phoneTrimmed;
+            final nameMatch = c.name.trim().toLowerCase() == name.toLowerCase();
+            return phoneMatch || nameMatch;
+          }).toList();
+      if (matches.isEmpty) return true;
 
-      final existing = customers.firstWhere((c) {
-        final phoneMatch =
-            phoneTrimmed.isNotEmpty && (c.phone?.trim() ?? '') == phoneTrimmed;
-        final nameMatch = c.name.trim().toLowerCase() == name.toLowerCase();
-        return phoneMatch || nameMatch;
-      });
+      if (matches.length > 1) {
+        final shouldUsePicker = await showDialog<bool>(
+          context: context,
+          builder: (ctx) {
+            final l10n = AppLocalizations.of(ctx)!;
+            return AlertDialog(
+              title: Text(l10n.salesCreditRiskWarningTitle),
+              content: const Text(
+                'Multiple customers match this name/phone. Choose customer from list to avoid credit mismatch.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(l10n.continueLabel),
+                ),
+              ],
+            );
+          },
+        );
+        if (shouldUsePicker != true) return false;
+        return false;
+      }
+
+      final existing = matches.first;
       final risk = riskMap[existing.id];
-      if (risk == null) return true;
-      final level = risk.riskLevel.toLowerCase();
+      final outstanding = risk?.outstandingAmount ?? existing.balance;
+      final level =
+          risk == null && outstanding > 0
+              ? 'yellow'
+              : (risk?.riskLevel ?? '').toLowerCase();
+      if (risk == null && outstanding <= 0) return true;
       if (level != 'red' && level != 'yellow') return true;
 
       final shouldProceed = await showDialog<bool>(
@@ -326,11 +274,15 @@ class CreateSaleScreen extends ConsumerWidget {
                 const SizedBox(height: 10),
                 Text(
                   l10n.salesCreditRiskOutstandingNpr(
-                    risk.outstandingAmount.toStringAsFixed(2),
+                    outstanding.toStringAsFixed(2),
                   ),
                 ),
-                Text(l10n.salesCreditRiskOldestDueDays(risk.oldestDueDays)),
-                Text(l10n.salesCreditRiskScore(risk.riskScore.toString())),
+                Text(
+                  l10n.salesCreditRiskOldestDueDays(risk?.oldestDueDays ?? 0),
+                ),
+                Text(
+                  l10n.salesCreditRiskScore((risk?.riskScore ?? 0).toString()),
+                ),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -358,7 +310,7 @@ class CreateSaleScreen extends ConsumerWidget {
       );
       return shouldProceed ?? false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
@@ -485,6 +437,8 @@ class CreateSaleScreen extends ConsumerWidget {
                                   ),
                                   selected: isSelected,
                                   onSelected: (value) {
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
                                     setState(() {
                                       if (value) {
                                         selected.add(method);
@@ -535,7 +489,7 @@ class CreateSaleScreen extends ConsumerWidget {
                             controller: customerPhoneCtrl,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              labelText: l10n.phoneOptionalLabel,
+                              labelText: l10n.phoneNumberLabel,
                               isDense: true,
                             ),
                           ),
@@ -850,6 +804,151 @@ class _QuickCreateProductEmpty extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CreditCustomerPickerDialog extends StatefulWidget {
+  const _CreditCustomerPickerDialog({
+    required this.customers,
+    required this.riskMap,
+    required this.onCustomerTap,
+    required this.onAddCustomer,
+  });
+
+  final List<Customer> customers;
+  final Map<String, CustomerRiskMetric> riskMap;
+  final Future<bool> Function(Customer customer, CustomerRiskMetric? risk)
+  onCustomerTap;
+  final Future<void> Function() onAddCustomer;
+
+  @override
+  State<_CreditCustomerPickerDialog> createState() =>
+      _CreditCustomerPickerDialogState();
+}
+
+class _CreditCustomerPickerDialogState
+    extends State<_CreditCustomerPickerDialog> {
+  late final TextEditingController _searchCtrl;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final filtered =
+        widget.customers.where((c) {
+          final q = _query.trim().toLowerCase();
+          if (q.isEmpty) return true;
+          return c.name.toLowerCase().contains(q) ||
+              (c.phone?.toLowerCase().contains(q) ?? false);
+        }).toList();
+    return AlertDialog(
+      title: Text(l10n.salesQuickCreditCustomerTitle),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search_rounded),
+                hintText: l10n.searchProducts,
+                isDense: true,
+              ),
+              onChanged: (value) {
+                if (!mounted) return;
+                setState(() => _query = value);
+              },
+            ),
+            const SizedBox(height: 10),
+            if (filtered.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'No customers found',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: filtered.length,
+                  separatorBuilder:
+                      (_, __) => const Divider(height: 1, thickness: 0.5),
+                  itemBuilder: (_, i) {
+                    final customer = filtered[i];
+                    final risk = widget.riskMap[customer.id];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(customer.name),
+                      subtitle: Text(
+                        [
+                          if (customer.phone?.isNotEmpty == true)
+                            customer.phone!,
+                          '${l10n.nprLabel} ${customer.balance.toStringAsFixed(2)}',
+                        ].join(' • '),
+                      ),
+                      trailing:
+                          risk == null
+                              ? null
+                              : StatusChip(
+                                label: riskLevelLabel(
+                                  context,
+                                  risk.riskLevel,
+                                  short: true,
+                                ),
+                                color:
+                                    risk.riskLevel.toLowerCase() == 'red'
+                                        ? AppColors.error
+                                        : risk.riskLevel.toLowerCase() ==
+                                            'yellow'
+                                        ? AppColors.warning
+                                        : AppColors.success,
+                              ),
+                      onTap: () async {
+                        final ok = await widget.onCustomerTap(customer, risk);
+                        if (ok && mounted) {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: () async {
+            FocusManager.instance.primaryFocus?.unfocus();
+            Navigator.of(context).pop();
+            await widget.onAddCustomer();
+          },
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: Text(l10n.addCustomer),
+        ),
+      ],
     );
   }
 }

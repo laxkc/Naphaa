@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/app_providers.dart';
+import '../customers/domain/customer.dart';
 import '../products/data/products_repository.dart';
 import '../products/domain/product.dart';
 import '../customers/data/customers_repository.dart';
@@ -19,9 +20,11 @@ class SalesController extends Notifier<SalesState> {
     _productsRepository = ref.watch(productsRepositoryProvider);
     _customersRepository = ref.watch(customersRepositoryProvider);
     Future.microtask(() async {
+      if (!ref.mounted) return;
       try {
         await search('');
       } catch (e) {
+        if (!ref.mounted) return;
         state = state.copyWith(
           loading: false,
           message: 'Failed to load products: $e',
@@ -84,16 +87,31 @@ class SalesController extends Notifier<SalesState> {
     String? phone,
   }) async {
     final name = customerName.trim();
+    final cleanPhone = phone?.trim() ?? '';
     if (name.isEmpty) {
       state = state.copyWith(
         message: 'Customer name is required for credit sale.',
       );
       return false;
     }
-    final customerId = await _resolveOrCreateCustomerId(
-      customerName: name,
-      phone: phone,
-    );
+    if (cleanPhone.isEmpty) {
+      state = state.copyWith(
+        message:
+            'Phone number is required for credit sale. Choose existing customer if phone is unavailable.',
+      );
+      return false;
+    }
+    late final String customerId;
+    try {
+      customerId = await _resolveOrCreateCustomerId(
+        customerName: name,
+        phone: cleanPhone,
+      );
+    } catch (e) {
+      final descriptor = _describeSaveError(e);
+      state = state.copyWith(message: descriptor.message);
+      return false;
+    }
     return _saveSale(
       saleType: 'CREDIT',
       paymentMethod: PaymentMethod.credit,
@@ -127,16 +145,30 @@ class SalesController extends Notifier<SalesState> {
     String? customerId;
     if (hasCredit) {
       final name = customerName?.trim() ?? '';
+      final phone = customerPhone?.trim() ?? '';
       if (name.isEmpty) {
         state = state.copyWith(
           message: 'Customer name is required when credit is included.',
         );
         return false;
       }
-      customerId = await _resolveOrCreateCustomerId(
-        customerName: name,
-        phone: customerPhone,
-      );
+      if (phone.isEmpty) {
+        state = state.copyWith(
+          message:
+              'Phone number is required when credit is included. Choose existing customer if phone is unavailable.',
+        );
+        return false;
+      }
+      try {
+        customerId = await _resolveOrCreateCustomerId(
+          customerName: name,
+          phone: phone,
+        );
+      } catch (e) {
+        final descriptor = _describeSaveError(e);
+        state = state.copyWith(message: descriptor.message);
+        return false;
+      }
     }
 
     final saleType =
@@ -312,6 +344,20 @@ class SalesController extends Notifier<SalesState> {
         message: 'Sale could not be saved: select a customer for credit.',
       );
     }
+    if (lower.contains('duplicate phone')) {
+      return (
+        code: 'customer_phone_ambiguous',
+        message:
+            'Multiple customers found with this phone number. Merge duplicates first.',
+      );
+    }
+    if (lower.contains('multiple customers found')) {
+      return (
+        code: 'customer_ambiguous',
+        message:
+            'Multiple customers found with this name. Use customer picker or phone number.',
+      );
+    }
     if (lower.contains('product missing') ||
         lower.contains('product not found')) {
       return (
@@ -390,21 +436,65 @@ class SalesController extends Notifier<SalesState> {
   }) async {
     final cleanName = customerName.trim();
     final cleanPhone = phone?.trim();
+    final normalizedName = cleanName.toLowerCase();
+    final hasPhone = cleanPhone != null && cleanPhone.isNotEmpty;
     final customers = await _customersRepository.listCustomers();
-    for (final c in customers) {
-      final samePhone =
-          cleanPhone != null &&
-          cleanPhone.isNotEmpty &&
-          (c.phone?.trim() ?? '') == cleanPhone;
-      final sameName = c.name.trim().toLowerCase() == cleanName.toLowerCase();
-      if (samePhone || sameName) {
-        return c.id;
+
+    if (hasPhone) {
+      final phoneMatches =
+          customers
+              .where((c) => (c.phone?.trim() ?? '') == cleanPhone)
+              .toList();
+      if (phoneMatches.length == 1) {
+        final existing = phoneMatches.first;
+        if (existing.name.trim() != cleanName) {
+          // Phone is the identity key for credit. Reuse the same customer id and
+          // refresh name to what user entered to avoid duplicate-credit splits.
+          await _customersRepository.updateCustomer(
+            Customer(
+              id: existing.id,
+              name: cleanName,
+              phone: existing.phone,
+              address: existing.address,
+              notes: existing.notes,
+              balance: existing.balance,
+              createdAt: existing.createdAt,
+              isDeleted: existing.isDeleted,
+            ),
+          );
+        }
+        return existing.id;
       }
+      if (phoneMatches.length > 1) {
+        final narrowed =
+            phoneMatches
+                .where((c) => c.name.trim().toLowerCase() == normalizedName)
+                .toList();
+        if (narrowed.length == 1) return narrowed.first.id;
+        throw StateError(
+          'Duplicate phone customer match; multiple customers found.',
+        );
+      }
+
+      // Phone is provided but does not match an existing customer: create a new
+      // customer record keyed by this phone to avoid accidental same-name merge.
+      return _customersRepository.addCustomer(
+        name: cleanName,
+        phone: cleanPhone,
+      );
     }
 
-    return _customersRepository.addCustomer(
-      name: cleanName,
-      phone: cleanPhone?.isEmpty ?? true ? null : cleanPhone,
-    );
+    final nameMatches =
+        customers
+            .where((c) => c.name.trim().toLowerCase() == normalizedName)
+            .toList();
+    if (nameMatches.length == 1) {
+      return nameMatches.first.id;
+    }
+    if (nameMatches.length > 1) {
+      throw StateError('Multiple customers found with same name');
+    }
+
+    return _customersRepository.addCustomer(name: cleanName, phone: null);
   }
 }

@@ -51,6 +51,28 @@ Future<void> _insertProduct(
   });
 }
 
+Future<void> _insertCustomer(
+  LocalDatabase localDb, {
+  required String id,
+  required String name,
+  String? phone,
+  double balance = 0,
+}) async {
+  final db = await localDb.database;
+  final now = DateTime.now().toUtc().toIso8601String();
+  await db.insert('customers', {
+    'id': id,
+    'name': name,
+    'phone': phone,
+    'address': null,
+    'notes': null,
+    'balance': balance,
+    'created_at': now,
+    'is_deleted': 0,
+    'updated_at': now,
+  });
+}
+
 ProviderContainer _container(
   LocalDatabase localDb, {
   SyncManager? syncManager,
@@ -210,6 +232,7 @@ void main() {
           SalePaymentInput(method: PaymentMethod.credit, amount: 50),
         ],
         customerName: 'Sita',
+        customerPhone: '9800000456',
       ),
       isTrue,
     );
@@ -239,4 +262,114 @@ void main() {
       greaterThanOrEqualTo(0),
     );
   });
+
+  test(
+    'credit quick-save fails clearly when duplicate phone matches exist',
+    () async {
+      final localDb = await createTestDb('credit_duplicate_phone_ambiguous');
+      addTearDown(localDb.reset);
+      await _insertProduct(localDb, id: 'p1', stockQty: 10, sellPrice: 100);
+      await _insertCustomer(
+        localDb,
+        id: 'c1',
+        name: 'Rohan One',
+        phone: '9800000777',
+        balance: 1200,
+      );
+      await _insertCustomer(
+        localDb,
+        id: 'c2',
+        name: 'Rohan Two',
+        phone: '9800000777',
+        balance: 500,
+      );
+
+      final container = _container(localDb);
+      addTearDown(container.dispose);
+      final controller = container.read(salesControllerProvider.notifier);
+
+      await controller.search('');
+      controller.increment('p1');
+      final ok = await controller.saveCreditSaleWithCustomer(
+        customerName: 'Rohan',
+        phone: '9800000777',
+      );
+
+      expect(ok, isFalse);
+      final state = container.read(salesControllerProvider);
+      expect(
+        state.message,
+        'Multiple customers found with this phone number. Merge duplicates first.',
+      );
+    },
+  );
+
+  test('credit quick-save requires phone number for identity safety', () async {
+    final localDb = await createTestDb('credit_requires_phone_identity');
+    addTearDown(localDb.reset);
+    await _insertProduct(localDb, id: 'p1', stockQty: 10, sellPrice: 100);
+
+    final container = _container(localDb);
+    addTearDown(container.dispose);
+    final controller = container.read(salesControllerProvider.notifier);
+
+    await controller.search('');
+    controller.increment('p1');
+    final ok = await controller.saveCreditSaleWithCustomer(
+      customerName: 'Ram',
+      phone: '',
+    );
+
+    expect(ok, isFalse);
+    final state = container.read(salesControllerProvider);
+    expect(
+      state.message,
+      'Phone number is required for credit sale. Choose existing customer if phone is unavailable.',
+    );
+  });
+
+  test(
+    'same phone with changed name reuses existing customer and preserves credit ledger',
+    () async {
+      final localDb = await createTestDb(
+        'credit_same_phone_name_changed_reuse',
+      );
+      addTearDown(localDb.reset);
+      await _insertProduct(localDb, id: 'p1', stockQty: 10, sellPrice: 100);
+      await _insertCustomer(
+        localDb,
+        id: 'c-existing',
+        name: 'Old Name',
+        phone: '9800000666',
+        balance: 250,
+      );
+
+      final container = _container(localDb);
+      addTearDown(container.dispose);
+      final controller = container.read(salesControllerProvider.notifier);
+
+      await controller.search('');
+      controller.increment('p1');
+      final ok = await controller.saveCreditSaleWithCustomer(
+        customerName: 'New Name',
+        phone: '9800000666',
+      );
+
+      expect(ok, isTrue);
+      final db = await localDb.database;
+      final customerRows = await db.query(
+        'customers',
+        where: 'id = ?',
+        whereArgs: ['c-existing'],
+        limit: 1,
+      );
+      expect(customerRows, hasLength(1));
+      expect(customerRows.single['name'], 'New Name');
+      expect((customerRows.single['balance'] as num).toDouble(), 350);
+
+      final saleRows = await db.query('sales', limit: 1);
+      expect(saleRows, hasLength(1));
+      expect(saleRows.single['customer_id'], 'c-existing');
+    },
+  );
 }
