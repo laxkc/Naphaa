@@ -665,6 +665,102 @@ abstract class AppLocalizations {
   /// **'Dashboard overview'**
   String get dashboardOverview;
 
+  /// No description provided for @dashboardSectionPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments'**
+  String get dashboardSectionPayments;
+
+  /// No description provided for @dashboardSectionInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get dashboardSectionInventory;
+
+  /// No description provided for @dashboardSectionCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit'**
+  String get dashboardSectionCredit;
+
+  /// No description provided for @dashboardKpiTotalRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Revenue'**
+  String get dashboardKpiTotalRevenue;
+
+  /// No description provided for @dashboardKpiTransactionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions Count'**
+  String get dashboardKpiTransactionsCount;
+
+  /// No description provided for @dashboardKpiAverageBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Average Bill'**
+  String get dashboardKpiAverageBill;
+
+  /// No description provided for @dashboardKpiCashCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Collected'**
+  String get dashboardKpiCashCollected;
+
+  /// No description provided for @dashboardKpiDigitalCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital Collected'**
+  String get dashboardKpiDigitalCollected;
+
+  /// No description provided for @dashboardKpiCreditCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit Created'**
+  String get dashboardKpiCreditCreated;
+
+  /// No description provided for @dashboardKpiCreditCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit Collected'**
+  String get dashboardKpiCreditCollected;
+
+  /// No description provided for @dashboardKpiLowStockItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Stock Items'**
+  String get dashboardKpiLowStockItems;
+
+  /// No description provided for @dashboardKpiInventoryLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory Loss'**
+  String get dashboardKpiInventoryLoss;
+
+  /// No description provided for @dashboardKpiTopSellingItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Selling Items'**
+  String get dashboardKpiTopSellingItems;
+
+  /// No description provided for @dashboardKpiCustomersWithDues.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers With Dues'**
+  String get dashboardKpiCustomersWithDues;
+
+  /// No description provided for @dashboardKpiOverdueCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Credit'**
+  String get dashboardKpiOverdueCredit;
+
+  /// No description provided for @dashboardKpiNoTopSelling.
+  ///
+  /// In en, this message translates to:
+  /// **'No top-selling items yet'**
+  String get dashboardKpiNoTopSelling;
+
   /// No description provided for @dashboardFirstRunTitle.
   ///
   /// In en, this message translates to:
@@ -3628,6 +3724,21 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'CANCELLED'**
   String get invoiceStatusCancelledLabel;
+
+  /// No description provided for @dashboardGreetingMorning.
+  String get dashboardGreetingMorning;
+
+  /// No description provided for @dashboardGreetingAfternoon.
+  String get dashboardGreetingAfternoon;
+
+  /// No description provided for @dashboardGreetingEvening.
+  String get dashboardGreetingEvening;
+
+  /// No description provided for @dashboardMoreActions.
+  String get dashboardMoreActions;
+
+  /// No description provided for @dashboardLessActions.
+  String get dashboardLessActions;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

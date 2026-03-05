@@ -9,7 +9,6 @@ import '../../../core/utils/formatters.dart';
 import '../../customers/presentation/customer_form_screen.dart';
 import '../../customers/presentation/customers_screen.dart';
 import '../../expenses/presentation/expenses_screen.dart';
-import '../../products/domain/product.dart';
 import '../../products/presentation/product_form_screen.dart';
 import '../../products/presentation/products_screen.dart';
 import '../../reports/presentation/credit_report_screen.dart';
@@ -31,8 +30,6 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(dashboardSummaryProvider);
-    final lowStock = ref.watch(lowStockProductsProvider);
-    final products = ref.watch(productsListProvider);
     final alerts = ref.watch(alertsUnreadFeedProvider);
     final setupPrompts = ref.watch(setupPromptsProvider);
     final firstRunSnapshot = ref.watch(firstRunSnapshotProvider);
@@ -52,9 +49,77 @@ class DashboardScreen extends ConsumerWidget {
           ),
       data: (data) {
         final sales = data.todaySales;
-        final expenses = data.todayExpenses;
         final profit = data.estimatedProfit;
         final credit = data.creditOutstanding;
+        final lowStockCount = data.lowStockItems;
+
+        final salesSection = [
+          _KpiValue(
+            label: l10n.todaySales,
+            value: formatCurrency(data.todaySales, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiTotalRevenue,
+            value: formatCurrency(data.totalRevenue, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiTransactionsCount,
+            value: data.transactionsCount.toString(),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiAverageBill,
+            value: formatCurrency(data.averageBill, localeCode),
+          ),
+        ];
+        final paymentsSection = [
+          _KpiValue(
+            label: l10n.dashboardKpiCashCollected,
+            value: formatCurrency(data.cashCollected, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiDigitalCollected,
+            value: formatCurrency(data.digitalCollected, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiCreditCreated,
+            value: formatCurrency(data.creditCreated, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiCreditCollected,
+            value: formatCurrency(data.creditCollected, localeCode),
+          ),
+        ];
+        final inventorySection = [
+          _KpiValue(
+            label: l10n.dashboardKpiLowStockItems,
+            value: data.lowStockItems.toString(),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiInventoryLoss,
+            value: data.inventoryLossQty.toStringAsFixed(0),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiTopSellingItems,
+            value:
+                data.topSellingItems.isEmpty
+                    ? l10n.dashboardKpiNoTopSelling
+                    : data.topSellingItems.join(', '),
+          ),
+        ];
+        final creditSection = [
+          _KpiValue(
+            label: l10n.creditOutstanding,
+            value: formatCurrency(data.creditOutstanding, localeCode),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiCustomersWithDues,
+            value: data.customersWithDues.toString(),
+          ),
+          _KpiValue(
+            label: l10n.dashboardKpiOverdueCredit,
+            value: formatCurrency(data.overdueCredit, localeCode),
+          ),
+        ];
         final creditRatio =
             sales <= 0
                 ? (credit > 0 ? 1.0 : 0.0)
@@ -93,26 +158,29 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DashboardTopRow(alerts: alerts, l10n: l10n),
-                const SizedBox(height: AppSpacing.sm),
+                // ── header ────────────────────────────────────────────────
+                _DashboardHeader(alerts: alerts, l10n: l10n, today: today),
+                const SizedBox(height: AppSpacing.md),
 
-                // ── hero card ──────────────────────────────────────────────
-                _HeroCard(
+                // ── 2×2 metric tiles ──────────────────────────────────────
+                _MetricTilesGrid(
                   sales: sales,
-                  expenses: expenses,
                   profit: profit,
+                  credit: credit,
+                  lowStockCount: lowStockCount,
                   localeCode: localeCode,
-                  today: today,
                   l10n: l10n,
                 ),
                 const SizedBox(height: AppSpacing.md),
+
+                // ── primary actions + expandable more ─────────────────────
+                _PrimaryActions(),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── first-run / setup prompts ─────────────────────────────
                 _FirstRunCard(snapshot: firstRunSnapshot),
                 if (firstRunSnapshot.asData?.value.isEmptyBusiness == true)
                   const SizedBox(height: AppSpacing.md),
-
-                // ── quick actions ──────────────────────────────────────────
-                const _QuickActions(),
-                const SizedBox(height: AppSpacing.md),
                 _SetupPromptsCard(prompts: setupPrompts),
                 const SizedBox(height: AppSpacing.md),
 
@@ -125,7 +193,30 @@ class DashboardScreen extends ConsumerWidget {
                   localeCode: localeCode,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _LowStockCard(lowStock: lowStock, products: products),
+                _KpiSectionCard(
+                  icon: Icons.receipt_long_outlined,
+                  title: l10n.sales,
+                  metrics: salesSection,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _KpiSectionCard(
+                  icon: Icons.payments_outlined,
+                  title: l10n.dashboardSectionPayments,
+                  metrics: paymentsSection,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _KpiSectionCard(
+                  icon: Icons.inventory_2_outlined,
+                  title: l10n.dashboardSectionInventory,
+                  metrics: inventorySection,
+                  emphasizeLast: true,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _KpiSectionCard(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: l10n.dashboardSectionCredit,
+                  metrics: creditSection,
+                ),
               ],
             ),
           ),
@@ -149,14 +240,31 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _DashboardTopRow extends StatelessWidget {
-  const _DashboardTopRow({required this.alerts, required this.l10n});
+// ─── dashboard header ─────────────────────────────────────────────────────────
+
+class _DashboardHeader extends ConsumerWidget {
+  const _DashboardHeader({
+    required this.alerts,
+    required this.l10n,
+    required this.today,
+  });
 
   final AsyncValue<List<AlertItem>> alerts;
   final AppLocalizations l10n;
+  final String today;
+
+  String _greeting(AppLocalizations l10n) {
+    final hour = TimeOfDay.now().hour;
+    if (hour < 12) return l10n.dashboardGreetingMorning;
+    if (hour < 17) return l10n.dashboardGreetingAfternoon;
+    return l10n.dashboardGreetingEvening;
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final storeName = profileAsync.asData?.value.storeName ?? l10n.dashboard;
+
     final (count, bellColor, badgeColor, icon, statusLabel) = alerts.when(
       loading:
           () => (
@@ -209,27 +317,45 @@ class _DashboardTopRow extends StatelessWidget {
     );
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.dashboard,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              if (count > 0)
-                Text(
-                  l10n.alertCount(count),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                _greeting(l10n),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.muted,
                 ),
+              ),
+              Text(
+                storeName,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  today,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.muted,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+        const SizedBox(width: AppSpacing.sm),
         Semantics(
           button: true,
           label:
@@ -264,8 +390,11 @@ class _DashboardTopRow extends StatelessWidget {
                             right: -4,
                             top: -4,
                             child: Container(
-                              constraints: const BoxConstraints(minWidth: 16),
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              constraints:
+                                  const BoxConstraints(minWidth: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               height: 16,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -273,7 +402,10 @@ class _DashboardTopRow extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(
                                   AppRadius.pill,
                                 ),
-                                border: Border.all(color: Colors.white, width: 1.2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.2,
+                                ),
                               ),
                               child: Text(
                                 count > 9 ? '9+' : '$count',
@@ -299,259 +431,376 @@ class _DashboardTopRow extends StatelessWidget {
   }
 }
 
-// ─── hero card ────────────────────────────────────────────────────────────────
+// ─── 2×2 metric tiles ─────────────────────────────────────────────────────────
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
+class _MetricTilesGrid extends StatelessWidget {
+  const _MetricTilesGrid({
     required this.sales,
-    required this.expenses,
     required this.profit,
+    required this.credit,
+    required this.lowStockCount,
     required this.localeCode,
-    required this.today,
     required this.l10n,
   });
 
   final double sales;
-  final double expenses;
   final double profit;
+  final double credit;
+  final int lowStockCount;
   final String localeCode;
-  final String today;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final profitColor = profit >= 0 ? AppColors.successBg : AppColors.errorBg;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: Stack(
-        children: [
-          // gradient background — Positioned.fill so it always covers full height
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.primaryDark, AppColors.primary],
-                ),
-              ),
+    return GridView.count(
+      crossAxisCount: 2,
+      mainAxisSpacing: AppSpacing.sm,
+      crossAxisSpacing: AppSpacing.sm,
+      childAspectRatio: 1.55,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        _MetricTile(
+          label: l10n.todaySales,
+          value: formatCurrency(sales, localeCode),
+          icon: Icons.receipt_long_outlined,
+          bgColor: AppColors.primary.withValues(alpha: 0.10),
+          iconColor: AppColors.primary,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SalesListScreen(standalone: true),
             ),
           ),
-          // decorative circles
-          Positioned(
-            top: -28,
-            right: -20,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.13),
-                
-              ),
+        ),
+        _MetricTile(
+          label: l10n.netAfterExpenses,
+          value: formatCurrency(profit, localeCode),
+          icon:
+              profit >= 0
+                  ? Icons.trending_up_rounded
+                  : Icons.trending_down_rounded,
+          bgColor:
+              profit >= 0
+                  ? AppColors.success.withValues(alpha: 0.10)
+                  : AppColors.error.withValues(alpha: 0.10),
+          iconColor: profit >= 0 ? AppColors.success : AppColors.error,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BusinessHealthScreen()),
+          ),
+        ),
+        _MetricTile(
+          label: l10n.creditOutstanding,
+          value: formatCurrency(credit, localeCode),
+          icon: Icons.account_balance_wallet_outlined,
+          bgColor: AppColors.warning.withValues(alpha: 0.10),
+          iconColor: AppColors.warning,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CreditReportScreen()),
+          ),
+        ),
+        _MetricTile(
+          label: l10n.dashboardKpiLowStockItems,
+          value: lowStockCount.toString(),
+          icon: Icons.inventory_2_outlined,
+          bgColor:
+              lowStockCount > 0
+                  ? AppColors.error.withValues(alpha: 0.10)
+                  : AppColors.success.withValues(alpha: 0.10),
+          iconColor:
+              lowStockCount > 0 ? AppColors.error : AppColors.success,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ProductsScreen(standalone: true),
             ),
           ),
-          Positioned(
-            bottom: -40,
-            right: 60,
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
-          // content
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // top row: label + date chip
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.bar_chart_rounded,
-                            size: 16,
-                            color: Colors.white60,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              l10n.dashboardOverview.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.bgColor,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color bgColor;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: iconColor.withValues(alpha: 0.12),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, size: 20, color: iconColor),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.label,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 82),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.20),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Text(
-                          today,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                // sales amount
-                Text(
-                  formatCurrency(sales, localeCode),
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -1.5,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.arrow_upward_rounded,
-                      size: 13,
-                      color: Colors.white60,
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.muted,
                     ),
-                    const SizedBox(width: 3),
-                    Text(
-                      l10n.todaySales,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                // thin divider
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.25)),
-                const SizedBox(height: AppSpacing.md),
-                // sub-stats row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _HeroStat(
-                        icon: Icons.receipt_long_outlined,
-                        label: l10n.expenses,
-                        value: formatCurrency(expenses, localeCode),
-                        valueColor: Colors.white,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 32,
-                      color: Colors.white.withValues(alpha: 0.25),
-                    ),
-                    Expanded(
-                      child: _HeroStat(
-                        icon:
-                            profit >= 0
-                                ? Icons.trending_up_rounded
-                                : Icons.trending_down_rounded,
-                        label: l10n.netAfterExpenses,
-                        value: formatCurrency(profit, localeCode),
-                        valueColor: profitColor,
-                        alignEnd: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  const _HeroStat({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.valueColor,
-    this.alignEnd = false,
-  });
+// ─── primary actions ──────────────────────────────────────────────────────────
 
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color valueColor;
-  final bool alignEnd;
+class _PrimaryActions extends ConsumerStatefulWidget {
+  const _PrimaryActions();
+
+  @override
+  ConsumerState<_PrimaryActions> createState() => _PrimaryActionsState();
+}
+
+class _PrimaryActionsState extends ConsumerState<_PrimaryActions> {
+  bool _expanded = false;
+
+  void _pushAfterFrame(BuildContext context, Widget page) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    });
+  }
+
+  void _showSheetAfterFrame(BuildContext context, Widget child) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      showAppBottomSheet(context, child: child);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final alignment =
-        alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: alignEnd ? AppSpacing.md : 0,
-        right: alignEnd ? 0 : AppSpacing.md,
+    final l10n = AppLocalizations.of(context)!;
+
+    final secondaryActions = <_QuickActionItem>[
+      _QuickActionItem(
+        icon: Icons.request_page_outlined,
+        label: l10n.expenses,
+        color: AppColors.error,
+        onTap:
+            () => _showSheetAfterFrame(
+              context,
+              ExpenseFormSheet(ref: ref, l10n: l10n),
+            ),
       ),
-      child: Column(
-        crossAxisAlignment: alignment,
-        children: [
-          Row(
-            mainAxisAlignment:
-                alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
-            children: [
-              Icon(icon, size: 12, color: Colors.white60),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: alignEnd ? TextAlign.right : TextAlign.left,
-                  style: const TextStyle(fontSize: 11, color: Colors.white60),
+      _QuickActionItem(
+        icon: Icons.history_rounded,
+        label: l10n.sales,
+        color: AppColors.primaryLight,
+        onTap:
+            () => _pushAfterFrame(
+              context,
+              const SalesListScreen(standalone: true),
+            ),
+      ),
+      _QuickActionItem(
+        icon: Icons.group_outlined,
+        label: l10n.customers,
+        color: AppColors.primary,
+        onTap:
+            () => _pushAfterFrame(
+              context,
+              const CustomersScreen(standalone: true),
+            ),
+      ),
+      _QuickActionItem(
+        icon: Icons.inventory_2_outlined,
+        label: l10n.products,
+        color: AppColors.success,
+        onTap:
+            () => _pushAfterFrame(
+              context,
+              const ProductsScreen(standalone: true),
+            ),
+      ),
+      _QuickActionItem(
+        icon: Icons.person_add_outlined,
+        label: l10n.addCustomer,
+        color: AppColors.primaryLight,
+        onTap: () => _pushAfterFrame(context, const CustomerFormScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.store_outlined,
+        label: l10n.setupPromptBusinessProfileAction,
+        color: AppColors.primaryDark,
+        onTap:
+            () => _pushAfterFrame(context, const BusinessSettingsScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.receipt_long_outlined,
+        label: l10n.invoices,
+        color: AppColors.primary,
+        onTap: () => _pushAfterFrame(context, const InvoiceListScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.health_and_safety_outlined,
+        label: l10n.businessHealth,
+        color: AppColors.success,
+        onTap: () => _pushAfterFrame(context, const BusinessHealthScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.schedule_outlined,
+        label: l10n.creditAging,
+        color: AppColors.warning,
+        onTap:
+            () => _pushAfterFrame(context, const CreditAgingReportScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.notification_important_outlined,
+        label: l10n.alertsLabel,
+        color: AppColors.error,
+        onTap: () => _pushAfterFrame(context, const AlertsFeedScreen()),
+      ),
+      _QuickActionItem(
+        icon: Icons.add_box_outlined,
+        label: l10n.addProduct,
+        color: AppColors.success,
+        onTap: () => _pushAfterFrame(context, const ProductFormScreen()),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── section label ──────────────────────────────────────────────────
+        Text(
+          l10n.quickActionsTitle,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppColors.muted,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // ── 2 primary buttons ──────────────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed:
+                    () => _pushAfterFrame(context, const CreateSaleScreen()),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(l10n.newSale),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: valueColor,
             ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed:
+                    () => _pushAfterFrame(context, const CreditReportScreen()),
+                icon: const Icon(Icons.payments_outlined, size: 18),
+                label: Text(l10n.recordPay),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.warning,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+
+        // ── "more actions" toggle ─────────────────────────────────────────
+        TextButton.icon(
+          onPressed: () => setState(() => _expanded = !_expanded),
+          icon: Icon(
+            _expanded ? Icons.expand_less : Icons.expand_more,
+            size: 16,
+          ),
+          label: Text(
+            _expanded ? l10n.dashboardLessActions : l10n.dashboardMoreActions,
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.muted,
+            textStyle: Theme.of(context).textTheme.labelSmall,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+
+        // ── expanded secondary grid ───────────────────────────────────────
+        if (_expanded) ...[
+          const SizedBox(height: AppSpacing.sm),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = AppSpacing.sm;
+              final columns = switch (constraints.maxWidth) {
+                <= 340 => 3,
+                <= 560 => 4,
+                _ => 5,
+              };
+              final itemHeight = columns == 3 ? 96.0 : 90.0;
+              final itemWidth =
+                  (constraints.maxWidth - (spacing * (columns - 1))) /
+                  columns;
+
+              return Wrap(
+                spacing: spacing,
+                runSpacing: AppSpacing.sm,
+                children:
+                    secondaryActions
+                        .map(
+                          (item) => SizedBox(
+                            width: itemWidth,
+                            height: itemHeight,
+                            child: _QuickActionButton(
+                              icon: item.icon,
+                              label: item.label,
+                              color: item.color,
+                              onTap: item.onTap,
+                            ),
+                          ),
+                        )
+                        .toList(),
+              );
+            },
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -601,8 +850,6 @@ class _HealthCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // progress
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.pill),
             child: LinearProgressIndicator(
@@ -615,7 +862,6 @@ class _HealthCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           const Divider(),
           const SizedBox(height: AppSpacing.sm),
-
           Row(
             children: [
               Expanded(
@@ -680,170 +926,56 @@ class _DashboardSkeleton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        children: [
-          SkeletonBox(height: 170, radius: AppRadius.xl),
-          const SizedBox(height: AppSpacing.md),
-          SkeletonBox(height: 130, radius: AppRadius.lg),
-        ],
-      ),
-    );
-  }
-}
-
-class _LowStockCard extends StatelessWidget {
-  const _LowStockCard({required this.lowStock, required this.products});
-
-  final AsyncValue<List<Product>> lowStock;
-  final AsyncValue<List<Product>> products;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return AppCard(
-      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // header skeleton
           Row(
             children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                size: 16,
-                color: AppColors.muted,
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  l10n.lowStockItemsTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(height: 14, radius: AppRadius.sm, width: 100),
+                    const SizedBox(height: 6),
+                    SkeletonBox(height: 22, radius: AppRadius.sm, width: 160),
+                    const SizedBox(height: 6),
+                    SkeletonBox(height: 18, radius: AppRadius.pill, width: 80),
+                  ],
                 ),
+              ),
+              SkeletonBox(
+                height: 48,
+                radius: AppRadius.pill,
+                width: 48,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          products.when(
-            loading:
-                () => Text(
-                  l10n.checkingStock,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                ),
-            error:
-                (_, __) => Text(
-                  l10n.unableLoadLowStockData,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.error),
-                ),
-            data: (allProducts) {
-              if (allProducts.isEmpty) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.dashboardLowStockEmptyNoProducts,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton.tonal(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProductFormScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(l10n.addProduct),
-                    ),
-                  ],
-                );
-              }
-              return lowStock.when(
-                loading:
-                    () => Text(
-                      l10n.checkingStock,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                    ),
-                error:
-                    (_, __) => Text(
-                      l10n.unableLoadLowStockData,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.error),
-                    ),
-                data: (items) {
-                  if (items.isEmpty) {
-                    return Text(
-                      l10n.allProductsAboveThreshold,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                    );
-                  }
-                  final top = items.take(4).toList();
-                  return Column(
-                    children: [
-                      for (final p in top)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                margin: const EdgeInsets.only(right: AppSpacing.sm),
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.warning,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  p.name.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.label,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warningBg,
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.pill,
-                                  ),
-                                ),
-                                child: Text(
-                                  l10n.stockLeftCount(
-                                    p.stockQty.toStringAsFixed(0),
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.warning,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              );
-            },
+          // 2×2 tile skeleton
+          GridView.count(
+            crossAxisCount: 2,
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
+            childAspectRatio: 1.55,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: List.generate(
+              4,
+              (_) => SkeletonBox(height: double.infinity, radius: AppRadius.lg),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // 2 button skeleton
+          Row(
+            children: [
+              Expanded(
+                child: SkeletonBox(height: 48, radius: AppRadius.md),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: SkeletonBox(height: 48, radius: AppRadius.md),
+              ),
+            ],
           ),
         ],
       ),
@@ -855,6 +987,118 @@ class _HealthStatus {
   const _HealthStatus(this.label, this.color);
   final String label;
   final Color color;
+}
+
+class _KpiValue {
+  const _KpiValue({required this.label, required this.value});
+  final String label;
+  final String value;
+}
+
+// ─── collapsible KPI section card ─────────────────────────────────────────────
+
+class _KpiSectionCard extends StatefulWidget {
+  const _KpiSectionCard({
+    required this.icon,
+    required this.title,
+    required this.metrics,
+    this.emphasizeLast = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<_KpiValue> metrics;
+  final bool emphasizeLast;
+
+  @override
+  State<_KpiSectionCard> createState() => _KpiSectionCardState();
+}
+
+class _KpiSectionCardState extends State<_KpiSectionCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 16, color: AppColors.muted),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: AppSpacing.md),
+            for (var i = 0; i < widget.metrics.length; i++) ...[
+              _KpiRow(
+                item: widget.metrics[i],
+                emphasize: widget.emphasizeLast && i == widget.metrics.length - 1,
+              ),
+              if (i != widget.metrics.length - 1)
+                const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _KpiRow extends StatelessWidget {
+  const _KpiRow({required this.item, this.emphasize = false});
+
+  final _KpiValue item;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment:
+          emphasize ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            item.label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            item.value,
+            textAlign: TextAlign.right,
+            maxLines: emphasize ? 3 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.label,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FirstRunCard extends StatelessWidget {
@@ -955,7 +1199,10 @@ class _SetupPromptsCard extends ConsumerWidget {
                             Text(
                               _promptSubtitle(l10n, prompt.id),
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppColors.muted, height: 1.4),
+                                  ?.copyWith(
+                                    color: AppColors.muted,
+                                    height: 1.4,
+                                  ),
                             ),
                             const SizedBox(height: AppSpacing.md),
                             Wrap(
@@ -963,8 +1210,11 @@ class _SetupPromptsCard extends ConsumerWidget {
                               runSpacing: AppSpacing.sm,
                               children: [
                                 FilledButton.tonal(
-                                  onPressed: () => _openPrompt(context, prompt.id),
-                                  child: Text(_promptActionLabel(l10n, prompt.id)),
+                                  onPressed:
+                                      () => _openPrompt(context, prompt.id),
+                                  child: Text(
+                                    _promptActionLabel(l10n, prompt.id),
+                                  ),
                                 ),
                                 TextButton(
                                   onPressed: () async {
@@ -1064,187 +1314,7 @@ class _SetupPromptsCard extends ConsumerWidget {
   }
 }
 
-// ─── quick actions ────────────────────────────────────────────────────────────
-
-class _QuickActions extends ConsumerWidget {
-  const _QuickActions();
-
-  void _pushAfterFrame(BuildContext context, Widget page) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
-    });
-  }
-
-  void _showSheetAfterFrame(BuildContext context, Widget child) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      showAppBottomSheet(context, child: child);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.quickActionsTitle,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppColors.muted,
-            letterSpacing: 1.0,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final actions = <_QuickActionItem>[
-              _QuickActionItem(
-                icon: Icons.receipt_outlined,
-                label: l10n.newSale,
-                color: AppColors.primary,
-                onTap: () => _pushAfterFrame(context, const CreateSaleScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.payments_outlined,
-                label: l10n.recordPay,
-                color: AppColors.warning,
-                onTap:
-                    () => _pushAfterFrame(context, const CreditReportScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.request_page_outlined,
-                label: l10n.expenses,
-                color: AppColors.error,
-                onTap:
-                    () => _showSheetAfterFrame(
-                      context,
-                      ExpenseFormSheet(ref: ref, l10n: l10n),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.history_rounded,
-                label: l10n.sales,
-                color: AppColors.primaryLight,
-                onTap:
-                    () => _pushAfterFrame(
-                      context,
-                      const SalesListScreen(standalone: true),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.group_outlined,
-                label: l10n.customers,
-                color: AppColors.primary,
-                onTap:
-                    () => _pushAfterFrame(
-                      context,
-                      const CustomersScreen(standalone: true),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.inventory_2_outlined,
-                label: l10n.products,
-                color: AppColors.success,
-                onTap:
-                    () => _pushAfterFrame(
-                      context,
-                      const ProductsScreen(standalone: true),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.person_add_outlined,
-                label: l10n.addCustomer,
-                color: AppColors.primaryLight,
-                onTap:
-                    () => _pushAfterFrame(context, const CustomerFormScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.store_outlined,
-                label: l10n.setupPromptBusinessProfileAction,
-                color: AppColors.primaryDark,
-                onTap:
-                    () => _pushAfterFrame(
-                      context,
-                      const BusinessSettingsScreen(),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.receipt_long_outlined,
-                label: l10n.invoices,
-                color: AppColors.primary,
-                onTap:
-                    () => _pushAfterFrame(context, const InvoiceListScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.health_and_safety_outlined,
-                label: l10n.businessHealth,
-                color: AppColors.success,
-                onTap:
-                    () =>
-                        _pushAfterFrame(context, const BusinessHealthScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.schedule_outlined,
-                label: l10n.creditAging,
-                color: AppColors.warning,
-                onTap:
-                    () => _pushAfterFrame(
-                      context,
-                      const CreditAgingReportScreen(),
-                    ),
-              ),
-              _QuickActionItem(
-                icon: Icons.notification_important_outlined,
-                label: l10n.alertsLabel,
-                color: AppColors.error,
-                onTap: () => _pushAfterFrame(context, const AlertsFeedScreen()),
-              ),
-              _QuickActionItem(
-                icon: Icons.add_box_outlined,
-                label: l10n.addProduct,
-                color: AppColors.success,
-                onTap:
-                    () => _pushAfterFrame(context, const ProductFormScreen()),
-              ),
-            ];
-
-            const spacing = AppSpacing.sm;
-            final columns = switch (constraints.maxWidth) {
-              <= 340 => 3,
-              <= 560 => 4,
-              _ => 5,
-            };
-            final itemHeight = columns == 3 ? 96.0 : 90.0;
-            final itemWidth =
-                (constraints.maxWidth - (spacing * (columns - 1))) / columns;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: AppSpacing.sm,
-              children:
-                  actions
-                      .map(
-                        (item) => SizedBox(
-                          width: itemWidth,
-                          height: itemHeight,
-                          child: _QuickActionButton(
-                            icon: item.icon,
-                            label: item.label,
-                            color: item.color,
-                            onTap: item.onTap,
-                          ),
-                        ),
-                      )
-                      .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
+// ─── quick action primitives (reused by _PrimaryActions) ─────────────────────
 
 class _QuickActionItem {
   const _QuickActionItem({

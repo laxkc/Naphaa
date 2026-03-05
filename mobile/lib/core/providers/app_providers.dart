@@ -39,6 +39,7 @@ import '../network/session_service.dart';
 import '../network/sync_service.dart';
 import '../date/calendar_adapter.dart';
 import '../date/business_clock.dart';
+import '../date/business_time.dart';
 import '../storage/local_db.dart';
 import '../storage/preferences.dart';
 import '../storage/secure_storage.dart';
@@ -854,11 +855,35 @@ class DashboardSummary {
     required this.todaySales,
     required this.todayExpenses,
     required this.creditOutstanding,
+    this.totalRevenue = 0,
+    this.transactionsCount = 0,
+    this.averageBill = 0,
+    this.cashCollected = 0,
+    this.digitalCollected = 0,
+    this.creditCreated = 0,
+    this.creditCollected = 0,
+    this.lowStockItems = 0,
+    this.inventoryLossQty = 0,
+    this.topSellingItems = const [],
+    this.customersWithDues = 0,
+    this.overdueCredit = 0,
   });
 
   final double todaySales;
   final double todayExpenses;
   final double creditOutstanding;
+  final double totalRevenue;
+  final int transactionsCount;
+  final double averageBill;
+  final double cashCollected;
+  final double digitalCollected;
+  final double creditCreated;
+  final double creditCollected;
+  final int lowStockItems;
+  final double inventoryLossQty;
+  final List<String> topSellingItems;
+  final int customersWithDues;
+  final double overdueCredit;
 
   double get estimatedProfit => todaySales - todayExpenses;
 }
@@ -887,14 +912,111 @@ class FirstRunSnapshot {
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   ref.watch(dataRefreshRevisionProvider);
   final salesRepo = ref.watch(salesRepositoryProvider);
+  final db = await ref.watch(localDatabaseProvider).database;
+  final prefs = ref.watch(preferencesProvider);
+  final businessTimezone = await prefs.getBusinessTimezone();
+  final todayAd = BusinessTime.businessDateAd(timezone: businessTimezone);
   final localTodaySales = await salesRepo.todaySalesTotal();
   final localTodayExpenses = await salesRepo.todayExpenseTotal();
   final localCredit = await salesRepo.creditOutstanding();
+  final revenueRow = await db.rawQuery('''
+    SELECT
+      COALESCE(SUM(total_amount), 0) AS total_revenue,
+      COUNT(*) AS transactions_count
+    FROM sales
+    WHERE COALESCE(status, 'completed') != 'void'
+  ''');
+  final totalRevenue =
+      (revenueRow.first['total_revenue'] as num?)?.toDouble() ?? 0;
+  final transactionsCount =
+      (revenueRow.first['transactions_count'] as num?)?.toInt() ?? 0;
+  final averageBill =
+      transactionsCount > 0 ? totalRevenue / transactionsCount : 0.0;
+
+  final paymentsRow = await db.rawQuery(
+    '''
+    SELECT
+      COALESCE(SUM(CASE WHEN UPPER(COALESCE(method, '')) = 'CASH' THEN amount ELSE 0 END), 0) AS cash_collected,
+      COALESCE(SUM(CASE WHEN UPPER(COALESCE(method, '')) IN ('QR', 'BANK', 'WALLET') THEN amount ELSE 0 END), 0) AS digital_collected,
+      COALESCE(SUM(CASE WHEN UPPER(COALESCE(method, '')) = 'CREDIT' THEN amount ELSE 0 END), 0) AS credit_created
+    FROM sale_payments
+  ''',
+  );
+  final cashCollected =
+      (paymentsRow.first['cash_collected'] as num?)?.toDouble() ?? 0;
+  final digitalCollected =
+      (paymentsRow.first['digital_collected'] as num?)?.toDouble() ?? 0;
+  final creditCreated =
+      (paymentsRow.first['credit_created'] as num?)?.toDouble() ?? 0;
+  final creditCollectedRow = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(amount), 0) AS credit_collected
+    FROM customer_payments
+    WHERE payment_date_ad <= ?
+  ''',
+    [todayAd],
+  );
+  final creditCollected =
+      (creditCollectedRow.first['credit_collected'] as num?)?.toDouble() ?? 0;
+
+  final lowStockRow = await db.rawQuery('''
+    SELECT COUNT(*) AS low_stock_count
+    FROM products
+    WHERE COALESCE(low_stock_threshold, 0) > 0
+      AND stock_qty <= low_stock_threshold
+  ''');
+  final lowStockItems = (lowStockRow.first['low_stock_count'] as num?)?.toInt() ?? 0;
+  final inventoryLossRow = await db.rawQuery('''
+    SELECT COALESCE(SUM(CASE
+      WHEN delta_qty < 0 THEN -delta_qty
+      ELSE 0
+    END), 0) AS inventory_loss_qty
+    FROM stock_movements
+    WHERE UPPER(COALESCE(movement_type, '')) = 'LOSS'
+  ''');
+  final inventoryLossQty =
+      (inventoryLossRow.first['inventory_loss_qty'] as num?)?.toDouble() ?? 0;
+
+  final topSellingRows = await db.rawQuery('''
+    SELECT product_name
+    FROM product_metrics
+    WHERE COALESCE(qty_sold_30d, 0) > 0
+    ORDER BY qty_sold_30d DESC, revenue_30d DESC
+    LIMIT 3
+  ''');
+  final topSellingItems =
+      topSellingRows
+          .map((r) => r['product_name']?.toString().trim() ?? '')
+          .where((name) => name.isNotEmpty)
+          .toList();
+
+  final dueRows = await db.rawQuery('''
+    SELECT
+      COALESCE(COUNT(CASE WHEN outstanding_amount > 0 THEN 1 END), 0) AS customers_with_dues,
+      COALESCE(SUM(CASE WHEN oldest_due_days > 0 THEN outstanding_amount ELSE 0 END), 0) AS overdue_credit
+    FROM customer_metrics
+  ''');
+  final customersWithDues =
+      (dueRows.first['customers_with_dues'] as num?)?.toInt() ?? 0;
+  final overdueCredit =
+      (dueRows.first['overdue_credit'] as num?)?.toDouble() ?? 0;
 
   return DashboardSummary(
     todaySales: localTodaySales,
     todayExpenses: localTodayExpenses,
     creditOutstanding: localCredit,
+    totalRevenue: totalRevenue,
+    transactionsCount: transactionsCount,
+    averageBill: averageBill,
+    cashCollected: cashCollected,
+    digitalCollected: digitalCollected,
+    creditCreated: creditCreated,
+    creditCollected: creditCollected,
+    lowStockItems: lowStockItems,
+    inventoryLossQty: inventoryLossQty,
+    topSellingItems: topSellingItems,
+    customersWithDues: customersWithDues,
+    overdueCredit: overdueCredit,
   );
 });
 

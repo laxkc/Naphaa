@@ -300,6 +300,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardOverview => 'Dashboard overview';
 
   @override
+  String get dashboardSectionPayments => 'Payments';
+
+  @override
+  String get dashboardSectionInventory => 'Inventory';
+
+  @override
+  String get dashboardSectionCredit => 'Credit';
+
+  @override
+  String get dashboardKpiTotalRevenue => 'Total Revenue';
+
+  @override
+  String get dashboardKpiTransactionsCount => 'Transactions Count';
+
+  @override
+  String get dashboardKpiAverageBill => 'Average Bill';
+
+  @override
+  String get dashboardKpiCashCollected => 'Cash Collected';
+
+  @override
+  String get dashboardKpiDigitalCollected => 'Digital Collected';
+
+  @override
+  String get dashboardKpiCreditCreated => 'Credit Created';
+
+  @override
+  String get dashboardKpiCreditCollected => 'Credit Collected';
+
+  @override
+  String get dashboardKpiLowStockItems => 'Low Stock Items';
+
+  @override
+  String get dashboardKpiInventoryLoss => 'Inventory Loss';
+
+  @override
+  String get dashboardKpiTopSellingItems => 'Top Selling Items';
+
+  @override
+  String get dashboardKpiCustomersWithDues => 'Customers With Dues';
+
+  @override
+  String get dashboardKpiOverdueCredit => 'Overdue Credit';
+
+  @override
+  String get dashboardKpiNoTopSelling => 'No top-selling items yet';
+
+  @override
   String get dashboardFirstRunTitle => 'Welcome to Naphaa';
 
   @override
@@ -1848,4 +1896,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invoiceStatusCancelledLabel => 'CANCELLED';
+
+  @override
+  String get dashboardGreetingMorning => 'Good morning,';
+
+  @override
+  String get dashboardGreetingAfternoon => 'Good afternoon,';
+
+  @override
+  String get dashboardGreetingEvening => 'Good evening,';
+
+  @override
+  String get dashboardMoreActions => 'More actions';
+
+  @override
+  String get dashboardLessActions => 'Less';
 }

@@ -300,6 +300,54 @@ class AppLocalizationsNe extends AppLocalizations {
   String get dashboardOverview => 'ड्यासबोर्ड सारांश';
 
   @override
+  String get dashboardSectionPayments => 'भुक्तानी';
+
+  @override
+  String get dashboardSectionInventory => 'इन्भेन्टरी';
+
+  @override
+  String get dashboardSectionCredit => 'उधारो';
+
+  @override
+  String get dashboardKpiTotalRevenue => 'कुल आम्दानी';
+
+  @override
+  String get dashboardKpiTransactionsCount => 'कारोबार संख्या';
+
+  @override
+  String get dashboardKpiAverageBill => 'औसत बिल';
+
+  @override
+  String get dashboardKpiCashCollected => 'नगद संकलन';
+
+  @override
+  String get dashboardKpiDigitalCollected => 'डिजिटल संकलन';
+
+  @override
+  String get dashboardKpiCreditCreated => 'सिर्जित उधारो';
+
+  @override
+  String get dashboardKpiCreditCollected => 'असुल भएको उधारो';
+
+  @override
+  String get dashboardKpiLowStockItems => 'कम स्टक वस्तु';
+
+  @override
+  String get dashboardKpiInventoryLoss => 'इन्भेन्टरी घाटा';
+
+  @override
+  String get dashboardKpiTopSellingItems => 'शीर्ष बिक्री वस्तु';
+
+  @override
+  String get dashboardKpiCustomersWithDues => 'बाँकी हुने ग्राहक';
+
+  @override
+  String get dashboardKpiOverdueCredit => 'समय नाघेको उधारो';
+
+  @override
+  String get dashboardKpiNoTopSelling => 'अहिलेसम्म शीर्ष बिक्री वस्तु छैन';
+
+  @override
   String get dashboardFirstRunTitle => 'Naphaa मा स्वागत छ';
 
   @override
@@ -1848,4 +1896,19 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get invoiceStatusCancelledLabel => 'रद्द';
+
+  @override
+  String get dashboardGreetingMorning => 'शुभ प्रभात,';
+
+  @override
+  String get dashboardGreetingAfternoon => 'शुभ दिन,';
+
+  @override
+  String get dashboardGreetingEvening => 'शुभ साँझ,';
+
+  @override
+  String get dashboardMoreActions => 'थप विकल्पहरू';
+
+  @override
+  String get dashboardLessActions => 'कम';
 }
