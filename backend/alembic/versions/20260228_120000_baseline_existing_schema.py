@@ -7,6 +7,10 @@ Create Date: 2026-02-28 12:00:00
 
 from __future__ import annotations
 
+from alembic import op
+
+from app import models as _models  # noqa: F401
+from app.core.database import Base
 
 revision = "20260228_120000"
 down_revision = None
@@ -15,9 +19,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Baseline revision for an existing deployed schema.
-    # Stamp current databases with this revision before using future migrations.
-    pass
+    # Bootstrap baseline schema for fresh databases.
+    # Existing deployments can still use `alembic stamp 20260228_120000`.
+    bind = op.get_bind()
+    Base.metadata.create_all(bind=bind)
 
 
 def downgrade() -> None:

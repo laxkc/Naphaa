@@ -119,10 +119,16 @@ uv run pytest
 
 ## Migrations
 
-This backend now uses Alembic for schema management.
+This backend uses Alembic for schema management.
 
-For an existing database that already matches the current models, stamp the
-baseline revision once:
+For a fresh/empty database:
+
+```bash
+cd backend
+uv run alembic upgrade head
+```
+
+For an existing database that already matches the baseline schema, stamp once:
 
 ```bash
 cd backend
