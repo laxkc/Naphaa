@@ -47,8 +47,17 @@ APP_PORT=8080 gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 -k uvicorn.wor
 API will be available at:
 
 - `http://127.0.0.1:8000`
-- Docs: `http://127.0.0.1:8000/docs`
 - Health check: `http://127.0.0.1:8000/health`
+
+API docs are disabled by default. To enable Swagger/ReDoc in local development:
+
+```env
+ENABLE_API_DOCS=true
+```
+
+Then open:
+
+- `http://127.0.0.1:8000/docs`
 
 ## Environment (optional)
 
@@ -62,6 +71,7 @@ Current development database:
 APP_NAME=SME Digitization API
 API_V1_PREFIX=/api/v1
 DEBUG=true
+ENABLE_API_DOCS=true
 DB_HOST=naphaa-server.postgres.database.azure.com
 DB_PORT=5432
 DB_NAME=naphaa-database

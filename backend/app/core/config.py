@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str
     app_port: int
     debug: bool
+    enable_api_docs: bool = False
     startup_db_check: bool = True
     db_connect_timeout_seconds: int = 10
 
