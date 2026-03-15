@@ -329,28 +329,38 @@ class _DashboardHeader extends ConsumerWidget {
                   color: AppColors.muted,
                 ),
               ),
-              Text(
-                storeName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  today,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.muted,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      storeName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      today,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -592,7 +602,6 @@ class _PrimaryActions extends ConsumerStatefulWidget {
 }
 
 class _PrimaryActionsState extends ConsumerState<_PrimaryActions> {
-  bool _expanded = false;
 
   void _pushAfterFrame(BuildContext context, Widget page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -742,30 +751,10 @@ class _PrimaryActionsState extends ConsumerState<_PrimaryActions> {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
 
-        // ── "more actions" toggle ─────────────────────────────────────────
-        TextButton.icon(
-          onPressed: () => setState(() => _expanded = !_expanded),
-          icon: Icon(
-            _expanded ? Icons.expand_less : Icons.expand_more,
-            size: 16,
-          ),
-          label: Text(
-            _expanded ? l10n.dashboardLessActions : l10n.dashboardMoreActions,
-          ),
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.muted,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-
-        // ── expanded secondary grid ───────────────────────────────────────
-        if (_expanded) ...[
-          const SizedBox(height: AppSpacing.sm),
-          LayoutBuilder(
+        // ── secondary actions grid ────────────────────────────────────────
+        LayoutBuilder(
             builder: (context, constraints) {
               const spacing = AppSpacing.sm;
               final columns = switch (constraints.maxWidth) {
@@ -799,7 +788,6 @@ class _PrimaryActionsState extends ConsumerState<_PrimaryActions> {
               );
             },
           ),
-        ],
       ],
     );
   }

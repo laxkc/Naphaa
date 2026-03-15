@@ -34,10 +34,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final profile = ref.watch(profileProvider);
     final syncStatus = ref.watch(syncCoordinatorProvider);
-
-    final storeName = profile.whenOrNull(data: (p) => p.storeName);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -47,7 +44,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         backgroundColor: AppColors.bg,
         resizeToAvoidBottomInset: true,
         extendBody: false,
-        appBar: _buildAppBar(context, l10n, storeName, syncStatus),
+        appBar: _buildAppBar(context, l10n, syncStatus),
         body: SafeArea(
           top: false,
           bottom: false,
@@ -61,7 +58,6 @@ class _AppShellState extends ConsumerState<AppShell> {
   PreferredSizeWidget _buildAppBar(
     BuildContext context,
     AppLocalizations l10n,
-    String? storeName,
     SyncStatusState syncStatus,
   ) {
     // Dashboard gets a special greeting header
@@ -72,24 +68,12 @@ class _AppShellState extends ConsumerState<AppShell> {
         elevation: 0,
         scrolledUnderElevation: 1,
         bottom: _syncStatusBar(context, syncStatus),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.appName,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            if (storeName != null && storeName.isNotEmpty)
-              Text(
-                storeName,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.muted,
-                    ),
-              ),
-          ],
+        title: Text(
+          l10n.appName,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
           Padding(
