@@ -89,7 +89,7 @@ jobs:
 
           cd backend
           uv sync
-          uv run alembic upgrade head
+          uv run python -m alembic upgrade head
 
           sudo systemctl restart naphaa
           sudo systemctl status naphaa --no-pager
