@@ -105,40 +105,6 @@ Baseline deployment (manual)
 4. Point mobile app API base URL to production backend
 5. Run DB backups (see `/Users/laxmankc/Startup/SME/sme-digital/infra/scripts/backup.sh` placeholder)
 
-Recommended next step:
-
-- fill `infra/docker-compose.yml` and `infra/scripts/deploy.sh` for one-command staging/prod deploy
-
-## Architecture diagram?
-
-```mermaid
-flowchart LR
-  A["Flutter Mobile App"] --> B["Local SQLite (Offline Cache)"]
-  A --> C["Sync Coordinator / Outbox"]
-  C -->|"push"| D["FastAPI Backend /sync/push"]
-  D --> E["PostgreSQL / Server DB"]
-  E --> F["Metrics + Alerts Engine"]
-  C -->|"pull (cursor)" G["FastAPI Backend /sync/pull"]
-  C -->|"refresh caches"| H["/metrics/* + /alerts"]
-  G --> B
-  H --> B
-  B --> I["UI Providers (Riverpod)"]
-  I --> A
-```
-
-## Roadmap?
-
-### Current (v1 core done)
-
-- Offline-first sync hardening (cursor, ACK, retries, diagnostics)
-- Intelligence + Risk layer v1:
-  - Credit Aging
-  - Customer Risk Score
-  - Alerts Feed
-  - Business Health
-  - Product Insights
-
-### Next
 
 - Manual release QA checklist runs (unstable network scenarios)
 - Full E2E test automation (device/network chaos)
