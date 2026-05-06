@@ -2,6 +2,8 @@
 
 Offline-first SME sales, inventory, credit, and expense management app for small shops.
 
+![Demo](demo.gif)
+
 ## What is this?
 
 SME Digital is a mobile-first business operations system for retail shops (especially shops with unstable internet). It includes a Flutter mobile app and a FastAPI backend with offline sync.
